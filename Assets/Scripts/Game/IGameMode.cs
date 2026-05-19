@@ -1,4 +1,4 @@
-public interface IGameMode
+﻿public interface IGameMode
 {
     void Initialize();
     void StartGame();

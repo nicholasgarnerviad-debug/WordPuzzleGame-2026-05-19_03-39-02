@@ -1,4 +1,4 @@
-public static class Constants
+﻿public static class Constants
 {
     // Game modes
     public const int CLASSIC_MODE = 0;
@@ -17,6 +17,6 @@ public static class Constants
     public const int TIME_ADDITION_COST = 25;
 
     // UI
-    public const float BUTTON_MIN_SIZE = 48f; // dp equivalent in Unity
+    public const float BUTTON_MIN_SIZE = 48f;
     public const int TARGET_FPS = 60;
 }
