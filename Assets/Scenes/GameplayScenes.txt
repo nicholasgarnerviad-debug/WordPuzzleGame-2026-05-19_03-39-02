@@ -1,0 +1,37 @@
+Gameplay Scenes Setup
+====================
+
+Three gameplay scenes need to be created in Unity Editor:
+
+1. Assets/Scenes/ClassicMode.unity
+   - Add GameController component to empty GameObject
+   - Add ClassicMode component to same GameObject
+   - Create Canvas with GameplayScreen component
+   - Setup buttons: Submit, Hint, Undo
+   - Setup Text fields: Score display, Words found
+   - Setup InputField for word input
+   - Add to Build Settings as Scene 1
+
+2. Assets/Scenes/PuzzleShowMode.unity
+   - Add GameController component to empty GameObject
+   - Add PuzzleShowMode component to same GameObject
+   - Create Canvas with GameplayScreen component
+   - Add tier progression UI element
+   - Setup same buttons and displays as ClassicMode
+   - Add to Build Settings as Scene 2
+
+3. Assets/Scenes/TimeAttackMode.unity
+   - Add GameController component to empty GameObject
+   - Add TimeAttackMode component to same GameObject
+   - Create Canvas with GameplayScreen component
+   - ADD: Timer display showing timeRemaining
+   - Setup same buttons and displays as ClassicMode
+   - Add to Build Settings as Scene 3
+
+All three scenes should also include:
+- Persistent managers (will be added in later tasks):
+  - UIManager singleton
+  - AdManager (added in Task 11)
+  - IAPManager (added in Task 12)
+  - CoinSystem (added in Task 10)
+  - PlayerDataManager (added in Task 15)
