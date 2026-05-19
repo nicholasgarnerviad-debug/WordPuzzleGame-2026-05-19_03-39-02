@@ -1,0 +1,31 @@
+{
+  "tiers": [
+    {
+      "id": 1,
+      "name": "Tier 1",
+      "puzzles": [
+        ["apple", "apply"],
+        ["brave", "break"],
+        ["crane", "craft"]
+      ]
+    },
+    {
+      "id": 2,
+      "name": "Tier 2",
+      "puzzles": [
+        ["distant", "display"],
+        ["forest", "forget"],
+        ["gentle", "golden"]
+      ]
+    },
+    {
+      "id": 3,
+      "name": "Tier 3",
+      "puzzles": [
+        ["harmony", "harvest"],
+        ["journal", "journey"],
+        ["kingdom", "kitchen"]
+      ]
+    }
+  ]
+}
