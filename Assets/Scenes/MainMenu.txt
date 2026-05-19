@@ -1,0 +1,33 @@
+MainMenu Scene
+==============
+
+This scene file must be created in Unity Editor and saved to Assets/Scenes/MainMenu.unity
+
+Scene Setup:
+- Create a new Scene in Unity Editor
+- Set up a Canvas for UI layout
+- Add the MainMenuScreen component to the Canvas
+
+Canvas Structure:
+- Canvas (Main UI Container)
+  └─ MainMenuScreen (Component attached here)
+     ├─ classicModeButton: Button for Classic Mode
+     ├─ puzzleShowButton: Button for Puzzle Show Mode
+     ├─ timeAttackButton: Button for Time Attack Mode
+     ├─ shopButton: Button for Shop (not yet implemented)
+     └─ settingsButton: Button for Settings (not yet implemented)
+
+UIManager Setup:
+- Create an empty GameObject named "UIManager"
+- Add the UIManager component
+- Set as DontDestroyOnLoad so it persists across scene loads
+
+Button Setup:
+- Create UI Buttons for each game mode
+- Assign them to the corresponding serialized fields in MainMenuScreen
+- Each button should have appropriate text labels and styling
+
+Notes:
+- The MainMenuScreen.cs component expects 5 Button references
+- The UIManager is a singleton that manages all screen navigation
+- Scene must be added to Build Settings for proper scene loading
