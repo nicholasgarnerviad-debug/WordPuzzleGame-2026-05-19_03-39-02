@@ -1,0 +1,28 @@
+{
+  "coinPacks": [
+    {
+      "id": "coins_50",
+      "coins": 50,
+      "price": 0.99,
+      "currency": "USD"
+    },
+    {
+      "id": "coins_150",
+      "coins": 150,
+      "price": 2.49,
+      "currency": "USD"
+    },
+    {
+      "id": "coins_500",
+      "coins": 500,
+      "price": 4.99,
+      "currency": "USD"
+    }
+  ],
+  "premium": {
+    "id": "premium_no_ads",
+    "name": "Remove Ads",
+    "price": 2.99,
+    "currency": "USD"
+  }
+}
