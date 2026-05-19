@@ -773,11 +773,11 @@ PlayerSettings:
   activeInputHandler: 1
   windowsGamepadBackendHint: 0
   enableDirectStorage: 0
-  cloudProjectId: 
+  cloudProjectId: a7d810a0-8b1f-45c7-801c-669afd4fd026
   framebufferDepthMemorylessMode: 0
   qualitySettingsNames: []
-  projectName: 
-  organizationId: 
+  projectName: WordPuzzleGame 2026-05-19_03-41-28
+  organizationId: unity_fb4570b2f539dcc63315
   cloudEnabled: 0
   legacyClampBlendShapeWeights: 0
   hmiLoadingImage: {fileID: 0}
