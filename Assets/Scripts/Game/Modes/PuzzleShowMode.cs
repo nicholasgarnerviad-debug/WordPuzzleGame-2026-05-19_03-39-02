@@ -3,16 +3,17 @@ using System.Collections.Generic;
 
 public class PuzzleShowMode : MonoBehaviour, IGameMode
 {
-    private GameController gameController;
+    private GameModeContext context;
     private int currentTier = 1;
     private int currentPuzzleInTier = 0;
     private int coinsEarned = 0;
+    private int puzzlesCompleted = 0;
+    private int totalTime = 0;
     private List<List<string>> tierPuzzles;
 
-    public void Initialize()
+    public void Initialize(GameModeContext context)
     {
-        gameController = GetComponent<GameController>();
-        gameController.PuzzleCompleted += OnPuzzleCompleted;
+        this.context = context;
         LoadTierData();
     }
 
@@ -31,6 +32,8 @@ public class PuzzleShowMode : MonoBehaviour, IGameMode
         currentTier = 1;
         currentPuzzleInTier = 0;
         coinsEarned = 0;
+        puzzlesCompleted = 0;
+        totalTime = 0;
         LoadNextPuzzle();
         Logger.Log("Puzzle Show Mode started");
     }
@@ -39,7 +42,6 @@ public class PuzzleShowMode : MonoBehaviour, IGameMode
     {
         if (currentPuzzleInTier < tierPuzzles.Count)
         {
-            gameController.GenerateNewPuzzle(currentTier);
             Logger.Log($"Puzzle Show: Tier {currentTier}, Puzzle {currentPuzzleInTier + 1}");
         }
         else
@@ -51,6 +53,7 @@ public class PuzzleShowMode : MonoBehaviour, IGameMode
     private void OnPuzzleCompleted(int score)
     {
         coinsEarned += Constants.PUZZLE_SHOW_COIN_REWARD;
+        puzzlesCompleted++;
         currentPuzzleInTier++;
         LoadNextPuzzle();
     }
@@ -67,11 +70,32 @@ public class PuzzleShowMode : MonoBehaviour, IGameMode
         LoadNextPuzzle();
     }
 
+    public void HandleInput(GameAction action)
+    {
+        if (context?.stateManager != null)
+        {
+            context.stateManager.Dispatch(action);
+        }
+    }
+
+    public void Update(float deltaTime)
+    {
+        totalTime += (int)deltaTime;
+    }
+
     public void OnGameOver()
     {
         Logger.Log($"Puzzle Show Mode ended at Tier {currentTier}");
     }
 
-    public int GetCoinsEarned() => coinsEarned;
-    public string GetModeName() => "Puzzle Show";
+    public ModeStats GetStats()
+    {
+        return new ModeStats
+        {
+            modeName = "Puzzle Show",
+            coinsEarned = coinsEarned,
+            puzzlesCompleted = puzzlesCompleted,
+            totalTime = totalTime
+        };
+    }
 }

@@ -2,15 +2,15 @@ using UnityEngine;
 
 public class ClassicMode : MonoBehaviour, IGameMode
 {
-    private GameController gameController;
+    private GameModeContext context;
     private int totalScore = 0;
     private int puzzlesCompleted = 0;
     private int coinsEarned = 0;
+    private int totalTime = 0;
 
-    public void Initialize()
+    public void Initialize(GameModeContext context)
     {
-        gameController = GetComponent<GameController>();
-        gameController.PuzzleCompleted += OnPuzzleCompleted;
+        this.context = context;
     }
 
     public void StartGame()
@@ -18,25 +18,21 @@ public class ClassicMode : MonoBehaviour, IGameMode
         totalScore = 0;
         puzzlesCompleted = 0;
         coinsEarned = 0;
-        gameController.GenerateNewPuzzle(1);
+        totalTime = 0;
         Logger.Log("Classic Mode started");
     }
 
-    private void OnPuzzleCompleted(int score)
+    public void HandleInput(GameAction action)
     {
-        puzzlesCompleted++;
-        totalScore += score;
-        coinsEarned += Constants.CLASSIC_COIN_REWARD;
-
-        Logger.Log($"Puzzle {puzzlesCompleted} completed. Total score: {totalScore}");
-
-        // Auto-generate next puzzle
-        gameController.GenerateNewPuzzle(puzzlesCompleted);
+        if (context?.stateManager != null)
+        {
+            context.stateManager.Dispatch(action);
+        }
     }
 
-    public void OnPuzzleComplete(int score)
+    public void Update(float deltaTime)
     {
-        OnPuzzleCompleted(score);
+        totalTime += (int)deltaTime;
     }
 
     public void OnGameOver()
@@ -44,6 +40,14 @@ public class ClassicMode : MonoBehaviour, IGameMode
         Logger.Log($"Classic Mode ended. Final score: {totalScore}");
     }
 
-    public int GetCoinsEarned() => coinsEarned;
-    public string GetModeName() => "Classic";
+    public ModeStats GetStats()
+    {
+        return new ModeStats
+        {
+            modeName = "Classic",
+            coinsEarned = coinsEarned,
+            puzzlesCompleted = puzzlesCompleted,
+            totalTime = totalTime
+        };
+    }
 }
