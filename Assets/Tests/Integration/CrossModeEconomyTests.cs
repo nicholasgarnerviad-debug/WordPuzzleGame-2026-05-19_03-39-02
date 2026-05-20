@@ -64,6 +64,46 @@ public class CrossModeEconomyTests
         // Assert
         Assert.AreEqual(coinsToAdd, coinsFromNewManager, "Coins should persist across EconomyManager instances");
     }
+
+    [Test]
+    public async Task AddCoins_WithNegativeAmount_IsIgnoredSilently()
+    {
+        // Arrange
+        await economyManager.AddCoinsAsync(100, "test");
+
+        // Act
+        await economyManager.AddCoinsAsync(-50, "test");  // Negative add
+        var coins = await economyManager.GetCoinsAsync();
+
+        // Assert
+        Assert.AreEqual(100, coins);  // Should stay at 100, not go to 50
+    }
+
+    [Test]
+    public async Task UseHint_WithInsufficientHints_FailsSilently()
+    {
+        // Arrange - no hints added
+
+        // Act
+        await economyManager.UseHintAsync();  // Try to use when hints = 0
+        var remaining = await economyManager.GetHintsAsync();
+
+        // Assert
+        Assert.AreEqual(0, remaining);  // Should stay at 0
+    }
+
+    [Test]
+    public async Task UseReveal_WithInsufficientReveals_FailsSilently()
+    {
+        // Arrange - no reveals added
+
+        // Act
+        await economyManager.UseRevealAsync();  // Try to use when reveals = 0
+        var remaining = await economyManager.GetRevealsAsync();
+
+        // Assert
+        Assert.AreEqual(0, remaining);  // Should stay at 0
+    }
 }
 
 /// <summary>
@@ -94,15 +134,52 @@ public class MockDataManager : IDataManager
 
     public Task UpdatePlayerProgressAsync(PlayerProgress progress)
     {
-        // Store the progress in memory
-        savedProgress = progress;
+        // Clone to simulate JSON deserialization creating new object instances
+        savedProgress = ClonePlayerProgress(progress);
         return Task.CompletedTask;
     }
 
     public Task<PlayerProgress> GetPlayerProgressAsync()
     {
-        // Return the in-memory copy of PlayerProgress
-        return Task.FromResult(savedProgress);
+        // Return a clone to simulate JSON deserialization
+        if (savedProgress == null)
+            return Task.FromResult<PlayerProgress>(null);
+
+        return Task.FromResult(ClonePlayerProgress(savedProgress));
+    }
+
+    private PlayerProgress ClonePlayerProgress(PlayerProgress original)
+    {
+        if (original == null)
+            return null;
+
+        return new PlayerProgress
+        {
+            totalCoins = original.totalCoins,
+            totalPuzzlesCompleted = original.totalPuzzlesCompleted,
+            highestTierUnlocked = original.highestTierUnlocked,
+            tierProgress = new Dictionary<int, TierProgress>(original.tierProgress),
+            totalHintsEarned = original.totalHintsEarned,
+            totalRevealsEarned = original.totalRevealsEarned,
+            totalUndosEarned = original.totalUndosEarned,
+            classicStats = original.classicStats != null
+                ? new ClassicModeStats
+                {
+                    gamesPlayed = original.classicStats.gamesPlayed,
+                    gamesWon = original.classicStats.gamesWon,
+                    totalCoinsEarned = original.classicStats.totalCoinsEarned,
+                    totalPuzzlesCompleted = original.classicStats.totalPuzzlesCompleted
+                }
+                : null,
+            timeAttackStats = original.timeAttackStats != null
+                ? new TimeAttackModeStats
+                {
+                    gamesPlayed = original.timeAttackStats.gamesPlayed,
+                    bestRoundReached = original.timeAttackStats.bestRoundReached,
+                    totalCoinsEarned = original.timeAttackStats.totalCoinsEarned
+                }
+                : null
+        };
     }
 
     public Task<TierData> GetTierDataAsync(int tierId)
