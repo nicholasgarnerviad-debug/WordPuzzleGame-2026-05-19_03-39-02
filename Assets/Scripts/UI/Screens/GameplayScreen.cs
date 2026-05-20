@@ -1,59 +1,107 @@
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using System;
 using System.Collections.Generic;
 
 public class GameplayScreen : MonoBehaviour
 {
-    [SerializeField] private GameController gameController;
+    [SerializeField] private WordChainDisplay wordChainDisplay;
+    [SerializeField] private CurrentWordInput currentWordInput;
+    [SerializeField] private Transform letterTileContainer;
+    [SerializeField] private LetterTile letterTilePrefab;
+    [SerializeField] private TextMeshProUGUI livesText;
     [SerializeField] private Button submitButton;
     [SerializeField] private Button hintButton;
+    [SerializeField] private Button revealButton;
     [SerializeField] private Button undoButton;
-    [SerializeField] private TMP_Text scoreText;
-    [SerializeField] private TMP_Text wordsText;
-    [SerializeField] private TMP_InputField wordInput;
 
-    private void Start()
+    private IGameStateManager gameStateManager;
+    private IEconomyManager economyManager;
+    private GameState currentState;
+    private IDisposable stateSubscription;
+
+    public void Initialize(IGameStateManager gameStateManager, IEconomyManager economyManager)
     {
-        gameController = GetComponent<GameController>();
+        this.gameStateManager = gameStateManager;
+        this.economyManager = economyManager;
 
-        submitButton.onClick.AddListener(() => SubmitWord());
-        hintButton.onClick.AddListener(() => ShowHint());
-        undoButton.onClick.AddListener(() => UndoWord());
-    }
+        // Subscribe to state changes
+        stateSubscription = gameStateManager.Subscribe(OnGameStateChanged);
 
-    private void SubmitWord()
-    {
-        string word = wordInput.text.ToLower().Trim();
-        if (string.IsNullOrEmpty(word)) return;
-
-        bool valid = gameController.SubmitWord(word);
-        if (valid)
+        // Instantiate letter tiles A-Z
+        for (char c = 'A'; c <= 'Z'; c++)
         {
-            wordInput.text = "";
-            UpdateDisplay();
+            LetterTile tile = Instantiate(letterTilePrefab, letterTileContainer);
+            tile.Initialize(c);
+            tile.OnLetterPressed += OnLetterPressed;
         }
-        else
+
+        // Wire up button handlers
+        submitButton.onClick.AddListener(OnSubmitPressed);
+        hintButton.onClick.AddListener(OnHintPressed);
+        revealButton.onClick.AddListener(OnRevealPressed);
+        undoButton.onClick.AddListener(OnUndoPressed);
+
+        // Initial UI refresh
+        RefreshUI();
+    }
+
+    private void OnGameStateChanged(GameState newState)
+    {
+        currentState = newState;
+        RefreshUI();
+    }
+
+    private void RefreshUI()
+    {
+        if (currentState == null)
+            return;
+
+        // Update word chain display
+        wordChainDisplay.UpdateChain(currentState.wordChain);
+
+        // Update current input display
+        currentWordInput.UpdateInput(currentState.currentInput, null);
+
+        // Update lives display
+        livesText.text = $"Lives: {currentState.lives}";
+    }
+
+    private void OnLetterPressed(char letter)
+    {
+        gameStateManager.Dispatch(new PressLetterAction(letter));
+    }
+
+    private void OnSubmitPressed()
+    {
+        if (currentState != null && !string.IsNullOrEmpty(currentState.currentInput))
         {
-            Logger.LogWarning($"Invalid word: {word}");
+            gameStateManager.Dispatch(new SubmitWordAction(currentState.currentInput));
         }
     }
 
-    private void ShowHint()
+    private void OnHintPressed()
     {
-        Logger.Log("Hint requested");
+        if (currentState != null && currentState.currentInput.Length > 0)
+        {
+            int hintIndex = Mathf.Min(currentState.currentInput.Length, currentState.currentInput.Length - 1);
+            gameStateManager.Dispatch(new UseHintAction(hintIndex));
+        }
     }
 
-    private void UndoWord()
+    private void OnRevealPressed()
     {
-        Logger.Log("Undo requested");
+        gameStateManager.Dispatch(new UseRevealAction());
     }
 
-    private void UpdateDisplay()
+    private void OnUndoPressed()
     {
-        scoreText.text = $"Score: {gameController.GetCurrentScore()}";
+        gameStateManager.Dispatch(new UndoStepAction());
+    }
 
-        List<string> words = gameController.GetCurrentUserWords();
-        wordsText.text = "Words: " + string.Join(", ", words);
+    private void OnDestroy()
+    {
+        stateSubscription?.Dispose();
     }
 }
