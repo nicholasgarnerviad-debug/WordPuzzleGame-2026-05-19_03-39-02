@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
+using TMPro;
 using System.Collections.Generic;
 
 public class GameplayScreen : MonoBehaviour
@@ -8,9 +9,9 @@ public class GameplayScreen : MonoBehaviour
     [SerializeField] private Button submitButton;
     [SerializeField] private Button hintButton;
     [SerializeField] private Button undoButton;
-    [SerializeField] private Text scoreText;
-    [SerializeField] private Text wordsText;
-    [SerializeField] private InputField wordInput;
+    [SerializeField] private TMP_Text scoreText;
+    [SerializeField] private TMP_Text wordsText;
+    [SerializeField] private TMP_InputField wordInput;
 
     private void Start()
     {

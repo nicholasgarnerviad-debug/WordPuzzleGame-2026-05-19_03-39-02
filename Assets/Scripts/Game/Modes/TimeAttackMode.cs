@@ -1,62 +1,45 @@
+using System;
 using UnityEngine;
 
 public class TimeAttackMode : MonoBehaviour, IGameMode
 {
     private GameModeContext context;
-    private float currentTimeLimit = 90f; // Start at 90 seconds
-    private float timeRemaining = 90f;
-    private int currentRound = 0;
-    private int coinsEarned = 0;
-    private int puzzlesCompleted = 0;
-    private bool isActive = false;
+    private float timeRemaining;
+    private float currentTimeLimit;
+    private int roundCount;
+    private TimeAttackModeStats stats;
+    private bool isActive;
+    private System.Random random;
+
+    public event Action<float> TimeChanged;
 
     public void Initialize(GameModeContext context)
     {
         this.context = context;
+        this.stats = new TimeAttackModeStats();
+        this.random = new System.Random();
     }
 
     public void StartGame()
     {
-        currentRound = 0;
-        coinsEarned = 0;
-        puzzlesCompleted = 0;
-        currentTimeLimit = 90f;
-        StartNewRound();
         isActive = true;
-        Logger.Log("Time Attack Mode started");
-    }
-
-    private void StartNewRound()
-    {
-        currentRound++;
-        timeRemaining = currentTimeLimit;
-        Logger.Log($"Time Attack: Round {currentRound}, Time: {currentTimeLimit}s");
-    }
-
-    private void OnPuzzleCompleted(int score)
-    {
-        coinsEarned += Constants.TIME_ATTACK_COIN_REWARD;
-        coinsEarned += Constants.TIME_ATTACK_BONUS_PER_ROUND; // Bonus for surviving round
-        puzzlesCompleted++;
-
-        // Decrease time for next round
-        currentTimeLimit = Mathf.Max(30f, currentTimeLimit - 5f); // Minimum 30s
-
-        Logger.Log($"Round {currentRound} completed. Next round time: {currentTimeLimit}s");
+        roundCount = 0;
+        stats.sessionStartTime = Time.time;
         StartNewRound();
-    }
-
-    private void OnTimeUp()
-    {
-        isActive = false;
-        Logger.Log($"Time Attack ended after {currentRound} rounds");
+        Logger.Log("Time Attack Mode started");
     }
 
     public void HandleInput(GameAction action)
     {
-        if (context?.stateManager != null)
+        if (!isActive)
+            return;
+
+        context.stateManager.Dispatch(action);
+        var state = context.stateManager.GetCurrentState();
+
+        if (state.isWon)
         {
-            context.stateManager.Dispatch(action);
+            OnPuzzleComplete();
         }
     }
 
@@ -65,6 +48,7 @@ public class TimeAttackMode : MonoBehaviour, IGameMode
         if (!isActive) return;
 
         timeRemaining -= deltaTime;
+        TimeChanged?.Invoke(timeRemaining);
 
         if (timeRemaining <= 0)
         {
@@ -75,20 +59,82 @@ public class TimeAttackMode : MonoBehaviour, IGameMode
     public void OnGameOver()
     {
         isActive = false;
-        Logger.Log($"Time Attack Mode ended");
+        context.RaiseGameOver();
     }
 
     public ModeStats GetStats()
     {
+        float elapsedTime = Time.time - stats.sessionStartTime;
         return new ModeStats
         {
             modeName = "Time Attack",
-            coinsEarned = coinsEarned,
-            puzzlesCompleted = puzzlesCompleted,
-            totalTime = (int)currentTimeLimit
+            coinsEarned = stats.totalCoinsEarned,
+            puzzlesCompleted = roundCount,
+            totalTime = (int)elapsedTime
         };
     }
 
-    public float GetTimeRemaining() => timeRemaining;
-    public int GetCurrentRound() => currentRound;
+    private void StartNewRound()
+    {
+        roundCount++;
+
+        if (roundCount == 1)
+        {
+            currentTimeLimit = Constants.TIME_ATTACK_START;
+        }
+        else
+        {
+            currentTimeLimit = Mathf.Max(Constants.TIME_ATTACK_MIN, currentTimeLimit - Constants.TIME_ATTACK_DECREMENT);
+        }
+
+        timeRemaining = currentTimeLimit;
+
+        // Generate random medium puzzle
+        var puzzleDefinition = context.puzzleGenerator.GenerateRandomPuzzle(Difficulty.Medium);
+        var puzzle = new WordPuzzle(
+            puzzleDefinition.puzzleId,
+            puzzleDefinition.startWord,
+            puzzleDefinition.endWord,
+            puzzleDefinition.optimalSteps,
+            puzzleDefinition.solution,
+            puzzleDefinition.seedValue,
+            Difficulty.Medium
+        );
+
+        context.stateManager.StartNewPuzzle(puzzle);
+        Logger.Log($"Time Attack: Round {roundCount}, Time: {currentTimeLimit}s");
+    }
+
+    private async void OnPuzzleComplete()
+    {
+        int reward = Constants.TIME_ATTACK_BASE_REWARD + (int)(Constants.TIME_ATTACK_BONUS_PER_SECOND * timeRemaining);
+        await context.economy.AddCoinsAsync(reward, "time_attack");
+        stats.totalCoinsEarned += reward;
+        stats.bestRoundReached = Mathf.Max(stats.bestRoundReached, roundCount);
+
+        Logger.Log($"Puzzle completed! Earned {reward} coins");
+
+        StartNewRound();
+    }
+
+    private void OnTimeUp()
+    {
+        isActive = false;
+        Logger.Log($"Time Attack ended after {roundCount} rounds");
+        context.RaiseGameOver();
+    }
+}
+
+public class TimeAttackModeStats
+{
+    public int bestRoundReached;
+    public int totalCoinsEarned;
+    public float sessionStartTime;
+
+    public TimeAttackModeStats()
+    {
+        bestRoundReached = 0;
+        totalCoinsEarned = 0;
+        sessionStartTime = 0f;
+    }
 }

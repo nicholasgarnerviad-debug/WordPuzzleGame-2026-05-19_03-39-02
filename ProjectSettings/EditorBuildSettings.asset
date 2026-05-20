@@ -5,8 +5,23 @@ EditorBuildSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 2
   m_Scenes:
-  - enabled: 1
+  - enabled: 0
     path: Assets/Scenes/SampleScene.unity
     guid: 8c9cfa26abfee488c85f1582747f6a02
+  - enabled: 1
+    path: Assets/Scenes/MainMenu.unity
+    guid: 5ea02b521de166047922e3fc2aa0051c
+  - enabled: 1
+    path: Assets/Scenes/ClassicMode.unity
+    guid: e91f92c8cc1e090469e5050b84405793
+  - enabled: 1
+    path: Assets/Scenes/PuzzleShowMode.unity
+    guid: a4d9a5f592d3faa4e97f2e290b46cf67
+  - enabled: 1
+    path: Assets/Scenes/TimeAttackMode.unity
+    guid: cbe7c9fcae7c2744e9feeb04352dce46
   m_configObjects:
+    com.unity.adaptivePerformance.basic.provider_settings: {fileID: 11400000, guid: e9a36b7d8f47f774190e2593f6fb1860, type: 2}
+    com.unity.adaptiveperformance.loader_settings: {fileID: 11400000, guid: 7a348c447efd5614bb4bac7d591c7848, type: 2}
+    com.unity.adaptiveperformance.simulator.provider_settings: {fileID: 11400000, guid: 9f6e2111eb494ac479b6dcdd91eac889, type: 2}
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}

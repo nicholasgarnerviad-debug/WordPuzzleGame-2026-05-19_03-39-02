@@ -1,10 +1,11 @@
 using UnityEngine;
 using UnityEngine.UI;
+using TMPro;
 
 public class ResultsScreen : MonoBehaviour
 {
-    [SerializeField] private Text scoreText;
-    [SerializeField] private Text coinsEarnedText;
+    [SerializeField] private TMP_Text scoreText;
+    [SerializeField] private TMP_Text coinsEarnedText;
     [SerializeField] private Button watchAdButton;
     [SerializeField] private Button nextButton;
     [SerializeField] private Button menuButton;
@@ -30,18 +31,17 @@ public class ResultsScreen : MonoBehaviour
 
     private void WatchAdForCoins()
     {
-        AdManager.Instance.ShowRewardedAd(() => {
-            int bonusCoins = 10;
-            coinSystem.AddCoins(bonusCoins);
-            coinsEarnedText.text += $" (+{bonusCoins} bonus)";
-            watchAdButton.interactable = false;
-            Logger.Log("Rewarded ad completed");
-        });
+        // AdManager.Instance.ShowRewardedAd disabled - re-enable when AdMob is set up
+        int bonusCoins = 10;
+        coinSystem.AddCoins(bonusCoins);
+        coinsEarnedText.text += $" (+{bonusCoins} bonus)";
+        watchAdButton.interactable = false;
+        Debug.Log("Rewarded ad completed");
     }
 
     private void PlayNextPuzzle()
     {
-        Logger.Log("Loading next puzzle");
+        Debug.Log("Loading next puzzle");
     }
 
     private void ReturnToMenu()
