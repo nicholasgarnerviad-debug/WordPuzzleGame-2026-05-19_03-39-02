@@ -1,4 +1,6 @@
 using System.Collections.Generic;
+using System.Diagnostics;
+using UnityEngine;
 
 public class WordValidator : IWordValidator
 {
@@ -23,11 +25,17 @@ public class WordValidator : IWordValidator
 
     public ValidationResult ValidateWord(string word)
     {
+        var sw = Stopwatch.StartNew();
         word = word.ToLower();
 
         // Check if word exists
         if (!wordGraph.IsValidWord(word))
         {
+            sw.Stop();
+            if (sw.ElapsedMilliseconds > 1)
+            {
+                Debug.LogWarning($"[Performance] ValidateWord (invalid dict check) took {sw.ElapsedMilliseconds}ms - exceeds 1ms target");
+            }
             return new ValidationResult(
                 valid: false,
                 msg: "Word not in dictionary",
@@ -41,6 +49,11 @@ public class WordValidator : IWordValidator
         // Check if already in chain
         if (currentChain.Contains(word))
         {
+            sw.Stop();
+            if (sw.ElapsedMilliseconds > 1)
+            {
+                Debug.LogWarning($"[Performance] ValidateWord (chain check) took {sw.ElapsedMilliseconds}ms - exceeds 1ms target");
+            }
             return new ValidationResult(
                 valid: false,
                 msg: "Word already used",
@@ -54,6 +67,11 @@ public class WordValidator : IWordValidator
         // Check one letter difference from previous word
         if (!HaveOneLetterDifference(previousWord, word))
         {
+            sw.Stop();
+            if (sw.ElapsedMilliseconds > 1)
+            {
+                Debug.LogWarning($"[Performance] ValidateWord (letter diff check) took {sw.ElapsedMilliseconds}ms - exceeds 1ms target");
+            }
             return new ValidationResult(
                 valid: false,
                 msg: "Must change exactly one letter",
@@ -67,6 +85,16 @@ public class WordValidator : IWordValidator
         int distStart = wordGraph.GetDistance(word, previousWord);
         int distEnd = wordGraph.GetDistance(word, targetWord);
         bool isProgress = distEnd < wordGraph.GetDistance(previousWord, targetWord);
+
+        sw.Stop();
+        if (sw.ElapsedMilliseconds > 1)
+        {
+            Debug.LogWarning($"[Performance] ValidateWord (full validation) took {sw.ElapsedMilliseconds}ms - exceeds 1ms target");
+        }
+        else
+        {
+            Debug.Log($"[Performance] ValidateWord completed in {sw.ElapsedMilliseconds}ms for word '{word}'");
+        }
 
         return new ValidationResult(
             valid: true,

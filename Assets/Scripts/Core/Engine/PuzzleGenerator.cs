@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Diagnostics;
 using UnityEngine;
 
 public class PuzzleGenerator : IPuzzleGenerator
@@ -35,6 +36,8 @@ public class PuzzleGenerator : IPuzzleGenerator
 
     public PuzzleDefinition GenerateRandomPuzzle(Difficulty difficulty)
     {
+        var sw = Stopwatch.StartNew();
+
         int maxAttempts = 20;
         for (int attempt = 0; attempt < maxAttempts; attempt++)
         {
@@ -53,7 +56,7 @@ public class PuzzleGenerator : IPuzzleGenerator
             if (path.Count > 0 && path.Count > 1)
             {
                 string endWord = path[path.Count - 1];
-                return new PuzzleDefinition
+                var puzzle = new PuzzleDefinition
                 {
                     puzzleId = Random.Range(10000, 99999),
                     startWord = startWord,
@@ -62,10 +65,16 @@ public class PuzzleGenerator : IPuzzleGenerator
                     solution = path.ToArray(),
                     seedValue = random.Next()
                 };
+
+                sw.Stop();
+                Debug.Log($"[Performance] Puzzle generation took {sw.ElapsedMilliseconds}ms (seed: {puzzle.seedValue}, difficulty: {difficulty}, attempts: {attempt + 1})");
+                return puzzle;
             }
         }
 
         // Fallback: return a simple puzzle if generation fails
+        sw.Stop();
+        Debug.LogWarning($"[Performance] Puzzle generation failed after {maxAttempts} attempts, took {sw.ElapsedMilliseconds}ms, using fallback");
         return CreateFallbackPuzzle();
     }
 
