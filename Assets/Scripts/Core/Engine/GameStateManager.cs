@@ -36,7 +36,8 @@ public class GameStateManager : IGameStateManager
             isLost = false,
             hintedLetterIndex = null,
             revealedWord = null,
-            previousChainLength = 0
+            previousChainLength = 0,
+            targetWord = puzzle.endWord
         };
 
         wordValidator.Initialize(puzzle.startWord, puzzle.endWord, currentState.wordChain);

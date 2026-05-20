@@ -10,6 +10,7 @@ public class GameState
     public int? hintedLetterIndex;      // Index of hinted letter (null if none)
     public string[] revealedWord;       // Full word revealed (null if not used)
     public int previousChainLength;     // For undo support
+    public string targetWord;            // Target word to reach
 
     public GameState()
     {
@@ -34,7 +35,8 @@ public class GameState
             isLost = isLost,
             hintedLetterIndex = hintedLetterIndex,
             revealedWord = revealedWord != null ? (string[])revealedWord.Clone() : null,
-            previousChainLength = previousChainLength
+            previousChainLength = previousChainLength,
+            targetWord = targetWord
         };
     }
 }

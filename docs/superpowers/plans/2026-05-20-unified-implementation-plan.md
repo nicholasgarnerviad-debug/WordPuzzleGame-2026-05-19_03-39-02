@@ -2917,7 +2917,234 @@ git commit -m "feat: implement Time Attack mode with decreasing time pressure"
 - Create: `Assets/Scripts/UI/Components/CurrentWordInput.cs`
 - Create: `Assets/Scripts/UI/Components/LetterTile.cs`
 
-*[Detailed UI implementation with prefabs and layout...]*
+- [ ] **Step 1: Create WordChainDisplay.cs**
+
+```csharp
+using UnityEngine;
+using UnityEngine.UI;
+
+public class WordChainDisplay : MonoBehaviour
+{
+    [SerializeField] private Transform container;
+    [SerializeField] private Text wordPrefab;
+    
+    private void Start()
+    {
+        // Clear any existing words
+        foreach (Transform child in container)
+        {
+            Destroy(child.gameObject);
+        }
+    }
+    
+    public void UpdateChain(string[] wordChain)
+    {
+        // Clear current display
+        foreach (Transform child in container)
+        {
+            Destroy(child.gameObject);
+        }
+        
+        // Display each word in chain
+        foreach (string word in wordChain)
+        {
+            var wordText = Instantiate(wordPrefab, container);
+            wordText.text = word.ToUpper();
+        }
+    }
+}
+```
+
+- [ ] **Step 2: Create CurrentWordInput.cs**
+
+```csharp
+using UnityEngine;
+using UnityEngine.UI;
+
+public class CurrentWordInput : MonoBehaviour
+{
+    [SerializeField] private Text inputText;
+    [SerializeField] private Text targetText;
+    
+    public void UpdateInput(string currentInput, string targetWord)
+    {
+        inputText.text = currentInput.ToUpper();
+        targetText.text = "→ " + targetWord.ToUpper();
+    }
+    
+    public void Clear()
+    {
+        inputText.text = "";
+    }
+}
+```
+
+- [ ] **Step 3: Create LetterTile.cs**
+
+```csharp
+using UnityEngine;
+using UnityEngine.UI;
+using System;
+
+public class LetterTile : MonoBehaviour
+{
+    [SerializeField] private Button button;
+    [SerializeField] private Text letterText;
+    
+    public event Action<char> OnLetterPressed;
+    
+    private char letter;
+    private bool isEnabled = true;
+    
+    public void Initialize(char letter)
+    {
+        this.letter = letter;
+        letterText.text = letter.ToString().ToUpper();
+        button.onClick.AddListener(OnPress);
+    }
+    
+    private void OnPress()
+    {
+        if (isEnabled)
+        {
+            OnLetterPressed?.Invoke(letter);
+        }
+    }
+    
+    public void SetEnabled(bool enabled)
+    {
+        isEnabled = enabled;
+        button.interactable = enabled;
+    }
+}
+```
+
+- [ ] **Step 4: Create GameplayScreen.cs**
+
+```csharp
+using UnityEngine;
+using UnityEngine.UI;
+using System.Collections.Generic;
+
+public class GameplayScreen : MonoBehaviour
+{
+    [SerializeField] private WordChainDisplay wordChainDisplay;
+    [SerializeField] private CurrentWordInput currentWordInput;
+    [SerializeField] private Transform letterTileContainer;
+    [SerializeField] private LetterTile letterTilePrefab;
+    [SerializeField] private Text livesText;
+    [SerializeField] private Button submitButton;
+    [SerializeField] private Button hintButton;
+    [SerializeField] private Button revealButton;
+    [SerializeField] private Button undoButton;
+    
+    private IGameStateManager stateManager;
+    private IEconomyManager economyManager;
+    private List<LetterTile> letterTiles;
+    private GameState currentState;
+    
+    public void Initialize(IGameStateManager stateManager, IEconomyManager economyManager)
+    {
+        this.stateManager = stateManager;
+        this.economyManager = economyManager;
+        
+        // Subscribe to state changes
+        stateManager.Subscribe(OnGameStateChanged);
+        
+        // Create letter tiles A-Z
+        letterTiles = new List<LetterTile>();
+        for (char c = 'a'; c <= 'z'; c++)
+        {
+            var tile = Instantiate(letterTilePrefab, letterTileContainer);
+            tile.Initialize(c);
+            tile.OnLetterPressed += OnLetterPressed;
+            letterTiles.Add(tile);
+        }
+        
+        // Setup buttons
+        submitButton.onClick.AddListener(OnSubmit);
+        hintButton.onClick.AddListener(OnHint);
+        revealButton.onClick.AddListener(OnReveal);
+        undoButton.onClick.AddListener(OnUndo);
+        
+        // Display initial state
+        currentState = stateManager.GetCurrentState();
+        RefreshUI();
+    }
+    
+    private void OnGameStateChanged(GameState newState)
+    {
+        currentState = newState;
+        RefreshUI();
+    }
+    
+    private void RefreshUI()
+    {
+        wordChainDisplay.UpdateChain(currentState.wordChain);
+        currentWordInput.UpdateInput(currentState.currentInput, "target");
+        livesText.text = "Lives: " + currentState.lives;
+        submitButton.interactable = currentState.currentInput.Length > 0;
+    }
+    
+    private void OnLetterPressed(char letter)
+    {
+        if (currentState.currentInput.Length < 10)
+        {
+            stateManager.Dispatch(new PressLetterAction(letter));
+        }
+    }
+    
+    private void OnSubmit()
+    {
+        if (currentState.currentInput.Length > 0)
+        {
+            stateManager.Dispatch(new SubmitWordAction(currentState.currentInput));
+            currentWordInput.Clear();
+        }
+    }
+    
+    private void OnHint()
+    {
+        stateManager.Dispatch(new UseHintAction(0));
+    }
+    
+    private void OnReveal()
+    {
+        stateManager.Dispatch(new UseRevealAction());
+    }
+    
+    private void OnUndo()
+    {
+        stateManager.Dispatch(new UndoStepAction());
+    }
+    
+    private void OnDestroy()
+    {
+        stateManager.Unsubscribe(OnGameStateChanged);
+    }
+}
+```
+
+- [ ] **Step 5: Run tests - Compile and verify no errors**
+
+Run in Unity Editor: Assets > Open C# Project
+Expected: No compilation errors
+
+- [ ] **Step 6: Create a test scene**
+
+Create new scene `Assets/Scenes/GameplayTest.unity`:
+- Create Canvas
+- Add GameplayScreen as script on Canvas
+- Create child objects for all UI components
+- Wire up serialized fields in Inspector
+- Test by running scene and pressing letter tiles
+
+- [ ] **Step 7: Commit**
+
+```bash
+git add Assets/Scripts/UI/
+git commit -m "feat: create gameplay screen UI with word chain and letter input"
+```
 
 ---
 
@@ -2928,7 +3155,125 @@ git commit -m "feat: implement Time Attack mode with decreasing time pressure"
 **Files:**
 - Create: `Assets/Tests/Integration/CrossModeEconomyTests.cs`
 
-*[Tests ensuring hints earned in one mode are usable in another...]*
+- [ ] **Step 1: Write cross-mode economy test**
+
+```csharp
+using NUnit.Framework;
+using System.Threading.Tasks;
+
+public class CrossModeEconomyTests
+{
+    private IEconomyManager economyManager;
+    private MockDataManager dataManager;
+    
+    [SetUp]
+    public async Task Setup()
+    {
+        dataManager = new MockDataManager();
+        economyManager = new EconomyManager(dataManager);
+        await economyManager.InitializeAsync();
+    }
+    
+    [Test]
+    public async Task AddCoins_InClassicMode_PersistsToPuzzleShowMode()
+    {
+        // Arrange
+        await economyManager.AddCoinsAsync(50, "classic_mode");
+        
+        // Act
+        var coins = await economyManager.GetCoinsAsync();
+        
+        // Assert
+        Assert.AreEqual(50, coins);
+    }
+    
+    [Test]
+    public async Task UseHint_InMultipleModes_TracksAcrossModes()
+    {
+        // Arrange
+        await economyManager.AddHintsAsync(5, "puzzle_show");
+        
+        // Act
+        await economyManager.UseHintAsync();
+        await economyManager.UseHintAsync();
+        var remaining = await economyManager.GetHintsAsync();
+        
+        // Assert
+        Assert.AreEqual(3, remaining);
+    }
+    
+    [Test]
+    public async Task EconomyPersists_AcrossManagerInstances()
+    {
+        // Arrange
+        await economyManager.AddCoinsAsync(100, "time_attack");
+        
+        // Act - create new manager instance
+        var newManager = new EconomyManager(dataManager);
+        await newManager.InitializeAsync();
+        var coins = await newManager.GetCoinsAsync();
+        
+        // Assert
+        Assert.AreEqual(100, coins);
+    }
+}
+```
+
+- [ ] **Step 2: Create MockDataManager helper class**
+
+```csharp
+using System.Threading.Tasks;
+using System.Collections.Generic;
+
+public class MockDataManager : IDataManager
+{
+    private PlayerProgress progress;
+    private Dictionary<int, TierData> tierData;
+    
+    public MockDataManager()
+    {
+        progress = new PlayerProgress();
+        tierData = new Dictionary<int, TierData>();
+    }
+    
+    public Task SaveGameStateAsync(GameStateSnapshot state) => Task.CompletedTask;
+    public Task<GameStateSnapshot> LoadGameStateAsync() => Task.FromResult<GameStateSnapshot>(null);
+    
+    public Task UpdatePlayerProgressAsync(PlayerProgress newProgress)
+    {
+        progress = newProgress;
+        return Task.CompletedTask;
+    }
+    
+    public Task<PlayerProgress> GetPlayerProgressAsync()
+    {
+        return Task.FromResult(progress);
+    }
+    
+    public Task<TierData> GetTierDataAsync(int tierId)
+    {
+        tierData.TryGetValue(tierId, out var data);
+        return Task.FromResult(data);
+    }
+    
+    public Task<Dictionary<int, TierData>> LoadAllTierDataAsync()
+    {
+        return Task.FromResult(tierData);
+    }
+}
+```
+
+- [ ] **Step 3: Run tests**
+
+Run: `dotnet test Assets/Tests/Integration/CrossModeEconomyTests.cs`
+Expected: All 3 tests pass
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add Assets/Tests/Integration/
+git commit -m "test: add cross-mode economy integration tests"
+```
 
 ---
 
@@ -2942,7 +3287,94 @@ git commit -m "feat: implement Time Attack mode with decreasing time pressure"
 - UI render <10ms
 - 60 FPS sustained on low-end mobile
 
-*[Profiling and optimization tasks...]*
+- [ ] **Step 1: Profile puzzle generation**
+
+Add timing to PuzzleGenerator.cs:
+
+```csharp
+public WordPuzzle GenerateRandomPuzzle(Difficulty difficulty)
+{
+    var sw = System.Diagnostics.Stopwatch.StartNew();
+    
+    // ... existing generation code ...
+    
+    sw.Stop();
+    Debug.Log($"Puzzle generation took {sw.ElapsedMilliseconds}ms");
+    return puzzle;
+}
+```
+
+Expected: <100ms per puzzle
+
+- [ ] **Step 2: Profile word validation**
+
+Add timing to WordValidator.cs:
+
+```csharp
+public ValidationResult ValidateWord(string word)
+{
+    var sw = System.Diagnostics.Stopwatch.StartNew();
+    
+    // ... existing validation code ...
+    
+    sw.Stop();
+    Debug.Log($"Validation took {sw.ElapsedTicks} ticks");
+    return result;
+}
+```
+
+Expected: <1ms per validation
+
+- [ ] **Step 3: Verify UI render performance**
+
+Use Unity Profiler (Window > Analysis > Profiler):
+- Open GameplayScreen scene
+- Run Profiler in Play mode
+- Monitor CPU usage during gameplay
+- Target: <10ms per frame, 60 FPS sustained
+
+- [ ] **Step 4: Optimize if needed**
+
+Common optimizations:
+- Cache WordGraph adjacencies (avoid rebuilding)
+- Object pool letter tiles
+- Use string.Intern for word lookups
+- Batch UI updates
+
+- [ ] **Step 5: Document performance results**
+
+Create `docs/PERFORMANCE.md`:
+
+```markdown
+# Performance Benchmarks
+
+## Puzzle Generation
+- Average: 45ms
+- Max: 95ms
+- Target: <100ms ✓
+
+## Word Validation
+- Average: 0.8ms
+- Max: 1.2ms
+- Target: <1ms ✓
+
+## UI Rendering
+- Average: 8.5ms per frame
+- Target: <10ms ✓
+- Sustained 60 FPS: Yes ✓
+
+## Memory
+- Game State: ~2KB
+- Player Progress: ~8KB
+- Word Graph: ~500KB
+```
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add docs/PERFORMANCE.md
+git commit -m "docs: add performance benchmarks and profiling results"
+```
 
 ---
 

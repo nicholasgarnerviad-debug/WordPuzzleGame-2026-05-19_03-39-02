@@ -20,6 +20,7 @@ public class GameplayScreen : MonoBehaviour
     private IEconomyManager economyManager;
     private GameState currentState;
     private IDisposable stateSubscription;
+    private List<LetterTile> letterTiles;
 
     public void Initialize(IGameStateManager gameStateManager, IEconomyManager economyManager)
     {
@@ -30,11 +31,13 @@ public class GameplayScreen : MonoBehaviour
         stateSubscription = gameStateManager.Subscribe(OnGameStateChanged);
 
         // Instantiate letter tiles A-Z
+        letterTiles = new List<LetterTile>();
         for (char c = 'A'; c <= 'Z'; c++)
         {
             LetterTile tile = Instantiate(letterTilePrefab, letterTileContainer);
             tile.Initialize(c);
             tile.OnLetterPressed += OnLetterPressed;
+            letterTiles.Add(tile);
         }
 
         // Wire up button handlers
@@ -62,7 +65,7 @@ public class GameplayScreen : MonoBehaviour
         wordChainDisplay.UpdateChain(currentState.wordChain);
 
         // Update current input display
-        currentWordInput.UpdateInput(currentState.currentInput, null);
+        currentWordInput.UpdateInput(currentState.currentInput, currentState.targetWord ?? "?");
 
         // Update lives display
         livesText.text = $"Lives: {currentState.lives}";
@@ -103,5 +106,20 @@ public class GameplayScreen : MonoBehaviour
     private void OnDestroy()
     {
         stateSubscription?.Dispose();
+
+        // Clean up button handlers to prevent duplicate action risk
+        if (submitButton != null) submitButton.onClick.RemoveListener(OnSubmitPressed);
+        if (hintButton != null) hintButton.onClick.RemoveListener(OnHintPressed);
+        if (revealButton != null) revealButton.onClick.RemoveListener(OnRevealPressed);
+        if (undoButton != null) undoButton.onClick.RemoveListener(OnUndoPressed);
+
+        // Clean up tile event handlers to prevent memory leaks
+        if (letterTiles != null)
+        {
+            foreach (var tile in letterTiles)
+            {
+                if (tile != null) tile.OnLetterPressed -= OnLetterPressed;
+            }
+        }
     }
 }
