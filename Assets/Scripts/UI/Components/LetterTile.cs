@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using System;
+using WordPuzzleGame.UI.Animations;
 
 /// <summary>
 /// Reusable UI button component representing an individual letter tile in the gameplay grid.
@@ -23,7 +24,7 @@ public class LetterTile : MonoBehaviour
     [SerializeField] private Image tileImage;
     [SerializeField] private Button tileButton;
 
-    private char letter;
+    private char currentLetter;
     private Color originalColor;
 
     private void Awake()
@@ -79,11 +80,11 @@ public class LetterTile : MonoBehaviour
     /// <param name="letter">The letter character to display</param>
     public void SetLetter(char letter)
     {
-        this.letter = char.ToUpper(letter);
+        currentLetter = letter;
 
         if (letterText != null)
         {
-            letterText.text = this.letter.ToString();
+            letterText.text = letter.ToString().ToUpper();
         }
     }
 
@@ -93,7 +94,7 @@ public class LetterTile : MonoBehaviour
     /// <returns>The letter character</returns>
     public char GetLetter()
     {
-        return letter;
+        return currentLetter;
     }
 
     /// <summary>
@@ -125,12 +126,8 @@ public class LetterTile : MonoBehaviour
     /// </summary>
     public void OnClick()
     {
-        // Play tap animation (ScaleTileTap expects RectTransform)
-        RectTransform rectTransform = GetComponent<RectTransform>();
-        if (rectTransform != null)
-        {
-            StartCoroutine(WordPuzzleGame.UI.Animations.UIAnimations.ScaleTileTap(rectTransform));
-        }
+        // Play tap animation
+        StartCoroutine(UIAnimations.ScaleTileTap(transform));
 
         // Invoke the callback
         OnTileClicked?.Invoke();
