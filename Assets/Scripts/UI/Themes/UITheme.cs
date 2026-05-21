@@ -1,4 +1,5 @@
 using UnityEngine;
+using System.Collections.Generic;
 
 /// <summary>
 /// Centralized color theme system for Word Puzzle Game.
@@ -28,17 +29,40 @@ public class UITheme : ScriptableObject
     [SerializeField] private Color accentGold = new Color(1f, 0.84f, 0f); // #ffd700
     [SerializeField] private Color errorRed = new Color(1f, 0.32f, 0.32f); // #ff5252
 
+    private Dictionary<ModeType, ModeColorPalette> modeColorLookup;
+
+    private void OnEnable()
+    {
+        InitializeModeColorLookup();
+    }
+
+    private void InitializeModeColorLookup()
+    {
+        modeColorLookup = new Dictionary<ModeType, ModeColorPalette>();
+        foreach (var palette in modeColors)
+        {
+            if (!modeColorLookup.ContainsKey(palette.modeType))
+            {
+                modeColorLookup[palette.modeType] = palette;
+            }
+        }
+    }
+
     /// <summary>
     /// Gets the primary color for a specific game mode.
+    /// O(1) lookup using Dictionary for performance.
     /// </summary>
     public Color GetModeColor(ModeType modeType)
     {
-        foreach (var palette in modeColors)
+        // Ensure lookup is initialized
+        if (modeColorLookup == null)
         {
-            if (palette.modeType == modeType)
-            {
-                return palette.primaryColor;
-            }
+            InitializeModeColorLookup();
+        }
+
+        if (modeColorLookup.TryGetValue(modeType, out var palette))
+        {
+            return palette.primaryColor;
         }
 
         // Fallback if mode not found
@@ -48,18 +72,23 @@ public class UITheme : ScriptableObject
 
     /// <summary>
     /// Gets the accent color for a specific game mode.
+    /// O(1) lookup using Dictionary for performance.
     /// </summary>
     public Color GetModeAccentColor(ModeType modeType)
     {
-        foreach (var palette in modeColors)
+        // Ensure lookup is initialized
+        if (modeColorLookup == null)
         {
-            if (palette.modeType == modeType)
-            {
-                return palette.accentColor;
-            }
+            InitializeModeColorLookup();
+        }
+
+        if (modeColorLookup.TryGetValue(modeType, out var palette))
+        {
+            return palette.accentColor;
         }
 
         // Fallback if mode not found
+        Logger.LogWarning($"Accent color not found for mode {modeType}, returning default");
         return accentGold;
     }
 
@@ -73,6 +102,9 @@ public class UITheme : ScriptableObject
 /// <summary>
 /// Static accessor for the default UI theme.
 /// Loads the theme from Resources/Themes/DefaultTheme.asset on first access.
+///
+/// NOTE: This class is NOT thread-safe. It assumes single-threaded access from the main Unity thread.
+/// If thread-safe access is required, use locking or ThreadLocal storage.
 /// </summary>
 public static class UIThemeManager
 {
