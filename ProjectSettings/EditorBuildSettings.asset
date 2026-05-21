@@ -20,6 +20,9 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/TimeAttackMode.unity
     guid: cbe7c9fcae7c2744e9feeb04352dce46
+  - enabled: 1
+    path: Assets/Scenes/GameUI.unity
+    guid: 455504c245d921c489edcf45449b8abe
   m_configObjects:
     com.unity.adaptivePerformance.basic.provider_settings: {fileID: 11400000, guid: e9a36b7d8f47f774190e2593f6fb1860, type: 2}
     com.unity.adaptiveperformance.loader_settings: {fileID: 11400000, guid: 7a348c447efd5614bb4bac7d591c7848, type: 2}

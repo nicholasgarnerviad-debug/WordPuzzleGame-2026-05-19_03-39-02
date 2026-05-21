@@ -1,0 +1,5 @@
+using UnityEngine;
+var objs = new[] { "IAPManagerObject", "CoinSystemObject", "AdManagerObject", "PlayerDataManagerObject", "Canvas", "UIManager", "Bootstrap" };
+foreach (var n in objs) { var g = GameObject.Find(n); if (g) GameObject.DestroyImmediate(g); }
+if (!GameObject.Find("Main Camera")) { var c = new GameObject("Main Camera"); c.AddComponent<Camera>(); c.tag = "MainCamera"; }
+return "Scene cleaned";

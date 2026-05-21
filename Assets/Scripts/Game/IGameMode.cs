@@ -5,7 +5,7 @@ public interface IGameMode
     void Initialize(GameModeContext context);
     void StartGame();
     void HandleInput(GameAction action);
-    void Update(float deltaTime);
+    void Tick(float deltaTime);
     void OnGameOver();
     ModeStats GetStats();
 }

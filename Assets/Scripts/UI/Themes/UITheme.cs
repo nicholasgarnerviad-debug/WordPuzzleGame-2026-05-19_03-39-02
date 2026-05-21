@@ -14,15 +14,19 @@ public class UITheme : ScriptableObject
         public Color accentColor;
     }
 
-    [Header("Mode Colors")]
+    [Header("Backgrounds")]
+    [SerializeField] private Color darkBackground = new Color(0.1f, 0.1f, 0.18f); // #1a1a2e
+
+    [Header("Game Mode Colors")]
     [SerializeField] private ModeColorPalette[] modeColors = new ModeColorPalette[3];
 
-    [Header("UI Base Colors")]
-    [SerializeField] private Color backgroundColor = new Color(0.1f, 0.1f, 0.1f, 1f);
-    [SerializeField] private Color textColor = new Color(1f, 1f, 1f, 1f);
-    [SerializeField] private Color accentColor = new Color(0.2f, 0.8f, 0.9f, 1f);
-    [SerializeField] private Color warningColor = new Color(1f, 0.4f, 0.4f, 1f);
-    [SerializeField] private Color successColor = new Color(0.4f, 1f, 0.4f, 1f);
+    [Header("Text Colors")]
+    [SerializeField] private Color lightText = Color.white; // #ffffff
+    [SerializeField] private Color subtleText = new Color(0.8f, 0.8f, 0.8f); // #cccccc
+
+    [Header("Accent & Feedback")]
+    [SerializeField] private Color accentGold = new Color(1f, 0.84f, 0f); // #ffd700
+    [SerializeField] private Color errorRed = new Color(1f, 0.32f, 0.32f); // #ff5252
 
     /// <summary>
     /// Gets the primary color for a specific game mode.
@@ -39,7 +43,7 @@ public class UITheme : ScriptableObject
 
         // Fallback if mode not found
         Logger.LogWarning($"Color not found for mode {modeType}, returning default");
-        return accentColor;
+        return accentGold;
     }
 
     /// <summary>
@@ -56,14 +60,14 @@ public class UITheme : ScriptableObject
         }
 
         // Fallback if mode not found
-        return accentColor;
+        return accentGold;
     }
 
-    public Color BackgroundColor => backgroundColor;
-    public Color TextColor => textColor;
-    public Color AccentColor => accentColor;
-    public Color WarningColor => warningColor;
-    public Color SuccessColor => successColor;
+    public Color DarkBackground => darkBackground;
+    public Color LightText => lightText;
+    public Color SubtleText => subtleText;
+    public Color AccentGold => accentGold;
+    public Color ErrorRed => errorRed;
 }
 
 /// <summary>

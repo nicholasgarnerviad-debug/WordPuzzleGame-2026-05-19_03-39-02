@@ -1,0 +1,73 @@
+{
+  "tiers": [
+    {
+      "tierId": 1,
+      "isUnlocked": true,
+      "unlockedTimestamp": 0,
+      "puzzles": [
+        {
+          "puzzleId": 1,
+          "startWord": "cat",
+          "endWord": "dog",
+          "optimalSteps": 3,
+          "solution": ["cat", "bat", "bag", "dog"],
+          "seedValue": 0
+        },
+        {
+          "puzzleId": 2,
+          "startWord": "head",
+          "endWord": "tail",
+          "optimalSteps": 4,
+          "solution": ["head", "heat", "teat", "tail"],
+          "seedValue": 1
+        },
+        {
+          "puzzleId": 3,
+          "startWord": "cold",
+          "endWord": "warm",
+          "optimalSteps": 4,
+          "solution": ["cold", "coal", "coil", "curl", "curl"],
+          "seedValue": 2
+        }
+      ]
+    },
+    {
+      "tierId": 2,
+      "isUnlocked": false,
+      "unlockedTimestamp": 0,
+      "puzzles": [
+        {
+          "puzzleId": 4,
+          "startWord": "love",
+          "endWord": "hate",
+          "optimalSteps": 5,
+          "solution": ["love", "live", "late", "hate"],
+          "seedValue": 3
+        },
+        {
+          "puzzleId": 5,
+          "startWord": "make",
+          "endWord": "take",
+          "optimalSteps": 3,
+          "solution": ["make", "take"],
+          "seedValue": 4
+        }
+      ]
+    },
+    {
+      "tierId": 3,
+      "isUnlocked": false,
+      "unlockedTimestamp": 0,
+      "puzzles": [
+        {
+          "puzzleId": 6,
+          "startWord": "read",
+          "endWord": "book",
+          "optimalSteps": 4,
+          "solution": ["read", "bead", "bean", "book"],
+          "seedValue": 5
+        }
+      ]
+    }
+  ]
+}

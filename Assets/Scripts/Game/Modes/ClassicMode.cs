@@ -41,7 +41,7 @@ public class ClassicMode : MonoBehaviour, IGameMode
         }
     }
 
-    public void Update(float deltaTime)
+    public void Tick(float deltaTime)
     {
         // No-op for Classic Mode
     }

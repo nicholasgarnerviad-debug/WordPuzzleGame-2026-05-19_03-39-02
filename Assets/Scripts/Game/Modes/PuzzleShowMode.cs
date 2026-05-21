@@ -8,7 +8,6 @@ public class PuzzleShowMode : MonoBehaviour, IGameMode
     private int currentPuzzleIndex = 0;
     private int maxTiersUnlocked = 1;
     private PuzzleShowModeStats stats;
-    private bool isActive = false;
 
     public void Initialize(GameModeContext context)
     {
@@ -18,7 +17,6 @@ public class PuzzleShowMode : MonoBehaviour, IGameMode
 
     public void StartGame()
     {
-        isActive = true;
         currentTier = 1;
         currentPuzzleIndex = 0;
         stats.sessionStartTime = Time.time;
@@ -44,14 +42,13 @@ public class PuzzleShowMode : MonoBehaviour, IGameMode
         }
     }
 
-    public void Update(float deltaTime)
+    public void Tick(float deltaTime)
     {
         // No-op
     }
 
     public void OnGameOver()
     {
-        isActive = false;
         context.RaiseGameOver();
     }
 

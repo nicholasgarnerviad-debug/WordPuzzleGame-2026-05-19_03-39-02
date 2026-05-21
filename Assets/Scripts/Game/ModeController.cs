@@ -58,7 +58,7 @@ public class ModeController : MonoBehaviour
 
     private void Update()
     {
-        activeMode?.Update(Time.deltaTime);
+        activeMode?.Tick(Time.deltaTime);
     }
 
     private IGameMode CreateMode(ModeType modeType)

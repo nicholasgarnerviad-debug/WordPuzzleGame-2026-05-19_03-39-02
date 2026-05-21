@@ -50,7 +50,7 @@ public class TimeAttackModeIntegrationTests
         // Act
         for (int i = 0; i < 10; i++)
         {
-            timeAttackMode.Update(1f);
+            timeAttackMode.Tick(1f);
         }
 
         // Assert

@@ -45,7 +45,7 @@ public class TimeAttackMode : MonoBehaviour, IGameMode
         }
     }
 
-    public void Update(float deltaTime)
+    public void Tick(float deltaTime)
     {
         if (!isActive) return;
 

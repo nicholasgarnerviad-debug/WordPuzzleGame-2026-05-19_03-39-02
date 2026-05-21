@@ -11,6 +11,7 @@ public class GameBootstrap : MonoBehaviour
 
     private void Awake()
     {
+        Debug.Log("[Bootstrap] Awake started");
         var dataManager = new DataManager();
         var wordGraph   = new WordGraph();
 
@@ -112,15 +113,20 @@ public class GameBootstrap : MonoBehaviour
         var economyManager  = new EconomyManager(dataManager);
         var stateManager    = new GameStateManager(wordValidator, dataManager);
 
+        Debug.Log("[Bootstrap] Starting async service initialization");
         _ = InitServicesAsync(economyManager, dataManager);
 
+        Debug.Log("[Bootstrap] Initializing mode controller");
         modeController.Initialize(dataManager, economyManager, puzzleGenerator,
                                   stateManager, wordValidator);
+        Debug.Log("[Bootstrap] Mode controller initialized");
 
+        Debug.Log("[Bootstrap] Registering UI screens");
         uiManager.RegisterScreen(mainMenuScreen);
         uiManager.RegisterScreen(gameplayScreen);
         uiManager.RegisterScreen(resultsScreen);
 
+        Debug.Log("[Bootstrap] Injecting dependencies into screens");
         mainMenuScreen.InjectDependencies(modeController, uiManager);
         gameplayScreen.InjectDependencies(stateManager, modeController, uiManager);
         resultsScreen.InjectDependencies(modeController, uiManager);
@@ -131,7 +137,9 @@ public class GameBootstrap : MonoBehaviour
             uiManager.ShowScreen<ResultsScreen>();
         };
 
+        Debug.Log("[Bootstrap] Showing MainMenuScreen");
         uiManager.ShowScreen<MainMenuScreen>();
+        Debug.Log("[Bootstrap] Awake complete");
     }
 
     private async Task InitServicesAsync(EconomyManager economy, DataManager data)
