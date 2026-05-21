@@ -71,8 +71,11 @@ public class ResultsScreen : MonoBehaviour
             finalScoreText.text = currentStats.finalScore.ToString();
 
         // Clear existing stats
-        foreach (Transform child in statsContent)
-            Destroy(child.gameObject);
+        if (statsContent != null)
+        {
+            foreach (Transform child in statsContent)
+                Destroy(child.gameObject);
+        }
 
         // Display all 7 stats in order
         AddStatItem("Final Score", $"{currentStats.finalScore} pts");
@@ -93,6 +96,12 @@ public class ResultsScreen : MonoBehaviour
 
     private void AddStatItem(string label, string value)
     {
+        if (statItemPrefab == null || statsContent == null)
+        {
+            Debug.LogWarning("Missing stat item prefab or stats content transform");
+            return;
+        }
+
         TextMeshProUGUI item = Instantiate(statItemPrefab, statsContent);
         item.text = $"{label}: {value}";
     }
