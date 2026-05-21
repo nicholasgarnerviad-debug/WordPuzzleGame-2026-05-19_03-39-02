@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Diagnostics;
 using UnityEngine;
 
 public class WordValidator : IWordValidator
@@ -25,7 +24,7 @@ public class WordValidator : IWordValidator
 
     public ValidationResult ValidateWord(string word)
     {
-        var sw = Stopwatch.StartNew();
+        var sw = System.Diagnostics.Stopwatch.StartNew();
         word = word.ToLower();
 
         // Check if word exists

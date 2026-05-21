@@ -13,6 +13,8 @@ public class TimeAttackMode : MonoBehaviour, IGameMode
 
     public event Action<float> TimeChanged;
 
+    public float GetTimeRemaining() => timeRemaining;
+
     public void Initialize(GameModeContext context)
     {
         this.context = context;
@@ -125,16 +127,3 @@ public class TimeAttackMode : MonoBehaviour, IGameMode
     }
 }
 
-public class TimeAttackModeStats
-{
-    public int bestRoundReached;
-    public int totalCoinsEarned;
-    public float sessionStartTime;
-
-    public TimeAttackModeStats()
-    {
-        bestRoundReached = 0;
-        totalCoinsEarned = 0;
-        sessionStartTime = 0f;
-    }
-}

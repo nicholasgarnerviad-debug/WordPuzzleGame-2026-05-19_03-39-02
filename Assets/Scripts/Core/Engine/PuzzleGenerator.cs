@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Diagnostics;
 using UnityEngine;
 
 public class PuzzleGenerator : IPuzzleGenerator
@@ -36,7 +35,7 @@ public class PuzzleGenerator : IPuzzleGenerator
 
     public PuzzleDefinition GenerateRandomPuzzle(Difficulty difficulty)
     {
-        var sw = Stopwatch.StartNew();
+        var sw = System.Diagnostics.Stopwatch.StartNew();
 
         int maxAttempts = 20;
         for (int attempt = 0; attempt < maxAttempts; attempt++)

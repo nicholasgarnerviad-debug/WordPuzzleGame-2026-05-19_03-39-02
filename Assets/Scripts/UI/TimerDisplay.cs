@@ -4,27 +4,34 @@ using TMPro;
 public class TimerDisplay : MonoBehaviour
 {
     [SerializeField] private TextMeshProUGUI timerText;
-    private TimeAttackMode timeAttackMode;
 
-    private void Start()
+    private TimeAttackMode boundMode;
+
+    public void BindToMode(TimeAttackMode mode)
     {
-        timeAttackMode = FindObjectOfType<TimeAttackMode>();
+        if (boundMode != null)
+            boundMode.TimeChanged -= OnTimeChanged;
+
+        boundMode = mode;
+
+        if (boundMode != null)
+            boundMode.TimeChanged += OnTimeChanged;
+
+        gameObject.SetActive(boundMode != null);
     }
 
-    private void Update()
+    private void OnDestroy()
     {
-        if (timeAttackMode != null)
-        {
-            float timeRemaining = timeAttackMode.GetTimeRemaining();
-            timerText.text = $"Time: {timeRemaining:F1}s";
+        if (boundMode != null)
+            boundMode.TimeChanged -= OnTimeChanged;
+    }
 
-            // Change color based on time
-            if (timeRemaining < 10f)
-                timerText.color = Color.red;
-            else if (timeRemaining < 30f)
-                timerText.color = Color.yellow;
-            else
-                timerText.color = Color.green;
-        }
+    private void OnTimeChanged(float remaining)
+    {
+        if (timerText == null) return;
+        timerText.text  = $"Time: {remaining:F1}s";
+        timerText.color = remaining < 10f ? Color.red
+                        : remaining < 30f ? Color.yellow
+                        : Color.green;
     }
 }

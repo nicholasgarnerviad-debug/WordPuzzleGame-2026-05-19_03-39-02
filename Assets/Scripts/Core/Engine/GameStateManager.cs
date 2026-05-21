@@ -7,11 +7,11 @@ public class GameStateManager : IGameStateManager
 {
     private GameState currentState;
     private WordPuzzle currentPuzzle;
-    private WordValidator wordValidator;
+    private IWordValidator wordValidator;
     private IDataManager dataManager;
     private List<Action<GameState>> subscribers;
 
-    public GameStateManager(WordValidator wordValidator, IDataManager dataManager)
+    public GameStateManager(IWordValidator wordValidator, IDataManager dataManager)
     {
         this.wordValidator = wordValidator;
         this.dataManager = dataManager;

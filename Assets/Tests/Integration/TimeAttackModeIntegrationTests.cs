@@ -1,4 +1,5 @@
 using NUnit.Framework;
+using System;
 using System.Collections;
 using System.Threading.Tasks;
 using UnityEngine;
@@ -20,7 +21,7 @@ public class TimeAttackModeIntegrationTests
     [TearDown]
     public void TearDown()
     {
-        Object.Destroy(timeAttackMode.gameObject);
+        UnityEngine.Object.Destroy(timeAttackMode.gameObject);
     }
 
     [Test]

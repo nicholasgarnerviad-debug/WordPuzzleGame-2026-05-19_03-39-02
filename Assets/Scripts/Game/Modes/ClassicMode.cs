@@ -109,18 +109,3 @@ public class ClassicMode : MonoBehaviour, IGameMode
     }
 }
 
-public class ClassicModeStats
-{
-    public int gamesPlayed;
-    public int gamesWon;
-    public int totalPuzzlesCompleted;
-    public int totalCoinsEarned;
-
-    public ClassicModeStats()
-    {
-        gamesPlayed = 0;
-        gamesWon = 0;
-        totalPuzzlesCompleted = 0;
-        totalCoinsEarned = 0;
-    }
-}

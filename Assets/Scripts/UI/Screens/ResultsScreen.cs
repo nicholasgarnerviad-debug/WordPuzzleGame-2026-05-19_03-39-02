@@ -4,48 +4,45 @@ using TMPro;
 
 public class ResultsScreen : MonoBehaviour
 {
+    [SerializeField] private TMP_Text modeNameText;
     [SerializeField] private TMP_Text scoreText;
     [SerializeField] private TMP_Text coinsEarnedText;
-    [SerializeField] private Button watchAdButton;
+    [SerializeField] private TMP_Text timeText;
     [SerializeField] private Button nextButton;
     [SerializeField] private Button menuButton;
 
-    private CoinSystem coinSystem;
-    private int baseCoinsEarned = 0;
+    private ModeController modeController;
+    private UIManager uiManager;
+
+    public void InjectDependencies(ModeController mc, UIManager ui)
+    {
+        modeController = mc;
+        uiManager      = ui;
+    }
 
     private void Start()
     {
-        coinSystem = FindObjectOfType<CoinSystem>();
-        watchAdButton.onClick.AddListener(() => WatchAdForCoins());
-        nextButton.onClick.AddListener(() => PlayNextPuzzle());
-        menuButton.onClick.AddListener(() => ReturnToMenu());
+        nextButton?.onClick.AddListener(PlayNextPuzzle);
+        menuButton?.onClick.AddListener(ReturnToMenu);
     }
 
-    public void ShowResults(int score, int coinsEarned)
+    public void ShowResults(ModeStats stats)
     {
-        scoreText.text = $"Score: {score}";
-        baseCoinsEarned = coinsEarned;
-        coinsEarnedText.text = $"Coins: +{coinsEarned}";
-        coinSystem.AddCoins(coinsEarned);
-    }
-
-    private void WatchAdForCoins()
-    {
-        // AdManager.Instance.ShowRewardedAd disabled - re-enable when AdMob is set up
-        int bonusCoins = 10;
-        coinSystem.AddCoins(bonusCoins);
-        coinsEarnedText.text += $" (+{bonusCoins} bonus)";
-        watchAdButton.interactable = false;
-        Debug.Log("Rewarded ad completed");
+        if (modeNameText    != null) modeNameText.text    = stats.modeName;
+        if (scoreText       != null) scoreText.text       = $"Puzzles: {stats.puzzlesCompleted}";
+        if (coinsEarnedText != null) coinsEarnedText.text = $"Coins: +{stats.coinsEarned}";
+        if (timeText        != null) timeText.text        = $"Time: {stats.totalTime}s";
     }
 
     private void PlayNextPuzzle()
     {
-        Debug.Log("Loading next puzzle");
+        if (modeController == null) return;
+        modeController.SwitchMode(modeController.LastMode);
+        uiManager.ShowScreen<GameplayScreen>();
     }
 
     private void ReturnToMenu()
     {
-        UnityEngine.SceneManagement.SceneManager.LoadScene("MainMenu");
+        uiManager.ShowScreen<MainMenuScreen>();
     }
 }

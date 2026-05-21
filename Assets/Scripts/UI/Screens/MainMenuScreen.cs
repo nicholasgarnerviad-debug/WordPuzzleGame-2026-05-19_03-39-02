@@ -9,17 +9,32 @@ public class MainMenuScreen : MonoBehaviour
     [SerializeField] private Button shopButton;
     [SerializeField] private Button settingsButton;
 
-    private void Start()
+    private ModeController modeController;
+    private UIManager uiManager;
+
+    public void InjectDependencies(ModeController mc, UIManager ui)
     {
-        classicModeButton.onClick.AddListener(() => StartMode("Classic"));
-        puzzleShowButton.onClick.AddListener(() => StartMode("PuzzleShow"));
-        timeAttackButton.onClick.AddListener(() => StartMode("TimeAttack"));
-        shopButton.onClick.AddListener(() => Logger.Log("Shop not yet implemented"));
-        settingsButton.onClick.AddListener(() => Logger.Log("Settings not yet implemented"));
+        modeController = mc;
+        uiManager      = ui;
     }
 
-    private void StartMode(string modeName)
+    private void Start()
     {
-        Logger.Log($"Starting {modeName} mode");
+        classicModeButton?.onClick.AddListener(() => StartMode(ModeType.Classic));
+        puzzleShowButton?.onClick.AddListener(() => StartMode(ModeType.PuzzleShow));
+        timeAttackButton?.onClick.AddListener(() => StartMode(ModeType.TimeAttack));
+        shopButton?.onClick.AddListener(() => Logger.Log("Shop coming soon"));
+        settingsButton?.onClick.AddListener(() => Logger.Log("Settings coming soon"));
+    }
+
+    private void StartMode(ModeType modeType)
+    {
+        if (modeController == null)
+        {
+            Logger.LogWarning("[MainMenuScreen] ModeController not injected");
+            return;
+        }
+        modeController.SwitchMode(modeType);
+        uiManager.ShowScreen<GameplayScreen>();
     }
 }

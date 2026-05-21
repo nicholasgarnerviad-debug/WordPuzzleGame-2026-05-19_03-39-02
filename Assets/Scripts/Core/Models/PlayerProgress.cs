@@ -54,4 +54,5 @@ public class TimeAttackModeStats
     public int gamesPlayed;
     public int bestRoundReached;
     public int totalCoinsEarned;
+    public float sessionStartTime;
 }

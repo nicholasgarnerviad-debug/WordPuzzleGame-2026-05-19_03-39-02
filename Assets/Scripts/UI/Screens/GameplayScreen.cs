@@ -6,120 +6,141 @@ using System.Collections.Generic;
 
 public class GameplayScreen : MonoBehaviour
 {
+    [Header("Word Display")]
     [SerializeField] private WordChainDisplay wordChainDisplay;
     [SerializeField] private CurrentWordInput currentWordInput;
-    [SerializeField] private Transform letterTileContainer;
+
+    [Header("Keyboard")]
+    [SerializeField] private Transform keyboardContainer;
     [SerializeField] private LetterTile letterTilePrefab;
-    [SerializeField] private TextMeshProUGUI livesText;
+
+    [Header("HUD")]
+    [SerializeField] private TMP_Text livesText;
+    [SerializeField] private TMP_Text scoreText;
+
+    [Header("Buttons")]
     [SerializeField] private Button submitButton;
     [SerializeField] private Button hintButton;
     [SerializeField] private Button revealButton;
     [SerializeField] private Button undoButton;
+    [SerializeField] private Button deleteButton;
 
-    private IGameStateManager gameStateManager;
-    private IEconomyManager economyManager;
-    private GameState currentState;
+    [Header("Overlays")]
+    [SerializeField] private GameObject winOverlay;
+    [SerializeField] private GameObject lossOverlay;
+
+    private IGameStateManager stateManager;
+    private ModeController modeController;
+    private UIManager uiManager;
     private IDisposable stateSubscription;
-    private List<LetterTile> letterTiles;
+    private readonly List<LetterTile> letterTiles = new();
+    private GameState currentState;
 
-    public void Initialize(IGameStateManager gameStateManager, IEconomyManager economyManager)
+    public void InjectDependencies(IGameStateManager sm, ModeController mc, UIManager ui)
     {
-        this.gameStateManager = gameStateManager;
-        this.economyManager = economyManager;
-
-        // Subscribe to state changes
-        stateSubscription = gameStateManager.Subscribe(OnGameStateChanged);
-
-        // Instantiate letter tiles A-Z
-        letterTiles = new List<LetterTile>();
-        for (char c = 'A'; c <= 'Z'; c++)
-        {
-            LetterTile tile = Instantiate(letterTilePrefab, letterTileContainer);
-            tile.Initialize(c);
-            tile.OnLetterPressed += OnLetterPressed;
-            letterTiles.Add(tile);
-        }
-
-        // Wire up button handlers
-        submitButton.onClick.AddListener(OnSubmitPressed);
-        hintButton.onClick.AddListener(OnHintPressed);
-        revealButton.onClick.AddListener(OnRevealPressed);
-        undoButton.onClick.AddListener(OnUndoPressed);
-
-        // Initial UI refresh
-        RefreshUI();
+        stateManager   = sm;
+        modeController = mc;
+        uiManager      = ui;
     }
 
-    private void OnGameStateChanged(GameState newState)
+    private void OnEnable()
     {
-        currentState = newState;
-        RefreshUI();
+        if (stateManager == null) return;
+
+        stateSubscription = stateManager.Subscribe(OnStateChanged);
+
+        if (letterTiles.Count == 0) BuildKeyboard();
+
+        submitButton.onClick.AddListener(OnSubmit);
+        hintButton.onClick.AddListener(OnHint);
+        revealButton.onClick.AddListener(OnReveal);
+        undoButton.onClick.AddListener(OnUndo);
+        deleteButton.onClick.AddListener(OnDelete);
+
+        Refresh(stateManager.GetCurrentState());
     }
 
-    private void RefreshUI()
-    {
-        if (currentState == null)
-            return;
-
-        // Update word chain display
-        wordChainDisplay.UpdateChain(currentState.wordChain);
-
-        // Update current input display
-        currentWordInput.UpdateInput(currentState.currentInput, currentState.targetWord ?? "?");
-
-        // Update lives display
-        livesText.text = $"Lives: {currentState.lives}";
-    }
-
-    private void OnLetterPressed(char letter)
-    {
-        gameStateManager.Dispatch(new PressLetterAction(letter));
-    }
-
-    private void OnSubmitPressed()
-    {
-        if (currentState != null && !string.IsNullOrEmpty(currentState.currentInput))
-        {
-            gameStateManager.Dispatch(new SubmitWordAction(currentState.currentInput));
-        }
-    }
-
-    private void OnHintPressed()
-    {
-        if (currentState != null && currentState.currentInput.Length > 0)
-        {
-            int hintIndex = Mathf.Min(currentState.currentInput.Length, currentState.currentInput.Length - 1);
-            gameStateManager.Dispatch(new UseHintAction(hintIndex));
-        }
-    }
-
-    private void OnRevealPressed()
-    {
-        gameStateManager.Dispatch(new UseRevealAction());
-    }
-
-    private void OnUndoPressed()
-    {
-        gameStateManager.Dispatch(new UndoStepAction());
-    }
-
-    private void OnDestroy()
+    private void OnDisable()
     {
         stateSubscription?.Dispose();
+        stateSubscription = null;
 
-        // Clean up button handlers to prevent duplicate action risk
-        if (submitButton != null) submitButton.onClick.RemoveListener(OnSubmitPressed);
-        if (hintButton != null) hintButton.onClick.RemoveListener(OnHintPressed);
-        if (revealButton != null) revealButton.onClick.RemoveListener(OnRevealPressed);
-        if (undoButton != null) undoButton.onClick.RemoveListener(OnUndoPressed);
+        submitButton.onClick.RemoveListener(OnSubmit);
+        hintButton.onClick.RemoveListener(OnHint);
+        revealButton.onClick.RemoveListener(OnReveal);
+        undoButton.onClick.RemoveListener(OnUndo);
+        deleteButton.onClick.RemoveListener(OnDelete);
+    }
 
-        // Clean up tile event handlers to prevent memory leaks
-        if (letterTiles != null)
+    private void BuildKeyboard()
+    {
+        if (letterTilePrefab == null || keyboardContainer == null) return;
+
+        for (char c = 'a'; c <= 'z'; c++)
         {
-            foreach (var tile in letterTiles)
+            var tile = Instantiate(letterTilePrefab, keyboardContainer);
+            tile.Initialize(c);
+            var captured = c;
+            tile.OnLetterPressed += _ => modeController.HandleInput(new PressLetterAction(captured));
+            letterTiles.Add(tile);
+        }
+    }
+
+    private void OnStateChanged(GameState state) => Refresh(state);
+
+    private void Refresh(GameState state)
+    {
+        if (state == null) return;
+        currentState = state;
+
+        wordChainDisplay?.UpdateChain(state.wordChain);
+        currentWordInput?.UpdateInput(state.currentInput, state.targetWord ?? "?");
+
+        if (livesText != null)  livesText.text  = $"Lives: {state.lives}";
+        if (scoreText != null)  scoreText.text  = $"Steps: {Mathf.Max(0, state.wordChain.Length - 1)}";
+
+        bool canInput = !state.isWon && !state.isLost;
+        if (submitButton != null) submitButton.interactable = canInput && state.currentInput.Length > 0;
+        if (hintButton   != null) hintButton.interactable   = canInput;
+        if (revealButton != null) revealButton.interactable  = canInput;
+        if (undoButton   != null) undoButton.interactable    = canInput && state.wordChain.Length > 1;
+        if (deleteButton != null) deleteButton.interactable  = canInput && state.currentInput.Length > 0;
+
+        winOverlay?.SetActive(state.isWon);
+        lossOverlay?.SetActive(state.isLost);
+
+        foreach (var tile in letterTiles)
+            tile.SetEnabled(canInput);
+
+        if (state.hintedLetterIndex.HasValue)
+            HighlightHintedLetter(state);
+    }
+
+    private void HighlightHintedLetter(GameState state)
+    {
+        if (state.targetWord == null || !state.hintedLetterIndex.HasValue) return;
+        int idx = state.hintedLetterIndex.Value;
+        if (idx < 0 || idx >= state.targetWord.Length) return;
+        char hintChar = state.targetWord[idx];
+        foreach (var tile in letterTiles)
+        {
+            if (tile.Letter == hintChar)
             {
-                if (tile != null) tile.OnLetterPressed -= OnLetterPressed;
+                tile.HighlightHint();
+                break;
             }
         }
     }
+
+    private void OnSubmit()
+    {
+        string word = currentState?.currentInput;
+        if (!string.IsNullOrEmpty(word))
+            modeController.HandleInput(new SubmitWordAction(word));
+    }
+
+    private void OnHint()   => modeController.HandleInput(new UseHintAction(0));
+    private void OnReveal() => modeController.HandleInput(new UseRevealAction());
+    private void OnUndo()   => modeController.HandleInput(new UndoStepAction());
+    private void OnDelete() => modeController.HandleInput(new DeleteLetterAction());
 }
