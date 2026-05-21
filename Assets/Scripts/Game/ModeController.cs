@@ -14,6 +14,7 @@ public class ModeController : MonoBehaviour
 
     private IGameMode activeMode;
     private GameModeContext modeContext;
+    private ModeType currentMode;
 
     public event Action<ModeStats> ModeCompleted;
     public ModeType LastMode { get; private set; }
@@ -42,6 +43,7 @@ public class ModeController : MonoBehaviour
         }
 
         LastMode = modeType;
+        currentMode = modeType;
         activeMode = CreateMode(modeType);
 
         if (activeMode != null)
@@ -75,5 +77,24 @@ public class ModeController : MonoBehaviour
     private void OnModeComplete(ModeStats stats)
     {
         ModeCompleted?.Invoke(stats);
+    }
+
+    // UI Integration Methods
+    public ModeType GetCurrentMode()
+    {
+        return currentMode;
+    }
+
+    public void EndMode()
+    {
+        if (activeMode != null)
+        {
+            activeMode.OnGameOver();
+        }
+    }
+
+    public void EndGameEarly()
+    {
+        EndMode();
     }
 }

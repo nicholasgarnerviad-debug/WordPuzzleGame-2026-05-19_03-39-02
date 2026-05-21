@@ -12,6 +12,12 @@ public class GameState
     public int previousChainLength;     // For undo support
     public string targetWord;            // Target word to reach
 
+    // UI Display Fields
+    public int score;                    // Current game score
+    public int currentStreak;            // Current consecutive valid word count
+    public int wordsRemaining;           // Words remaining (Puzzle Show mode)
+    public float timeRemaining;          // Time remaining (Time Attack mode)
+
     public GameState()
     {
         wordChain = new string[] { };
@@ -22,6 +28,10 @@ public class GameState
         hintedLetterIndex = null;
         revealedWord = null;
         previousChainLength = 0;
+        score = 0;
+        currentStreak = 0;
+        wordsRemaining = 0;
+        timeRemaining = 0f;
     }
 
     public GameState Clone()
@@ -36,7 +46,11 @@ public class GameState
             hintedLetterIndex = hintedLetterIndex,
             revealedWord = revealedWord != null ? (string[])revealedWord.Clone() : null,
             previousChainLength = previousChainLength,
-            targetWord = targetWord
+            targetWord = targetWord,
+            score = score,
+            currentStreak = currentStreak,
+            wordsRemaining = wordsRemaining,
+            timeRemaining = timeRemaining
         };
     }
 }
