@@ -6,28 +6,30 @@ using System.Collections.Generic;
 
 public class GameplayScreen : MonoBehaviour
 {
-    [Header("Word Display")]
-    [SerializeField] private WordChainDisplay wordChainDisplay;
-    [SerializeField] private CurrentWordInput currentWordInput;
+    [Header("Header Components")]
+    [SerializeField] private TextMeshProUGUI gameModeLabel;
+    [SerializeField] private TextMeshProUGUI scoreDisplay;
+    [SerializeField] private TextMeshProUGUI timerDisplay;
+    [SerializeField] private Button menuButton;
 
-    [Header("Keyboard")]
-    [SerializeField] private Transform keyboardContainer;
+    [Header("Input Section")]
+    [SerializeField] private TMP_InputField currentWordInput;
+    [SerializeField] private Button clearButton;
+    [SerializeField] private Button submitButton;
+
+    [Header("Tile Grid")]
+    [SerializeField] private Transform tileGridContainer;
     [SerializeField] private LetterTile letterTilePrefab;
 
-    [Header("HUD")]
-    [SerializeField] private TMP_Text livesText;
-    [SerializeField] private TMP_Text scoreText;
+    [Header("Word Chain")]
+    [SerializeField] private Transform wordListContent;
+    [SerializeField] private TextMeshProUGUI wordItemPrefab;
 
-    [Header("Buttons")]
-    [SerializeField] private Button submitButton;
-    [SerializeField] private Button hintButton;
-    [SerializeField] private Button revealButton;
-    [SerializeField] private Button undoButton;
-    [SerializeField] private Button deleteButton;
-
-    [Header("Overlays")]
-    [SerializeField] private GameObject winOverlay;
-    [SerializeField] private GameObject lossOverlay;
+    [Header("Game Status")]
+    [SerializeField] private TextMeshProUGUI streakDisplay;
+    [SerializeField] private TextMeshProUGUI wordsRemainingDisplay;
+    [SerializeField] private Button endGameButton;
+    [SerializeField] private CanvasGroup canvasGroup;
 
     private IGameStateManager stateManager;
     private ModeController modeController;
@@ -51,12 +53,12 @@ public class GameplayScreen : MonoBehaviour
 
         if (letterTiles.Count == 0) BuildKeyboard();
 
-        submitButton.onClick.AddListener(OnSubmit);
-        hintButton.onClick.AddListener(OnHint);
-        revealButton.onClick.AddListener(OnReveal);
-        undoButton.onClick.AddListener(OnUndo);
-        deleteButton.onClick.AddListener(OnDelete);
+        if (submitButton != null) submitButton.onClick.AddListener(OnSubmit);
+        if (clearButton != null) clearButton.onClick.AddListener(OnClearInput);
+        if (menuButton != null) menuButton.onClick.AddListener(OnMenuPressed);
+        if (endGameButton != null) endGameButton.onClick.AddListener(OnEndGamePressed);
 
+        UpdateModeLabel();
         Refresh(stateManager.GetCurrentState());
     }
 
@@ -65,20 +67,19 @@ public class GameplayScreen : MonoBehaviour
         stateSubscription?.Dispose();
         stateSubscription = null;
 
-        submitButton.onClick.RemoveListener(OnSubmit);
-        hintButton.onClick.RemoveListener(OnHint);
-        revealButton.onClick.RemoveListener(OnReveal);
-        undoButton.onClick.RemoveListener(OnUndo);
-        deleteButton.onClick.RemoveListener(OnDelete);
+        if (submitButton != null) submitButton.onClick.RemoveListener(OnSubmit);
+        if (clearButton != null) clearButton.onClick.RemoveListener(OnClearInput);
+        if (menuButton != null) menuButton.onClick.RemoveListener(OnMenuPressed);
+        if (endGameButton != null) endGameButton.onClick.RemoveListener(OnEndGamePressed);
     }
 
     private void BuildKeyboard()
     {
-        if (letterTilePrefab == null || keyboardContainer == null) return;
+        if (letterTilePrefab == null || tileGridContainer == null) return;
 
         for (char c = 'a'; c <= 'z'; c++)
         {
-            var tile = Instantiate(letterTilePrefab, keyboardContainer);
+            var tile = Instantiate(letterTilePrefab, tileGridContainer);
             tile.Initialize(c);
             var captured = c;
             tile.OnLetterPressed += _ => modeController.HandleInput(new PressLetterAction(captured));
@@ -93,27 +94,79 @@ public class GameplayScreen : MonoBehaviour
         if (state == null) return;
         currentState = state;
 
-        wordChainDisplay?.UpdateChain(state.wordChain);
-        currentWordInput?.UpdateInput(state.currentInput, state.targetWord ?? "?");
-
-        if (livesText != null)  livesText.text  = $"Lives: {state.lives}";
-        if (scoreText != null)  scoreText.text  = $"Steps: {Mathf.Max(0, state.wordChain.Length - 1)}";
+        UpdateScoreDisplay(state);
+        UpdateStreakDisplay(state);
+        UpdateWordsRemainingDisplay(state);
+        UpdateTimerDisplay(state);
+        UpdateWordChain(state);
+        UpdateInputDisplay(state);
 
         bool canInput = !state.isWon && !state.isLost;
         if (submitButton != null) submitButton.interactable = canInput && state.currentInput.Length > 0;
-        if (hintButton   != null) hintButton.interactable   = canInput;
-        if (revealButton != null) revealButton.interactable  = canInput;
-        if (undoButton   != null) undoButton.interactable    = canInput && state.wordChain.Length > 1;
-        if (deleteButton != null) deleteButton.interactable  = canInput && state.currentInput.Length > 0;
-
-        winOverlay?.SetActive(state.isWon);
-        lossOverlay?.SetActive(state.isLost);
+        if (clearButton != null) clearButton.interactable = canInput && state.currentInput.Length > 0;
 
         foreach (var tile in letterTiles)
             tile.SetEnabled(canInput);
 
         if (state.hintedLetterIndex.HasValue)
             HighlightHintedLetter(state);
+    }
+
+    private void UpdateScoreDisplay(GameState state)
+    {
+        if (scoreDisplay != null)
+            scoreDisplay.text = state.score.ToString();
+    }
+
+    private void UpdateStreakDisplay(GameState state)
+    {
+        if (streakDisplay != null)
+            streakDisplay.text = $"Streak: {state.currentStreak}";
+    }
+
+    private void UpdateWordsRemainingDisplay(GameState state)
+    {
+        if (wordsRemainingDisplay != null)
+            wordsRemainingDisplay.text = $"Words: {state.wordsRemaining}";
+    }
+
+    private void UpdateTimerDisplay(GameState state)
+    {
+        if (timerDisplay != null)
+        {
+            // Only show timer for TimeAttack mode - check if mode supports it
+            bool hasTimeRemaining = state.timeRemaining > 0;
+            timerDisplay.gameObject.SetActive(hasTimeRemaining);
+
+            if (hasTimeRemaining)
+                timerDisplay.text = $"{Mathf.Max(0, state.timeRemaining):F1}s";
+        }
+    }
+
+    private void UpdateModeLabel()
+    {
+        if (gameModeLabel != null && modeController != null)
+        {
+            // Mode label should be set based on current game mode
+            gameModeLabel.text = "Game Mode";  // Will be updated by mode controller if needed
+        }
+    }
+
+    private void UpdateWordChain(GameState state)
+    {
+        if (wordListContent != null && state.wordChain.Length > 0)
+        {
+            // Word chain display - could instantiate word items here if needed
+            // For now, just validate the container exists
+        }
+    }
+
+    private void UpdateInputDisplay(GameState state)
+    {
+        if (currentWordInput != null)
+        {
+            currentWordInput.text = state.currentInput;
+        }
     }
 
     private void HighlightHintedLetter(GameState state)
@@ -139,8 +192,21 @@ public class GameplayScreen : MonoBehaviour
             modeController.HandleInput(new SubmitWordAction(word));
     }
 
-    private void OnHint()   => modeController.HandleInput(new UseHintAction(0));
-    private void OnReveal() => modeController.HandleInput(new UseRevealAction());
-    private void OnUndo()   => modeController.HandleInput(new UndoStepAction());
-    private void OnDelete() => modeController.HandleInput(new DeleteLetterAction());
+    private void OnClearInput()
+    {
+        if (currentWordInput != null)
+            currentWordInput.text = string.Empty;
+    }
+
+    private void OnMenuPressed()
+    {
+        if (modeController != null)
+            modeController.EndMode();
+    }
+
+    private void OnEndGamePressed()
+    {
+        if (modeController != null)
+            modeController.EndMode();
+    }
 }

@@ -2540,19 +2540,21 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 44e91530eeba6834d98f029698a6a398, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GameplayScreen
-  wordChainDisplay: {fileID: 0}
+  gameModeLabel: {fileID: 0}
+  scoreDisplay: {fileID: 0}
+  timerDisplay: {fileID: 0}
+  menuButton: {fileID: 0}
   currentWordInput: {fileID: 0}
-  keyboardContainer: {fileID: 0}
-  letterTilePrefab: {fileID: 6012295711078542967, guid: 3202c0440d6cb344daf36b2886170950, type: 3}
-  livesText: {fileID: 0}
-  scoreText: {fileID: 0}
+  clearButton: {fileID: 0}
   submitButton: {fileID: 0}
-  hintButton: {fileID: 0}
-  revealButton: {fileID: 0}
-  undoButton: {fileID: 0}
-  deleteButton: {fileID: 0}
-  winOverlay: {fileID: 0}
-  lossOverlay: {fileID: 0}
+  tileGridContainer: {fileID: 0}
+  letterTilePrefab: {fileID: 6012295711078542967, guid: 3202c0440d6cb344daf36b2886170950, type: 3}
+  wordListContent: {fileID: 0}
+  wordItemPrefab: {fileID: 0}
+  streakDisplay: {fileID: 0}
+  wordsRemainingDisplay: {fileID: 0}
+  endGameButton: {fileID: 0}
+  canvasGroup: {fileID: 0}
 --- !u!225 &1095656732
 CanvasGroup:
   m_ObjectHideFlags: 0
