@@ -4,11 +4,13 @@ using TMPro;
 using System;
 using WordPuzzleGame.UI.Animations;
 
-/// <summary>
-/// Reusable UI button component representing an individual letter tile in the gameplay grid.
-/// Handles letter display, color management, click animations, and tile interaction callbacks.
-/// </summary>
-public class LetterTile : MonoBehaviour
+namespace WordPuzzleGame.UI
+{
+    /// <summary>
+    /// Reusable UI button component representing an individual letter tile in the gameplay grid.
+    /// Handles letter display, color management, click animations, and tile interaction callbacks.
+    /// </summary>
+    public class LetterTile : MonoBehaviour
 {
     /// <summary>
     /// Delegate for tile click callbacks. No parameters - caller can access tile state via GetLetter().
@@ -24,8 +26,8 @@ public class LetterTile : MonoBehaviour
     [SerializeField] private Image tileImage;
     [SerializeField] private Button tileButton;
 
-    private char currentLetter;
-    private Color originalColor;
+    private char currentLetter = ' ';
+    private Color originalColor = Color.white;
 
     private void Awake()
     {
@@ -71,6 +73,14 @@ public class LetterTile : MonoBehaviour
         if (tileButton != null)
         {
             tileButton.onClick.AddListener(OnClick);
+        }
+    }
+
+    private void OnDestroy()
+    {
+        if (tileButton != null)
+        {
+            tileButton.onClick.RemoveListener(OnClick);
         }
     }
 
@@ -124,12 +134,13 @@ public class LetterTile : MonoBehaviour
     /// Handles click event: plays tap animation and invokes the OnTileClicked callback.
     /// Called by the button's onClick event.
     /// </summary>
-    public void OnClick()
+    private void OnClick()
     {
         // Play tap animation
-        StartCoroutine(UIAnimations.ScaleTileTap(transform));
+        StartCoroutine(UIAnimations.ScaleTileTap((RectTransform)transform));
 
         // Invoke the callback
         OnTileClicked?.Invoke();
     }
+}
 }
