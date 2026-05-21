@@ -9,20 +9,28 @@ public class ResultsScreen : MonoBehaviour
     [Header("Display Components")]
     [SerializeField] private TextMeshProUGUI headerText;
     [SerializeField] private TextMeshProUGUI finalScoreText;
-    [SerializeField] private TextMeshProUGUI finalScoreStatText;
-    [SerializeField] private TextMeshProUGUI durationStatText;
-    [SerializeField] private TextMeshProUGUI wordsFoundStatText;
-    [SerializeField] private TextMeshProUGUI accuracyStatText;
-    [SerializeField] private TextMeshProUGUI bestWordStatText;
-    [SerializeField] private TextMeshProUGUI currentStreakStatText;
-    [SerializeField] private TextMeshProUGUI longestStreakStatText;
+    [SerializeField] private Transform statsContent;
+    [SerializeField] private TextMeshProUGUI statItemPrefab;
     [SerializeField] private Button playAgainButton;
     [SerializeField] private Button mainMenuButton;
     [SerializeField] private CanvasGroup canvasGroup;
 
     private ModeController modeController;
     private UIManager uiManager;
-    private ModeStats currentStats;
+    private GameStats currentStats;
+
+    [System.Serializable]
+    public struct GameStats
+    {
+        public int finalScore;
+        public float gameDuration;
+        public int wordsFound;
+        public int validAttempts;
+        public int totalAttempts;
+        public string bestWord;
+        public int currentStreak;
+        public int longestStreak;
+    }
 
     public void InjectDependencies(ModeController mc, UIManager ui)
     {
@@ -46,7 +54,7 @@ public class ResultsScreen : MonoBehaviour
             mainMenuButton.onClick.RemoveListener(OnMainMenuClicked);
     }
 
-    public void ShowResults(ModeStats stats)
+    public void ShowResults(GameStats stats)
     {
         currentStats = stats;
         DisplayResults();
@@ -60,29 +68,20 @@ public class ResultsScreen : MonoBehaviour
 
         // Final score
         if (finalScoreText != null)
-            finalScoreText.text = currentStats.coinsEarned.ToString();
+            finalScoreText.text = currentStats.finalScore.ToString();
 
-        // Display all stats
-        if (finalScoreStatText != null)
-            finalScoreStatText.text = $"Final Score: {currentStats.coinsEarned} pts";
+        // Clear existing stats
+        foreach (Transform child in statsContent)
+            Destroy(child.gameObject);
 
-        if (durationStatText != null)
-            durationStatText.text = $"Duration: {FormatTime(currentStats.totalTime)}";
-
-        if (wordsFoundStatText != null)
-            wordsFoundStatText.text = $"Words Found: {currentStats.puzzlesCompleted}";
-
-        if (accuracyStatText != null)
-            accuracyStatText.text = $"Accuracy: {CalculateAccuracy():F1}%";
-
-        if (bestWordStatText != null)
-            bestWordStatText.text = $"Best Word: {currentStats.modeName}";
-
-        if (currentStreakStatText != null)
-            currentStreakStatText.text = $"Current Streak: N/A";
-
-        if (longestStreakStatText != null)
-            longestStreakStatText.text = $"Longest Streak: N/A";
+        // Display all 7 stats in order
+        AddStatItem("Final Score", $"{currentStats.finalScore} pts");
+        AddStatItem("Duration", FormatTime(currentStats.gameDuration));
+        AddStatItem("Words Found", currentStats.wordsFound.ToString());
+        AddStatItem("Accuracy", $"{CalculateAccuracy():F0}%");
+        AddStatItem("Best Word", currentStats.bestWord);
+        AddStatItem("Current Streak", currentStats.currentStreak.ToString());
+        AddStatItem("Longest Streak", currentStats.longestStreak.ToString());
 
         // Fade in animation
         if (canvasGroup != null)
@@ -92,11 +91,17 @@ public class ResultsScreen : MonoBehaviour
         }
     }
 
+    private void AddStatItem(string label, string value)
+    {
+        TextMeshProUGUI item = Instantiate(statItemPrefab, statsContent);
+        item.text = $"{label}: {value}";
+    }
+
     private float CalculateAccuracy()
     {
-        // Accuracy calculation is based on available stats
-        // For now, returns 100% as placeholder since ModeStats doesn't have attempt tracking
-        return 100f;
+        if (currentStats.totalAttempts == 0)
+            return 0f;
+        return (currentStats.validAttempts / (float)currentStats.totalAttempts) * 100f;
     }
 
     private string FormatTime(float seconds)
@@ -120,7 +125,7 @@ public class ResultsScreen : MonoBehaviour
 
         // Start new game in same mode
         if (modeController != null)
-            modeController.SwitchMode(modeController.LastMode);
+            modeController.SwitchMode(modeController.GetCurrentMode());
 
         if (uiManager != null)
             uiManager.ShowScreen<GameplayScreen>();
