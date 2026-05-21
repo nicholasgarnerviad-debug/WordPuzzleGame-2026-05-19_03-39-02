@@ -4,12 +4,18 @@ using TMPro;
 
 public class ResultsScreen : MonoBehaviour
 {
-    [SerializeField] private TMP_Text modeNameText;
-    [SerializeField] private TMP_Text scoreText;
-    [SerializeField] private TMP_Text coinsEarnedText;
-    [SerializeField] private TMP_Text timeText;
-    [SerializeField] private Button nextButton;
-    [SerializeField] private Button menuButton;
+    [SerializeField] private TMP_Text headerText;
+    [SerializeField] private TMP_Text finalScoreText;
+    [SerializeField] private TMP_Text finalScoreStatText;
+    [SerializeField] private TMP_Text durationStatText;
+    [SerializeField] private TMP_Text wordsFoundStatText;
+    [SerializeField] private TMP_Text accuracyStatText;
+    [SerializeField] private TMP_Text bestWordStatText;
+    [SerializeField] private TMP_Text currentStreakStatText;
+    [SerializeField] private TMP_Text longestStreakStatText;
+    [SerializeField] private Button playAgainButton;
+    [SerializeField] private Button mainMenuButton;
+    [SerializeField] private CanvasGroup canvasGroup;
 
     private ModeController modeController;
     private UIManager uiManager;
@@ -22,16 +28,22 @@ public class ResultsScreen : MonoBehaviour
 
     private void Start()
     {
-        nextButton?.onClick.AddListener(PlayNextPuzzle);
-        menuButton?.onClick.AddListener(ReturnToMenu);
+        playAgainButton?.onClick.AddListener(PlayNextPuzzle);
+        mainMenuButton?.onClick.AddListener(ReturnToMenu);
     }
 
     public void ShowResults(ModeStats stats)
     {
-        if (modeNameText    != null) modeNameText.text    = stats.modeName;
-        if (scoreText       != null) scoreText.text       = $"Puzzles: {stats.puzzlesCompleted}";
-        if (coinsEarnedText != null) coinsEarnedText.text = $"Coins: +{stats.coinsEarned}";
-        if (timeText        != null) timeText.text        = $"Time: {stats.totalTime}s";
+        if (headerText != null) headerText.text = "Game Complete!";
+        if (finalScoreText != null) finalScoreText.text = $"{stats.score}";
+
+        if (finalScoreStatText != null) finalScoreStatText.text = $"Final Score: {stats.score} pts";
+        if (durationStatText != null) durationStatText.text = $"Duration: {stats.totalTime}s";
+        if (wordsFoundStatText != null) wordsFoundStatText.text = $"Words Found: {stats.puzzlesCompleted}";
+        if (accuracyStatText != null) accuracyStatText.text = $"Accuracy: {stats.accuracy}%";
+        if (bestWordStatText != null) bestWordStatText.text = $"Best Word: {stats.bestWord}";
+        if (currentStreakStatText != null) currentStreakStatText.text = $"Current Streak: {stats.currentStreak}";
+        if (longestStreakStatText != null) longestStreakStatText.text = $"Longest Streak: {stats.longestStreak}";
     }
 
     private void PlayNextPuzzle()

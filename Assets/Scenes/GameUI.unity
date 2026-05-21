@@ -2084,6 +2084,7 @@ GameObject:
   - component: {fileID: 880164074}
   - component: {fileID: 880164073}
   - component: {fileID: 880164072}
+  - component: {fileID: 880164075}
   m_Layer: 0
   m_Name: ResultsScreen
   m_TagString: Untagged
@@ -2126,14 +2127,20 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: dc139d782f96b7049aca32786f12ccc3, type: 3}
-  m_Name: 
+  m_Name:
   m_EditorClassIdentifier: Assembly-CSharp::ResultsScreen
-  modeNameText: {fileID: 705743968}
-  scoreText: {fileID: 1427976196}
-  coinsEarnedText: {fileID: 472346791}
-  timeText: {fileID: 668411369}
-  nextButton: {fileID: 1896991853}
-  menuButton: {fileID: 1260260004}
+  headerText: {fileID: 705743968}
+  finalScoreText: {fileID: 1427976196}
+  finalScoreStatText: {fileID: 472346791}
+  durationStatText: {fileID: 668411369}
+  wordsFoundStatText: {fileID: 0}
+  accuracyStatText: {fileID: 0}
+  bestWordStatText: {fileID: 0}
+  currentStreakStatText: {fileID: 0}
+  longestStreakStatText: {fileID: 0}
+  playAgainButton: {fileID: 1896991853}
+  mainMenuButton: {fileID: 1260260004}
+  canvasGroup: {fileID: 880164075}
 --- !u!114 &880164073
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2147,7 +2154,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 0.078431375, g: 0.078431375, b: 0.15686275, a: 1}
+  m_Color: {r: 0.102, g: 0.102, b: 0.18, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -2172,6 +2179,18 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 880164070}
   m_CullTransparentMesh: 1
+--- !u!225 &880164075
+CanvasGroup:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 880164070}
+  m_Enabled: 1
+  m_Alpha: 1
+  m_Interactable: 1
+  m_BlocksRaycasts: 1
+  m_IgnoreParentGroups: 0
 --- !u!1 &925167013
 GameObject:
   m_ObjectHideFlags: 0
