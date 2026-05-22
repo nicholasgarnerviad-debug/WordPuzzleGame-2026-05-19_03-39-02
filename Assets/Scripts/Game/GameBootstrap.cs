@@ -41,10 +41,10 @@ namespace WordPuzzle
             stateManager = new GameStateManager();
             modeController = new ModeController(stateManager);
 
-            // Create puzzle generator
-            var wordValidator = new WordValidator();
-            var wordGraphBuilder = new WordGraphBuilder();
-            puzzleGenerator = new PuzzleGenerator(wordGraphBuilder, wordValidator);
+            // Create puzzle generator with word graph and tier cache
+            var wordGraph = new WordGraph();
+            var tierCache = new System.Collections.Generic.Dictionary<int, TierData>();
+            puzzleGenerator = new PuzzleGenerator(wordGraph, tierCache);
 
             Debug.Log("Game systems initialized");
         }
