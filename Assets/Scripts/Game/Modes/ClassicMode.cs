@@ -1,111 +1,77 @@
-using UnityEngine;
+using WordPuzzle.State;
 
-public class ClassicMode : MonoBehaviour, IGameMode
+namespace WordPuzzle.Modes
 {
-    private GameModeContext context;
-    private WordPuzzle currentPuzzle;
-    private ClassicModeStats stats;
-    private bool isActive;
-    private System.Random random;
-
-    public void Initialize(GameModeContext context)
+    /// <summary>
+    /// Classic puzzle word chain game. Complete the word chain by finding
+    /// valid one-letter transitions from start to end word.
+    /// </summary>
+    public class ClassicMode : IGameMode
     {
-        this.context = context;
-        this.stats = new ClassicModeStats();
-        this.random = new System.Random();
-    }
+        private GameStateManager stateManager;
+        private WordPuzzle currentPuzzle;
+        private const int MAX_FAILURES = 5;
+        private int failureCount = 0;
 
-    public void StartGame()
-    {
-        isActive = true;
-        stats.gamesPlayed++;
-        LoadNextPuzzle();
-        Logger.Log("Classic Mode started");
-    }
-
-    public void HandleInput(GameAction action)
-    {
-        if (!isActive)
-            return;
-
-        context.stateManager.Dispatch(action);
-        var state = context.stateManager.GetCurrentState();
-
-        if (state.isWon)
+        public void Initialize(GameStateManager stateManager)
         {
-            OnPuzzleComplete();
+            this.stateManager = stateManager ?? throw new System.ArgumentNullException(nameof(stateManager));
         }
-        else if (state.isLost)
+
+        public void StartGame(WordPuzzle puzzle)
         {
-            OnGameOver();
+            if (stateManager == null)
+                throw new System.InvalidOperationException("Must call Initialize first");
+
+            currentPuzzle = puzzle ?? throw new System.ArgumentNullException(nameof(puzzle));
+            stateManager.StartNewPuzzle(puzzle);
+            failureCount = 0;
         }
-    }
 
-    public void Tick(float deltaTime)
-    {
-        // No-op for Classic Mode
-    }
-
-    public void OnGameOver()
-    {
-        isActive = false;
-        context.RaiseGameOver();
-        Logger.Log("Classic Mode ended");
-    }
-
-    public ModeStats GetStats()
-    {
-        return new ModeStats
+        public void HandleWordSubmission(string word)
         {
-            modeName = "Classic",
-            coinsEarned = stats.totalCoinsEarned,
-            puzzlesCompleted = stats.totalPuzzlesCompleted,
-            totalTime = 0
-        };
-    }
+            if (stateManager == null || currentPuzzle == null) return;
 
-    private void LoadNextPuzzle()
-    {
-        // Generate random puzzle: Easy or Medium 50/50
-        Difficulty difficulty = random.Next(2) == 0 ? Difficulty.Easy : Difficulty.Medium;
-        var puzzleDefinition = context.puzzleGenerator.GenerateRandomPuzzle(difficulty);
+            var stateBefore = stateManager.GetCurrentState();
+            stateManager.SubmitWord(word);
+            var stateAfter = stateManager.GetCurrentState();
 
-        currentPuzzle = new WordPuzzle(
-            puzzleDefinition.puzzleId,
-            puzzleDefinition.startWord,
-            puzzleDefinition.endWord,
-            puzzleDefinition.optimalSteps,
-            puzzleDefinition.solution,
-            puzzleDefinition.seedValue,
-            difficulty
-        );
+            // If word wasn't added, count as failure
+            if (stateAfter.wordChain.Count == stateBefore.wordChain.Count)
+            {
+                failureCount++;
+            }
+        }
 
-        context.stateManager.StartNewPuzzle(currentPuzzle);
-        Logger.Log($"Classic Mode: Loaded puzzle {currentPuzzle.puzzleId} ({difficulty})");
-    }
+        public void Tick(float deltaTime)
+        {
+            // Classic mode doesn't have a timer, but we still track elapsed time
+            if (stateManager != null)
+                stateManager.UpdateElapsedTime(deltaTime);
+        }
 
-    private void OnPuzzleComplete()
-    {
-        stats.gamesWon++;
-        stats.totalPuzzlesCompleted++;
+        public GameModeStats GetStats()
+        {
+            var state = stateManager?.GetCurrentState();
+            if (state == null) return default;
 
-        int reward = CalculateReward();
-        // Fire and forget the async operation
-        _ = context.economy.AddCoinsAsync(reward, "classic_mode");
-        stats.totalCoinsEarned += reward;
+            return new GameModeStats
+            {
+                modeName = "Classic",
+                wordsFound = state.wordsFound,
+                totalTime = state.elapsedTime,
+                score = state.score,
+                accuracy = state.wordsFound > 0 ?
+                    (1f - (failureCount / (float)(state.wordsFound + failureCount))) : 0f
+            };
+        }
 
-        Logger.Log($"Puzzle completed! Earned {reward} coins");
-
-        LoadNextPuzzle();
-    }
-
-    private int CalculateReward()
-    {
-        const int baseReward = 10;
-        var state = context.stateManager.GetCurrentState();
-        int livesBonus = Mathf.Max(0, state.lives * 5);
-        int totalReward = baseReward + livesBonus;
-        return Mathf.Max(10, totalReward);
+        public void Reset()
+        {
+            stateManager = null;
+            currentPuzzle = null;
+            failureCount = 0;
+        }
     }
 }
 
