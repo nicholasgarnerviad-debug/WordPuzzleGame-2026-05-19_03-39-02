@@ -3,6 +3,7 @@ using UnityEngine.UI;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using TMPro;
+using WordPuzzleGame.UI;
 
 public class CreatePrefabs
 {

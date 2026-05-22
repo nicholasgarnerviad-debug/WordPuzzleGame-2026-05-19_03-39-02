@@ -3,6 +3,7 @@ using UnityEngine.UI;
 using TMPro;
 using System;
 using System.Collections.Generic;
+using WordPuzzleGame.UI;
 
 public class GameplayScreen : MonoBehaviour
 {

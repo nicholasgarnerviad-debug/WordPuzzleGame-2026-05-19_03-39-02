@@ -133,7 +133,8 @@ public class GameBootstrap : MonoBehaviour
 
         modeController.ModeCompleted += stats =>
         {
-            resultsScreen.ShowResults(stats);
+            var finalStats = stateManager.GetFinalStats();
+            resultsScreen.ShowResults(finalStats);
             uiManager.ShowScreen<ResultsScreen>();
         };
 

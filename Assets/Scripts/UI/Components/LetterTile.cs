@@ -18,9 +18,19 @@ namespace WordPuzzleGame.UI
     public delegate void TileClickedCallback();
 
     /// <summary>
+    /// Delegate for letter press callbacks with the letter as a parameter.
+    /// </summary>
+    public delegate void LetterPressedCallback(char letter);
+
+    /// <summary>
     /// Event invoked when the tile is clicked.
     /// </summary>
     public event TileClickedCallback OnTileClicked;
+
+    /// <summary>
+    /// Event invoked when a letter is pressed, passing the letter character.
+    /// </summary>
+    public event LetterPressedCallback OnLetterPressed;
 
     [SerializeField] private TextMeshProUGUI letterText;
     [SerializeField] private Image tileImage;
@@ -85,6 +95,15 @@ namespace WordPuzzleGame.UI
     }
 
     /// <summary>
+    /// Initializes the tile with a letter. Convenience method for SetLetter.
+    /// </summary>
+    /// <param name="letter">The letter character to display</param>
+    public void Initialize(char letter)
+    {
+        SetLetter(letter);
+    }
+
+    /// <summary>
     /// Sets the letter to display on this tile (stored as uppercase).
     /// </summary>
     /// <param name="letter">The letter character to display</param>
@@ -131,16 +150,45 @@ namespace WordPuzzleGame.UI
     }
 
     /// <summary>
-    /// Handles click event: plays tap animation and invokes the OnTileClicked callback.
+    /// Gets the current letter as a property for easy access.
+    /// </summary>
+    public char Letter
+    {
+        get { return currentLetter; }
+    }
+
+    /// <summary>
+    /// Enables or disables interaction with this tile.
+    /// </summary>
+    /// <param name="enabled">Whether the tile should be interactable</param>
+    public void SetEnabled(bool enabled)
+    {
+        if (tileButton != null)
+        {
+            tileButton.interactable = enabled;
+        }
+    }
+
+    /// <summary>
+    /// Highlights the tile to show it's a hint letter.
+    /// </summary>
+    public void HighlightHint()
+    {
+        SetColor(Color.yellow);
+    }
+
+    /// <summary>
+    /// Handles click event: plays tap animation and invokes callbacks.
     /// Called by the button's onClick event.
     /// </summary>
-    private void OnClick()
+    public void OnClick()
     {
         // Play tap animation
         StartCoroutine(UIAnimations.ScaleTileTap((RectTransform)transform));
 
-        // Invoke the callback
+        // Invoke the callbacks
         OnTileClicked?.Invoke();
+        OnLetterPressed?.Invoke(currentLetter);
     }
 }
 }

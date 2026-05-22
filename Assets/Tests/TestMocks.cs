@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 
 // Shared mock implementations for testing
@@ -32,6 +33,9 @@ public class MockGameStateManager : IGameStateManager
 {
     private GameState currentState = new GameState();
     private bool wonState = false;
+    private List<string> foundWords = new List<string>();
+    private int longestStreak = 0;
+    private int totalScore = 0;
 
     public void SetupPuzzle(WordPuzzle puzzle)
     {
@@ -60,6 +64,112 @@ public class MockGameStateManager : IGameStateManager
     public void SetWonState(bool won)
     {
         wonState = won;
+    }
+
+    public char[] GetAvailableLetters()
+    {
+        var usedLetters = new HashSet<char>();
+        foreach (var word in currentState.wordChain)
+        {
+            foreach (var c in word)
+            {
+                usedLetters.Add(c);
+            }
+        }
+        var available = new List<char>();
+        for (char c = 'a'; c <= 'z'; c++)
+        {
+            if (!usedLetters.Contains(c))
+            {
+                available.Add(c);
+            }
+        }
+        return available.ToArray();
+    }
+
+    public int GetCurrentScore()
+    {
+        return totalScore;
+    }
+
+    public bool IsValidWord(string word)
+    {
+        return !string.IsNullOrEmpty(word);
+    }
+
+    public int SubmitWord(string word)
+    {
+        if (!IsValidWord(word))
+            return 0;
+        word = word.ToLower();
+        if (foundWords.Contains(word))
+            return 0;
+        foundWords.Add(word);
+        int points = word.Length;
+        totalScore += points;
+        currentState.score = totalScore;
+        currentState.currentStreak++;
+        longestStreak = System.Math.Max(longestStreak, currentState.currentStreak);
+        return points;
+    }
+
+    public int GetCurrentStreak()
+    {
+        return currentState.currentStreak;
+    }
+
+    public int GetWordsRemaining()
+    {
+        return currentState.wordsRemaining;
+    }
+
+    public void SetWordsRemaining(int count)
+    {
+        currentState.wordsRemaining = count;
+    }
+
+    public float GetTimeRemaining()
+    {
+        return currentState.timeRemaining;
+    }
+
+    public void SetTimeRemaining(float time)
+    {
+        currentState.timeRemaining = time;
+    }
+
+    public string GetBestWord()
+    {
+        if (foundWords.Count == 0)
+            return "--";
+        return foundWords.OrderByDescending(w => w.Length).FirstOrDefault() ?? "--";
+    }
+
+    public int GetLongestStreak()
+    {
+        return longestStreak;
+    }
+
+    public ResultsScreen.GameStats GetFinalStats()
+    {
+        return new ResultsScreen.GameStats
+        {
+            finalScore = totalScore,
+            gameDuration = 0f,
+            wordsFound = foundWords.Count,
+            validAttempts = foundWords.Count,
+            totalAttempts = foundWords.Count,
+            bestWord = GetBestWord(),
+            currentStreak = currentState.currentStreak,
+            longestStreak = longestStreak
+        };
+    }
+
+    public void ResetTracking()
+    {
+        foundWords.Clear();
+        longestStreak = 0;
+        totalScore = 0;
     }
 }
 
@@ -189,6 +299,9 @@ public class PuzzleShowModeMockGameStateManager : IGameStateManager
 {
     private GameState currentState;
     private bool wonState = false;
+    private List<string> foundWords = new List<string>();
+    private int longestStreak = 0;
+    private int totalScore = 0;
 
     public PuzzleShowModeMockGameStateManager()
     {
@@ -235,6 +348,112 @@ public class PuzzleShowModeMockGameStateManager : IGameStateManager
     public void SetWonState(bool won)
     {
         wonState = won;
+    }
+
+    public char[] GetAvailableLetters()
+    {
+        var usedLetters = new HashSet<char>();
+        foreach (var word in currentState.wordChain)
+        {
+            foreach (var c in word)
+            {
+                usedLetters.Add(c);
+            }
+        }
+        var available = new List<char>();
+        for (char c = 'a'; c <= 'z'; c++)
+        {
+            if (!usedLetters.Contains(c))
+            {
+                available.Add(c);
+            }
+        }
+        return available.ToArray();
+    }
+
+    public int GetCurrentScore()
+    {
+        return totalScore;
+    }
+
+    public bool IsValidWord(string word)
+    {
+        return !string.IsNullOrEmpty(word);
+    }
+
+    public int SubmitWord(string word)
+    {
+        if (!IsValidWord(word))
+            return 0;
+        word = word.ToLower();
+        if (foundWords.Contains(word))
+            return 0;
+        foundWords.Add(word);
+        int points = word.Length;
+        totalScore += points;
+        currentState.score = totalScore;
+        currentState.currentStreak++;
+        longestStreak = System.Math.Max(longestStreak, currentState.currentStreak);
+        return points;
+    }
+
+    public int GetCurrentStreak()
+    {
+        return currentState.currentStreak;
+    }
+
+    public int GetWordsRemaining()
+    {
+        return currentState.wordsRemaining;
+    }
+
+    public void SetWordsRemaining(int count)
+    {
+        currentState.wordsRemaining = count;
+    }
+
+    public float GetTimeRemaining()
+    {
+        return currentState.timeRemaining;
+    }
+
+    public void SetTimeRemaining(float time)
+    {
+        currentState.timeRemaining = time;
+    }
+
+    public string GetBestWord()
+    {
+        if (foundWords.Count == 0)
+            return "--";
+        return foundWords.OrderByDescending(w => w.Length).FirstOrDefault() ?? "--";
+    }
+
+    public int GetLongestStreak()
+    {
+        return longestStreak;
+    }
+
+    public ResultsScreen.GameStats GetFinalStats()
+    {
+        return new ResultsScreen.GameStats
+        {
+            finalScore = totalScore,
+            gameDuration = 0f,
+            wordsFound = foundWords.Count,
+            validAttempts = foundWords.Count,
+            totalAttempts = foundWords.Count,
+            bestWord = GetBestWord(),
+            currentStreak = currentState.currentStreak,
+            longestStreak = longestStreak
+        };
+    }
+
+    public void ResetTracking()
+    {
+        foundWords.Clear();
+        longestStreak = 0;
+        totalScore = 0;
     }
 }
 

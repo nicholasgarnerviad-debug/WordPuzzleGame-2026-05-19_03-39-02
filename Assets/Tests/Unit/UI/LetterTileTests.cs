@@ -2,6 +2,7 @@ using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using WordPuzzleGame.UI;
 
 namespace WordPuzzleGame.Tests.Unit.UI
 {
