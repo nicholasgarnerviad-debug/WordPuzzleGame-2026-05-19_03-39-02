@@ -1,5 +1,6 @@
 using NUnit.Framework;
 using System.Threading.Tasks;
+using WordPuzzle.Persistence;
 
 public class DataManagerTests
 {

@@ -1,5 +1,6 @@
 using UnityEngine;
 using System.Collections.Generic;
+using WordPuzzle.Modes;
 
 /// <summary>
 /// Centralized color theme system for Word Puzzle Game.

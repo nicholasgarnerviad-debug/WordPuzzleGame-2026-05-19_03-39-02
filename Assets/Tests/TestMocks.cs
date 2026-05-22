@@ -4,6 +4,9 @@ using System.Linq;
 using System.Threading.Tasks;
 using WordPuzzle.Puzzle;
 using WordPuzzle.State;
+using WordPuzzle.Persistence;
+using WordPuzzle.UI;
+using WordPuzzle.Modes;
 
 // Shared mock implementations for testing
 public class MockWordValidator : IWordValidator
@@ -19,9 +22,9 @@ public class MockWordValidator : IWordValidator
 
     public void Initialize(string startWord, string endWord, string[] currentWordChain) { }
 
-    public ValidationResult ValidateWord(string word)
+    public WordPuzzle.Puzzle.ValidationResult ValidateWord(string word)
     {
-        return new ValidationResult(isValid, "", isNextStep, true, -1, -1);
+        return new WordPuzzle.Puzzle.ValidationResult(isValid, "", isNextStep, true, -1, -1);
     }
 
     public bool IsValidNextWord(string word, string previousWord)
@@ -33,27 +36,27 @@ public class MockWordValidator : IWordValidator
 
 public class MockGameStateManager : IGameStateManager
 {
-    private GameState currentState = new GameState();
+    private GameState currentState;
+    private WordPuzzle.Puzzle.WordPuzzle currentPuzzle;
     private bool wonState = false;
     private List<string> foundWords = new List<string>();
     private int longestStreak = 0;
     private int totalScore = 0;
 
-    public void SetupPuzzle(WordPuzzle puzzle)
+    public void SetupPuzzle(WordPuzzle.Puzzle.WordPuzzle puzzle)
     {
-        currentState.wordChain = new[] { puzzle.startWord };
-        currentState.lives = 3;
+        currentPuzzle = puzzle;
+        currentState = new GameState(puzzle);
     }
 
     public void Dispatch(GameAction action) { }
 
     public GameState GetCurrentState()
     {
-        currentState.isWon = wonState;
-        return currentState;
+        return currentState ?? throw new System.InvalidOperationException("No puzzle started");
     }
 
-    public void StartNewPuzzle(WordPuzzle puzzle)
+    public void StartNewPuzzle(WordPuzzle.Puzzle.WordPuzzle puzzle)
     {
         SetupPuzzle(puzzle);
     }
@@ -109,35 +112,34 @@ public class MockGameStateManager : IGameStateManager
         foundWords.Add(word);
         int points = word.Length;
         totalScore += points;
-        currentState.score = totalScore;
-        currentState.currentStreak++;
-        longestStreak = System.Math.Max(longestStreak, currentState.currentStreak);
+        longestStreak = System.Math.Max(longestStreak, foundWords.Count);
+        currentState = currentState.WithScore(totalScore).WithWordsFound(foundWords.Count);
         return points;
     }
 
     public int GetCurrentStreak()
     {
-        return currentState.currentStreak;
+        return foundWords.Count;
     }
 
     public int GetWordsRemaining()
     {
-        return currentState.wordsRemaining;
+        return 0;
     }
 
     public void SetWordsRemaining(int count)
     {
-        currentState.wordsRemaining = count;
+        // Mock implementation - no-op
     }
 
     public float GetTimeRemaining()
     {
-        return currentState.timeRemaining;
+        return 0f;
     }
 
     public void SetTimeRemaining(float time)
     {
-        currentState.timeRemaining = time;
+        // Mock implementation - no-op
     }
 
     public string GetBestWord()
@@ -152,17 +154,15 @@ public class MockGameStateManager : IGameStateManager
         return longestStreak;
     }
 
-    public ResultsScreen.GameStats GetFinalStats()
+    public WordPuzzle.State.GameStats GetFinalStats()
     {
-        return new ResultsScreen.GameStats
+        return new WordPuzzle.State.GameStats
         {
-            finalScore = totalScore,
-            gameDuration = 0f,
             wordsFound = foundWords.Count,
-            validAttempts = foundWords.Count,
-            totalAttempts = foundWords.Count,
-            bestWord = GetBestWord(),
-            currentStreak = currentState.currentStreak,
+            totalTime = 0f,
+            score = totalScore,
+            accuracy = 100f,
+            currentStreak = foundWords.Count,
             longestStreak = longestStreak
         };
     }
@@ -177,19 +177,19 @@ public class MockGameStateManager : IGameStateManager
 
 public class MockPuzzleGenerator : IPuzzleGenerator
 {
-    public PuzzleDefinition GenerateRandomPuzzle(Difficulty difficulty)
+    public WordPuzzle.Puzzle.PuzzleDefinition GenerateRandomPuzzle(Difficulty difficulty)
     {
         return CreateDefaultPuzzle();
     }
 
-    public PuzzleDefinition GetTierPuzzle(int tierId, int puzzleIndex)
+    public WordPuzzle.Puzzle.PuzzleDefinition GetTierPuzzle(int tierId, int puzzleIndex)
     {
         return CreateDefaultPuzzle();
     }
 
-    private PuzzleDefinition CreateDefaultPuzzle()
+    private WordPuzzle.Puzzle.PuzzleDefinition CreateDefaultPuzzle()
     {
-        return new PuzzleDefinition
+        return new WordPuzzle.Puzzle.PuzzleDefinition
         {
             puzzleId = 1,
             startWord = "cat",
@@ -239,8 +239,8 @@ public class MockDataManager : IDataManager
         return Task.FromResult(lastPlayerProgress ?? new PlayerProgress());
     }
 
-    public Task<TierData> GetTierDataAsync(int tierId)
-        => Task.FromResult(new TierData { tierId = tierId, isUnlocked = true });
+    public Task<WordPuzzle.Persistence.TierData> GetTierDataAsync(int tierId)
+        => Task.FromResult(new WordPuzzle.Persistence.TierData { tierId = tierId, isUnlocked = true });
 
     public Task LoadAllTierDataAsync()
         => Task.CompletedTask;

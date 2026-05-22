@@ -1,4 +1,6 @@
+using System;
 using WordPuzzle.State;
+using WordPuzzle.Puzzle;
 
 namespace WordPuzzle.Modes
 {
@@ -9,16 +11,22 @@ namespace WordPuzzle.Modes
     public class TimeAttackMode : IGameMode
     {
         private GameStateManager stateManager;
-        private WordPuzzle currentPuzzle;
+        private WordPuzzle.Puzzle.WordPuzzle currentPuzzle;
         private float timeRemaining;
         private const float TOTAL_TIME = 60f;
+
+        /// <summary>
+        /// Event fired when time remaining changes.
+        /// Subscribers receive the updated time remaining in seconds.
+        /// </summary>
+        public event Action<float> TimeChanged;
 
         public void Initialize(GameStateManager stateManager)
         {
             this.stateManager = stateManager ?? throw new System.ArgumentNullException(nameof(stateManager));
         }
 
-        public void StartGame(WordPuzzle puzzle)
+        public void StartGame(WordPuzzle.Puzzle.WordPuzzle puzzle)
         {
             if (stateManager == null)
                 throw new System.InvalidOperationException("Must call Initialize first");
@@ -41,7 +49,8 @@ namespace WordPuzzle.Modes
             timeRemaining -= deltaTime;
             if (timeRemaining < 0) timeRemaining = 0;
 
-            // Time tracking is managed internally by the mode
+            // Notify subscribers of time change
+            TimeChanged?.Invoke(timeRemaining);
         }
 
         public GameModeStats GetStats()

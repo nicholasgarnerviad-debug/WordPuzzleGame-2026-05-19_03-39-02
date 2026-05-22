@@ -1,13 +1,17 @@
 using NUnit.Framework;
 using WordPuzzle.State;
 using WordPuzzle.Modes;
+using WordPuzzle.Puzzle;
+using WordPuzzle.Persistence;
+using PuzzleType = WordPuzzle.Puzzle.WordPuzzle;
+using Diff = WordPuzzle.Puzzle.Difficulty;
 
 [TestFixture]
 public class ClassicModeIntegrationTests
 {
     private ClassicMode mode;
     private GameStateManager stateManager;
-    private WordPuzzle testPuzzle;
+    private PuzzleType testPuzzle;
     private MockWordValidator mockValidator;
     private MockDataManager mockDataManager;
 
@@ -18,14 +22,14 @@ public class ClassicModeIntegrationTests
         mockValidator = new MockWordValidator();
         mockDataManager = new MockDataManager();
         stateManager = new GameStateManager(mockValidator, mockDataManager);
-        testPuzzle = new WordPuzzle(
+        testPuzzle = new PuzzleType(
             id: 1,
             start: "cat",
             end: "dog",
             optimal: 3,
             solutionPath: new[] { "cat", "bat", "bad", "dog" },
             seed: 12345,
-            diff: Difficulty.Easy
+            diff: Diff.Easy
         );
 
         mode.Initialize(stateManager);

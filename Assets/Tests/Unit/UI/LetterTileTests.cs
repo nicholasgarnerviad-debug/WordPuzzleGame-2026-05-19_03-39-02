@@ -2,9 +2,9 @@ using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
-using WordPuzzleGame.UI;
+using WordPuzzle.UI;
 
-namespace WordPuzzleGame.Tests.Unit.UI
+namespace WordPuzzle.Tests.Unit.UI
 {
     /// <summary>
     /// Unit tests for the LetterTile component.

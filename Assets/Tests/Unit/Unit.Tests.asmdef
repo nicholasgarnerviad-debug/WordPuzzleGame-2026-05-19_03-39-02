@@ -6,14 +6,21 @@
         "Tests",
         "Game.Modes",
         "Game.State",
-        "Game.Puzzle"
+        "Game.Puzzle",
+        "Game.UI",
+        "Game.Bootstrap",
+        "Game.Persistence",
+        "Utils",
+        "Unity.TestFramework",
+        "Unity.TextMeshPro"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
-    "overrideReferences": true,
+    "overrideReferences": false,
     "precompiledReferences": [
-        "nunit.framework.dll"
+        "nunit.framework.dll",
+        "UnityEngine.TestRunner.dll"
     ],
     "autoReferenced": false,
     "defineConstraints": [

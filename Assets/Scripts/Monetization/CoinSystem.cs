@@ -16,12 +16,12 @@ public class CoinSystem : MonoBehaviour
     {
         if (amount < 0)
         {
-            Logger.LogError("Cannot add negative coins");
+            Debug.LogError("Cannot add negative coins");
             return;
         }
 
         coinBalance += amount;
-        Logger.Log($"Added {amount} coins. Balance: {coinBalance}");
+        Debug.Log($"Added {amount} coins. Balance: {coinBalance}");
         CoinsChanged?.Invoke(coinBalance);
     }
 
@@ -29,18 +29,18 @@ public class CoinSystem : MonoBehaviour
     {
         if (amount < 0)
         {
-            Logger.LogError("Cannot spend negative coins");
+            Debug.LogError("Cannot spend negative coins");
             return false;
         }
 
         if (coinBalance < amount)
         {
-            Logger.LogWarning($"Insufficient coins. Have {coinBalance}, need {amount}");
+            Debug.LogWarning($"Insufficient coins. Have {coinBalance}, need {amount}");
             return false;
         }
 
         coinBalance -= amount;
-        Logger.Log($"Spent {amount} coins. Balance: {coinBalance}");
+        Debug.Log($"Spent {amount} coins. Balance: {coinBalance}");
         CoinsChanged?.Invoke(coinBalance);
         return true;
     }

@@ -1,7 +1,9 @@
 using UnityEngine;
 using TMPro;
 
-public class CurrentWordInput : MonoBehaviour
+namespace WordPuzzle.UI
+{
+    public class CurrentWordInput : MonoBehaviour
 {
     [SerializeField] private TextMeshProUGUI inputText;
     [SerializeField] private TextMeshProUGUI targetText;
@@ -16,4 +18,5 @@ public class CurrentWordInput : MonoBehaviour
     {
         inputText.text = "";
     }
+}
 }

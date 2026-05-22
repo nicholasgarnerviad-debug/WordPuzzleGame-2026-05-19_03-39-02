@@ -37,14 +37,6 @@ namespace WordPuzzle
                 Debug.Log("Added UIManager component");
             }
 
-            // Add ModeController if missing
-            var modeController = bootstrap.GetComponent<ModeController>();
-            if (modeController == null)
-            {
-                modeController = bootstrap.AddComponent<ModeController>();
-                Debug.Log("Added ModeController component");
-            }
-
             // Find UI elements
             var canvas = GameObject.Find("Canvas");
             if (canvas == null)
@@ -83,19 +75,11 @@ namespace WordPuzzle
             // Wire GameBootstrap using reflection
             if (gameBootstrap != null)
             {
-                SetFieldValue(gameBootstrap, "modeController", modeController);
                 SetFieldValue(gameBootstrap, "uiManager", uiManager);
                 SetFieldValue(gameBootstrap, "gameplayScreen", gameplayScreen);
                 SetFieldValue(gameBootstrap, "mainMenuScreen", mainMenuScreen);
                 SetFieldValue(gameBootstrap, "resultsScreen", resultsScreen);
                 Debug.Log("Wired GameBootstrap references");
-            }
-
-            // Wire ModeController using reflection
-            if (modeController != null && timerDisplay != null)
-            {
-                SetFieldValue(modeController, "timerDisplay", timerDisplay);
-                Debug.Log("Wired ModeController references");
             }
 
             Debug.Log("Bootstrap initialization complete");

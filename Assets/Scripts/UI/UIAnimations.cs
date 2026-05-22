@@ -1,7 +1,7 @@
 using System.Collections;
 using UnityEngine;
 
-namespace WordPuzzleGame.UI.Animations
+namespace WordPuzzle.UI
 {
     /// <summary>
     /// Reusable animation utility system for smooth UI feedback animations.

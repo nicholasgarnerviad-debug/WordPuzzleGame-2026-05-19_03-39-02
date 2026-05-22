@@ -2,7 +2,8 @@
     "name": "Game.State",
     "rootNamespace": "WordPuzzle.State",
     "references": [
-        "Game.Puzzle"
+        "Game.Puzzle",
+        "Game.Persistence"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

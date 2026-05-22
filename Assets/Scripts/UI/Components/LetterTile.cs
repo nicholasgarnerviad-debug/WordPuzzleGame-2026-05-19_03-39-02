@@ -2,9 +2,8 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using System;
-using WordPuzzleGame.UI.Animations;
 
-namespace WordPuzzleGame.UI
+namespace WordPuzzle.UI
 {
     /// <summary>
     /// Reusable UI button component representing an individual letter tile in the gameplay grid.

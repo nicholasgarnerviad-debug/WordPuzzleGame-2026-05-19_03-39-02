@@ -2,7 +2,7 @@ using UnityEngine;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using TMPro;
-using WordPuzzleGame.UI;
+using WordPuzzle.UI;
 
 public class WirePrefabs
 {

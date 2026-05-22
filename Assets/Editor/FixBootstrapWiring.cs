@@ -1,6 +1,8 @@
 using UnityEngine;
 using UnityEditor;
 using UnityEditor.SceneManagement;
+using WordPuzzle.UI;
+using WordPuzzle.Modes;
 
 public class FixBootstrapWiring
 {
@@ -40,16 +42,12 @@ public class FixBootstrapWiring
             Debug.Log("✓ UIManager already present");
         }
 
-        var modeController = bootstrap.GetComponent<WordPuzzle.Modes.ModeController>();
-        if (modeController == null)
-        {
-            modeController = bootstrap.AddComponent<WordPuzzle.Modes.ModeController>();
-            Debug.Log("✓ Added ModeController component");
-        }
-        else
-        {
-            Debug.Log("✓ ModeController already present");
-        }
+        // Note: ModeController is not a MonoBehaviour, so it's created in GameBootstrap, not here
+        // var modeController = bootstrap.GetComponent<WordPuzzle.Modes.ModeController>();
+        // if (modeController == null)
+        // {
+        //     Debug.Log("ModeController will be created by GameBootstrap");
+        // }
 
         // Find screens by searching canvas children more robustly
         GameplayScreen gameplayScreenComp = null;
@@ -71,7 +69,7 @@ public class FixBootstrapWiring
 
         // Wire GameBootstrap
         var bootstrapSO = new SerializedObject(gameBootstrap);
-        bootstrapSO.FindProperty("modeController").objectReferenceValue = modeController;
+        // modeController is created in GameBootstrap.InitializeGameSystems(), not wired here
         bootstrapSO.FindProperty("uiManager").objectReferenceValue = uiManager;
         bootstrapSO.FindProperty("gameplayScreen").objectReferenceValue = gameplayScreenComp;
         bootstrapSO.FindProperty("mainMenuScreen").objectReferenceValue = mainMenuScreenComp;
@@ -95,10 +93,10 @@ public class FixBootstrapWiring
         uiManagerSO.ApplyModifiedProperties();
         Debug.Log("✓ UIManager wired");
 
-        // Wire ModeController timer display
-        var modeControllerSO = new SerializedObject(modeController);
-        modeControllerSO.FindProperty("timerDisplay").objectReferenceValue = timerDisplayComp;
-        modeControllerSO.ApplyModifiedProperties();
+        // Note: ModeController is not a MonoBehaviour and is created in GameBootstrap.InitializeGameSystems()
+        // var modeControllerSO = new SerializedObject(modeController);
+        // modeControllerSO.FindProperty("timerDisplay").objectReferenceValue = timerDisplayComp;
+        // modeControllerSO.ApplyModifiedProperties();
 
         if (timerDisplayComp) Debug.Log("✓ TimerDisplay wired");
         else Debug.LogWarning("✗ TimerDisplay not found");

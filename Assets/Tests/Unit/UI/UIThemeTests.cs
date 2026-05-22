@@ -1,5 +1,6 @@
 using NUnit.Framework;
 using UnityEngine;
+using WordPuzzle.Modes;
 
 public class UIThemeTests
 {

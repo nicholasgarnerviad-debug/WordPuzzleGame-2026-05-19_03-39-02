@@ -2,7 +2,15 @@
     "name": "Tests",
     "rootNamespace": "",
     "references": [
-        "Assembly-CSharp"
+        "Assembly-CSharp",
+        "Game.Models",
+        "Game.Persistence",
+        "Game.State",
+        "Game.Puzzle",
+        "Game.Modes",
+        "Game.Bootstrap",
+        "Game.UI",
+        "Utils"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
@@ -11,7 +19,7 @@
     "precompiledReferences": [
         "nunit.framework.dll"
     ],
-    "autoReferenced": true,
+    "autoReferenced": false,
     "defineConstraints": [
         "UNITY_INCLUDE_TESTS"
     ],

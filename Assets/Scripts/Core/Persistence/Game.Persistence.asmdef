@@ -1,11 +1,8 @@
 {
-    "name": "Game.UI",
-    "rootNamespace": "WordPuzzle.UI",
+    "name": "Game.Persistence",
+    "rootNamespace": "WordPuzzle.Persistence",
     "references": [
-        "Game.Modes",
-        "Game.State",
-        "Game.Persistence",
-        "Unity.TextMeshPro",
+        "Game.Puzzle",
         "Utils"
     ],
     "includePlatforms": [],

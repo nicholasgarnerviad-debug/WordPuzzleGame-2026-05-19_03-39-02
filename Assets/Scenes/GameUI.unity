@@ -395,9 +395,9 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 334179048}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 100, y: -25}
   m_SizeDelta: {x: 200, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &136586897
@@ -512,7 +512,6 @@ GameObject:
   - component: {fileID: 143488771}
   - component: {fileID: 143488770}
   - component: {fileID: 143488769}
-  - component: {fileID: 99999991}
   m_Layer: 0
   m_Name: Canvas
   m_TagString: Untagged
@@ -906,9 +905,9 @@ RectTransform:
   - {fileID: 1990962142}
   m_Father: {fileID: 1942777376}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 748, y: -40}
   m_SizeDelta: {x: 120, y: 48}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &274366276
@@ -1270,9 +1269,9 @@ RectTransform:
   - {fileID: 1513910257}
   m_Father: {fileID: 1473857579}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 681.3334, y: -24}
   m_SizeDelta: {x: 48, y: 48}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &388253213
@@ -1414,8 +1413,6 @@ MonoBehaviour:
   classicModeButton: {fileID: 1187152360}
   puzzleShowButton: {fileID: 1425189176}
   timeAttackButton: {fileID: 1354813495}
-  shopButton: {fileID: 0}
-  settingsButton: {fileID: 0}
 --- !u!114 &392277413
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2129,13 +2126,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: dc139d782f96b7049aca32786f12ccc3, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ResultsScreen
-  headerText: {fileID: 705743968}
-  finalScoreText: {fileID: 1427976196}
-  statsContent: {fileID: 0}
-  statItemPrefab: {fileID: 0}
+  modeNameText: {fileID: 0}
+  wordsFoundText: {fileID: 0}
+  accuracyText: {fileID: 0}
+  timeText: {fileID: 0}
+  scoreText: {fileID: 0}
   playAgainButton: {fileID: 1896991853}
   mainMenuButton: {fileID: 1260260004}
-  canvasGroup: {fileID: 880164075}
 --- !u!114 &880164073
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2355,9 +2352,9 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 1942777376}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 452, y: -41}
   m_SizeDelta: {x: 200, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1007754062
@@ -2554,21 +2551,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 44e91530eeba6834d98f029698a6a398, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GameplayScreen
-  gameModeLabel: {fileID: 0}
-  scoreDisplay: {fileID: 0}
-  timerDisplay: {fileID: 0}
-  menuButton: {fileID: 0}
-  currentWordInput: {fileID: 0}
-  clearButton: {fileID: 0}
+  puzzleDisplayText: {fileID: 0}
+  wordChainText: {fileID: 0}
+  scoreText: {fileID: 0}
+  timerText: {fileID: 0}
+  wordInputField: {fileID: 0}
   submitButton: {fileID: 0}
-  tileGridContainer: {fileID: 0}
-  letterTilePrefab: {fileID: 6012295711078542967, guid: 3202c0440d6cb344daf36b2886170950, type: 3}
-  wordListContent: {fileID: 0}
-  wordItemPrefab: {fileID: 0}
-  streakDisplay: {fileID: 0}
-  wordsRemainingDisplay: {fileID: 0}
-  endGameButton: {fileID: 0}
-  canvasGroup: {fileID: 0}
+  feedbackText: {fileID: 0}
 --- !u!225 &1095656732
 CanvasGroup:
   m_ObjectHideFlags: 0
@@ -3115,9 +3104,9 @@ RectTransform:
   - {fileID: 408890801}
   m_Father: {fileID: 334179048}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 858, y: -24}
   m_SizeDelta: {x: 48, y: 48}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1348039095
@@ -3769,6 +3758,8 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1428571312}
+  - component: {fileID: 1428571314}
+  - component: {fileID: 1428571313}
   m_Layer: 0
   m_Name: Bootstrap
   m_TagString: Untagged
@@ -3791,6 +3782,37 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1428571313
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1428571308}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 02f5d29a998cfaf408da0e681fbc782b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Game.UI::WordPuzzle.UI.UIManager
+  mainMenuScreen: {fileID: 392277412}
+  gameplayScreen: {fileID: 1095656731}
+  resultsScreen: {fileID: 880164072}
+--- !u!114 &1428571314
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1428571308}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b012518483809624098392e1c993d8a4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Game.Bootstrap::WordPuzzle.GameBootstrap
+  uiManager: {fileID: 1428571313}
+  gameplayScreen: {fileID: 1095656731}
+  mainMenuScreen: {fileID: 392277412}
+  resultsScreen: {fileID: 880164072}
 --- !u!1 &1453004126
 GameObject:
   m_ObjectHideFlags: 0
@@ -4065,9 +4087,9 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 1942777376}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 116, y: -41}
   m_SizeDelta: {x: 200, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1486017429
@@ -4478,9 +4500,9 @@ RectTransform:
   - {fileID: 322670168}
   m_Father: {fileID: 1473857579}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 378.6667, y: -24}
   m_SizeDelta: {x: 48, y: 48}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1535273377
@@ -4598,9 +4620,9 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 1473857579}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 50, y: -50}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1660477170
@@ -4741,9 +4763,9 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 334179048}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 378, y: -25}
   m_SizeDelta: {x: 200, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1777837230
@@ -5104,9 +5126,9 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 334179048}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 656, y: -25}
   m_SizeDelta: {x: 200, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1953643026

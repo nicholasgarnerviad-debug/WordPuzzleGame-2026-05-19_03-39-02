@@ -4,6 +4,7 @@ using System.Linq;
 using WordPuzzle.Puzzle;
 using WordPuzzle.State;
 using WordPuzzle.Persistence;
+using WordPuzzleModel = WordPuzzle.Puzzle.WordPuzzle;
 using UnityEngine;
 
 namespace WordPuzzle.State
@@ -16,7 +17,7 @@ namespace WordPuzzle.State
     public class GameStateManager : IGameStateManager
     {
         private MutableGameState workingState;
-        private WordPuzzle currentPuzzle;
+        private WordPuzzleModel currentPuzzle;
         private IWordValidator wordValidator;
         private IDataManager dataManager;
         private List<Action<GameState>> subscribers;
@@ -44,7 +45,7 @@ namespace WordPuzzle.State
             );
         }
 
-        public void StartNewPuzzle(WordPuzzle puzzle)
+        public void StartNewPuzzle(WordPuzzleModel puzzle)
         {
             currentPuzzle = puzzle;
             workingState = new MutableGameState
@@ -296,7 +297,7 @@ namespace WordPuzzle.State
                 return 0;
 
             int scoreBefore = workingState.score;
-            Dispatch(new SubmitWordAction { word = word });
+            Dispatch(new SubmitWordAction(word));
             int scoreAfter = workingState.score;
 
             return scoreAfter - scoreBefore;
@@ -433,7 +434,7 @@ namespace WordPuzzle.State
     public interface IGameStateManager
     {
         GameState GetCurrentState();
-        void StartNewPuzzle(WordPuzzle puzzle);
+        void StartNewPuzzle(WordPuzzleModel puzzle);
         void Dispatch(GameAction action);
         IDisposable Subscribe(Action<GameState> observer);
 

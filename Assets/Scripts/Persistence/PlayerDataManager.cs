@@ -42,7 +42,7 @@ public class PlayerDataManager : MonoBehaviour
             puzzleShowTierUnlocked = PlayerPrefs.GetInt("PuzzleShowTier", 1),
             timeAttackBestStreak = PlayerPrefs.GetInt("TimeAttackStreak", 0)
         };
-        Logger.Log("Player data loaded");
+        Debug.Log("Player data loaded");
     }
 
     public void SavePlayerData()
@@ -53,7 +53,7 @@ public class PlayerDataManager : MonoBehaviour
         PlayerPrefs.SetInt("PuzzleShowTier", playerData.puzzleShowTierUnlocked);
         PlayerPrefs.SetInt("TimeAttackStreak", playerData.timeAttackBestStreak);
         PlayerPrefs.Save();
-        Logger.Log("Player data saved");
+        Debug.Log("Player data saved");
     }
 
     public PlayerData GetData() => playerData;

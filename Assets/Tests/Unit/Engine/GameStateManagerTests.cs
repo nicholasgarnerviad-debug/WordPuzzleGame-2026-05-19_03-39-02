@@ -1,6 +1,9 @@
 using NUnit.Framework;
 using System.Collections.Generic;
 using WordPuzzle.State;
+using WordPuzzle.Persistence;
+using PuzzleType = WordPuzzle.Puzzle.WordPuzzle;
+using Diff = WordPuzzle.Puzzle.Difficulty;
 
 [TestFixture]
 public class GameStateManagerTests
@@ -21,8 +24,8 @@ public class GameStateManagerTests
     public void StartNewPuzzle_InitializesState()
     {
         // Arrange
-        var puzzle = new WordPuzzle(1, "cat", "dog", 3,
-            new[] { "cat", "bat", "bag", "dog" }, 0, Difficulty.Easy);
+        var puzzle = new PuzzleType(1, "cat", "dog", 3,
+            new[] { "cat", "bat", "bag", "dog" }, 0, Diff.Easy);
 
         // Act
         manager.StartNewPuzzle(puzzle);
@@ -37,8 +40,8 @@ public class GameStateManagerTests
     public void Dispatch_PressLetter_UpdatesState()
     {
         // Arrange
-        var puzzle = new WordPuzzle(1, "cat", "dog", 3,
-            new[] { "cat", "bat", "bag", "dog" }, 0, Difficulty.Easy);
+        var puzzle = new PuzzleType(1, "cat", "dog", 3,
+            new[] { "cat", "bat", "bag", "dog" }, 0, Diff.Easy);
         manager.StartNewPuzzle(puzzle);
 
         // Act
@@ -54,8 +57,8 @@ public class GameStateManagerTests
     public void Dispatch_DeleteLetter()
     {
         // Arrange
-        var puzzle = new WordPuzzle(1, "cat", "dog", 3,
-            new[] { "cat", "bat", "bag", "dog" }, 0, Difficulty.Easy);
+        var puzzle = new PuzzleType(1, "cat", "dog", 3,
+            new[] { "cat", "bat", "bag", "dog" }, 0, Diff.Easy);
         manager.StartNewPuzzle(puzzle);
         manager.Dispatch(new PressLetterAction('b'));
         manager.Dispatch(new PressLetterAction('a'));
@@ -73,8 +76,8 @@ public class GameStateManagerTests
     public void Dispatch_SubmitValidWord_AddsToChain()
     {
         // Arrange
-        var puzzle = new WordPuzzle(1, "cat", "dog", 3,
-            new[] { "cat", "bat", "bag", "dog" }, 0, Difficulty.Easy);
+        var puzzle = new PuzzleType(1, "cat", "dog", 3,
+            new[] { "cat", "bat", "bag", "dog" }, 0, Diff.Easy);
         manager.StartNewPuzzle(puzzle);
         mockValidator.SetValidResult(true, true);
 
@@ -91,8 +94,8 @@ public class GameStateManagerTests
     public void GetCurrentScore_ReturnsScore()
     {
         // Arrange
-        var puzzle = new WordPuzzle(1, "cat", "dog", 3,
-            new[] { "cat", "bat", "bag", "dog" }, 0, Difficulty.Easy);
+        var puzzle = new PuzzleType(1, "cat", "dog", 3,
+            new[] { "cat", "bat", "bag", "dog" }, 0, Diff.Easy);
         manager.StartNewPuzzle(puzzle);
         mockValidator.SetValidResult(true, true);
 
@@ -108,8 +111,8 @@ public class GameStateManagerTests
     public void GetCurrentStreak_ReturnsStreak()
     {
         // Arrange
-        var puzzle = new WordPuzzle(1, "cat", "dog", 3,
-            new[] { "cat", "bat", "bag", "dog" }, 0, Difficulty.Easy);
+        var puzzle = new PuzzleType(1, "cat", "dog", 3,
+            new[] { "cat", "bat", "bag", "dog" }, 0, Diff.Easy);
         manager.StartNewPuzzle(puzzle);
         mockValidator.SetValidResult(true, true);
 

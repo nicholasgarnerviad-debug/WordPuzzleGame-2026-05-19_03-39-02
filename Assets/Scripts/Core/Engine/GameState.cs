@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-using WordPuzzle.Puzzle;
+using WordPuzzleModel = WordPuzzle.Puzzle.WordPuzzle;
 
 namespace WordPuzzle.State
 {
@@ -10,16 +10,16 @@ namespace WordPuzzle.State
     /// functional state transitions.
     /// </summary>
     public sealed class GameState
-{
-    public readonly WordPuzzle puzzle;
-    public readonly List<string> wordChain;
-    public readonly int score;
+    {
+        public readonly WordPuzzleModel puzzle;
+        public readonly List<string> wordChain;
+        public readonly int score;
     public readonly int wordsFound;
     public readonly float elapsedTime;
     public readonly string currentInput;
 
-    public GameState(
-        WordPuzzle puzzle,
+        public GameState(
+        WordPuzzleModel puzzle,
         List<string> wordChain = null,
         int score = 0,
         int wordsFound = 0,

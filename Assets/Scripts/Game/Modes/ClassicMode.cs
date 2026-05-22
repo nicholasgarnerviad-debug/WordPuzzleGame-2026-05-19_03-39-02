@@ -1,4 +1,5 @@
 using WordPuzzle.State;
+using WordPuzzle.Puzzle;
 
 namespace WordPuzzle.Modes
 {
@@ -9,7 +10,7 @@ namespace WordPuzzle.Modes
     public class ClassicMode : IGameMode
     {
         private GameStateManager stateManager;
-        private WordPuzzle currentPuzzle;
+        private WordPuzzle.Puzzle.WordPuzzle currentPuzzle;
         private const int MAX_FAILURES = 5;
         private int failureCount = 0;
 
@@ -18,7 +19,7 @@ namespace WordPuzzle.Modes
             this.stateManager = stateManager ?? throw new System.ArgumentNullException(nameof(stateManager));
         }
 
-        public void StartGame(WordPuzzle puzzle)
+        public void StartGame(WordPuzzle.Puzzle.WordPuzzle puzzle)
         {
             if (stateManager == null)
                 throw new System.InvalidOperationException("Must call Initialize first");

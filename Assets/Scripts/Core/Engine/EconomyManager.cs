@@ -1,10 +1,13 @@
 using System.Threading.Tasks;
 using UnityEngine;
+using WordPuzzle.Persistence;
 
-public class EconomyManager : IEconomyManager
+namespace WordPuzzle.State
 {
-    private IDataManager dataManager;
-    private PlayerProgress currentProgress;
+    public class EconomyManager : IEconomyManager
+    {
+        private IDataManager dataManager;
+        private PlayerProgress currentProgress;
 
     public EconomyManager(IDataManager dataManager)
     {
@@ -135,5 +138,6 @@ public class EconomyManager : IEconomyManager
     public void LogEconomyEvent(string eventName, string data)
     {
         Debug.Log($"[EconomyEvent] {eventName}: {data}");
+    }
     }
 }

@@ -4,6 +4,7 @@ using WordPuzzle.State;
 using WordPuzzle.Modes;
 using WordPuzzle.UI;
 using WordPuzzle.Persistence;
+using WordPuzzleModel = WordPuzzle.Puzzle.WordPuzzle;
 
 namespace WordPuzzle
 {
@@ -45,10 +46,9 @@ namespace WordPuzzle
             {
                 // Create puzzle generator with word graph and tier cache
                 var wordGraph = new WordGraph();
-                var tierCache = new System.Collections.Generic.Dictionary<int, TierData>();
 
-                // Load dictionary words from tier definitions
-                LoadDictionaryWordsFromTiers(wordGraph, tierCache);
+                // Load dictionary words from tier definitions into word graph
+                LoadDictionaryWordsFromTiers(wordGraph);
 
                 // Create word validator (depends on word graph)
                 var wordValidator = new WordValidator(wordGraph);
@@ -65,7 +65,8 @@ namespace WordPuzzle
                     modeController = new ModeController(stateManager);
                 }
 
-                // Create puzzle generator (depends on word graph and tier cache)
+                // Create puzzle generator (uses word graph, tierCache will be loaded via IDataManager)
+                var tierCache = new System.Collections.Generic.Dictionary<int, WordPuzzle.Puzzle.TierData>();
                 puzzleGenerator = new PuzzleGenerator(wordGraph, tierCache);
 
                 Debug.Log("Game systems initialized successfully");
@@ -77,7 +78,7 @@ namespace WordPuzzle
             }
         }
 
-        private void LoadDictionaryWordsFromTiers(WordGraph wordGraph, System.Collections.Generic.Dictionary<int, TierData> tierCache)
+        private void LoadDictionaryWordsFromTiers(WordGraph wordGraph)
         {
             // Load tier definitions from Resources/Data/tier_definitions.json
             TextAsset tierFile = Resources.Load<TextAsset>("Data/tier_definitions");
@@ -103,9 +104,6 @@ namespace WordPuzzle
 
                 foreach (var tier in wrapper.tiers)
                 {
-                    // Cache the tier
-                    tierCache[tier.tierId] = tier;
-
                     // Extract words from all puzzles in this tier
                     if (tier.puzzles != null)
                     {
@@ -189,7 +187,8 @@ namespace WordPuzzle
             {
                 activeMode.Tick(Time.deltaTime);
                 UpdateGameplayUI();
-                CheckGameOver();
+                // TODO: Implement game-over checking via mode-agnostic interface method
+                // CheckGameOver();
             }
         }
 
@@ -236,7 +235,7 @@ namespace WordPuzzle
             }
 
             // Convert PuzzleDefinition to WordPuzzle for compatibility with GameStateManager
-            var puzzle = new WordPuzzle(
+            var puzzle = new WordPuzzleModel(
                 puzzleDefinition.puzzleId,
                 puzzleDefinition.startWord,
                 puzzleDefinition.endWord,
@@ -288,22 +287,23 @@ namespace WordPuzzle
             }
         }
 
-        private void CheckGameOver()
-        {
-            bool isGameOver = false;
-
-            if (activeMode is ClassicMode cm)
-                isGameOver = cm.IsGameOver();
-            else if (activeMode is TimeAttackMode tam)
-                isGameOver = tam.IsTimeUp();
-            else if (activeMode is PuzzleShowMode psm)
-                isGameOver = psm.IsGameOver();
-
-            if (isGameOver)
-            {
-                EndGame();
-            }
-        }
+        // TODO: Implement game-over checking via mode-agnostic interface method
+        // private void CheckGameOver()
+        // {
+        //     bool isGameOver = false;
+        //
+        //     if (activeMode is ClassicMode cm)
+        //         isGameOver = cm.IsGameOver();
+        //     else if (activeMode is TimeAttackMode tam)
+        //         isGameOver = tam.IsTimeUp();
+        //     else if (activeMode is PuzzleShowMode psm)
+        //         isGameOver = psm.IsGameOver();
+        //
+        //     if (isGameOver)
+        //     {
+        //         EndGame();
+        //     }
+        // }
 
         private void EndGame()
         {

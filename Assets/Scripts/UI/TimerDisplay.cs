@@ -1,5 +1,6 @@
 using UnityEngine;
 using TMPro;
+using WordPuzzle.Modes;
 
 public class TimerDisplay : MonoBehaviour
 {

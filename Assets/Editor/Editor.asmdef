@@ -1,20 +1,23 @@
 {
-    "name": "Game.UI",
-    "rootNamespace": "WordPuzzle.UI",
+    "name": "Editor",
+    "rootNamespace": "",
     "references": [
+        "Game.UI",
         "Game.Modes",
-        "Game.State",
-        "Game.Persistence",
-        "Unity.TextMeshPro",
-        "Utils"
+        "Game.Bootstrap",
+        "Unity.TextMeshPro"
     ],
-    "includePlatforms": [],
+    "includePlatforms": [
+        "Editor"
+    ],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
     "overrideReferences": false,
     "precompiledReferences": [],
     "autoReferenced": false,
-    "defineConstraints": [],
+    "defineConstraints": [
+        "UNITY_EDITOR"
+    ],
     "versionDefines": [],
     "noEngineReferences": false
 }

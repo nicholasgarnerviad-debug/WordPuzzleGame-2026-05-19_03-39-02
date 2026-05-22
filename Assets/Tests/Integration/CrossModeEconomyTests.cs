@@ -1,6 +1,8 @@
 using NUnit.Framework;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using WordPuzzle.Persistence;
+using WordPuzzle.State;
 
 [TestFixture]
 public class CrossModeEconomyTests

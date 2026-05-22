@@ -1,5 +1,6 @@
 using System;
 using WordPuzzle.State;
+using WordPuzzle.Puzzle;
 
 namespace WordPuzzle.Modes
 {
@@ -30,7 +31,7 @@ namespace WordPuzzle.Modes
             activeMode.Initialize(stateManager);
         }
 
-        public void StartGame(WordPuzzle puzzle)
+        public void StartGame(WordPuzzle.Puzzle.WordPuzzle puzzle)
         {
             if (activeMode == null)
                 throw new InvalidOperationException("No mode set. Call SetMode first.");

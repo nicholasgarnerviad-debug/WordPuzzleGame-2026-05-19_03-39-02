@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using WordPuzzle.State;
+using WordPuzzle.Puzzle;
 
 namespace WordPuzzle.Modes
 {
@@ -10,7 +11,7 @@ namespace WordPuzzle.Modes
     public class PuzzleShowMode : IGameMode
     {
         private GameStateManager stateManager;
-        private WordPuzzle currentPuzzle;
+        private WordPuzzle.Puzzle.WordPuzzle currentPuzzle;
         private int solutionIndex = 0;
 
         public void Initialize(GameStateManager stateManager)
@@ -18,7 +19,7 @@ namespace WordPuzzle.Modes
             this.stateManager = stateManager ?? throw new System.ArgumentNullException(nameof(stateManager));
         }
 
-        public void StartGame(WordPuzzle puzzle)
+        public void StartGame(WordPuzzle.Puzzle.WordPuzzle puzzle)
         {
             if (stateManager == null)
                 throw new System.InvalidOperationException("Must call Initialize first");

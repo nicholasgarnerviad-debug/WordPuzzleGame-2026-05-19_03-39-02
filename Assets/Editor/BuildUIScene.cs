@@ -3,6 +3,9 @@ using UnityEngine.UI;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using TMPro;
+using WordPuzzle;
+using WordPuzzle.UI;
+using WordPuzzle.Modes;
 
 public class BuildUIScene {
     [MenuItem("Tools/Build Complete UI")]
@@ -262,16 +265,11 @@ public class BuildUIScene {
 
         var bootstrapComp = bootstrap.GetComponent<GameBootstrap>();
         var bootstrapSO = new SerializedObject(bootstrapComp);
-        bootstrapSO.FindProperty("modeController").objectReferenceValue = bootstrap.GetComponent<ModeController>();
         bootstrapSO.FindProperty("uiManager").objectReferenceValue = bootstrap.GetComponent<UIManager>();
         bootstrapSO.FindProperty("gameplayScreen").objectReferenceValue = gameplayScreen ? gameplayScreen.GetComponent<GameplayScreen>() : null;
         bootstrapSO.FindProperty("mainMenuScreen").objectReferenceValue = mainMenuScreen ? mainMenuScreen.GetComponent<MainMenuScreen>() : null;
         bootstrapSO.FindProperty("resultsScreen").objectReferenceValue = resultsScreen ? resultsScreen.GetComponent<ResultsScreen>() : null;
         bootstrapSO.ApplyModifiedProperties();
-
-        var modeControllerSO = new SerializedObject(bootstrap.GetComponent<ModeController>());
-        modeControllerSO.FindProperty("timerDisplay").objectReferenceValue = timerDisplay ? timerDisplay.GetComponent<TimerDisplay>() : null;
-        modeControllerSO.ApplyModifiedProperties();
 
         Debug.Log("Bootstrap wired");
     }

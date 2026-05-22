@@ -1,7 +1,9 @@
 using UnityEngine;
 using TMPro;
 
-public class WordChainDisplay : MonoBehaviour
+namespace WordPuzzle.UI
+{
+    public class WordChainDisplay : MonoBehaviour
 {
     [SerializeField] private Transform container;
     [SerializeField] private TextMeshProUGUI wordPrefab;
@@ -24,4 +26,5 @@ public class WordChainDisplay : MonoBehaviour
             }
         }
     }
+}
 }

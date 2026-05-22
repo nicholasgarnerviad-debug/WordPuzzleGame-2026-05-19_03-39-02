@@ -1,6 +1,8 @@
 using UnityEngine;
 using UnityEditor;
 using UnityEditor.SceneManagement;
+using WordPuzzle.UI;
+using WordPuzzle.Modes;
 
 public class AutoFixBootstrap
 {
@@ -25,10 +27,9 @@ public class AutoFixBootstrap
 
         var gameBootstrap = bootstrap.GetComponent<WordPuzzle.GameBootstrap>();
         var uiManager = bootstrap.GetComponent<WordPuzzle.UI.UIManager>();
-        var modeController = bootstrap.GetComponent<WordPuzzle.Modes.ModeController>();
 
-        // If all components exist, we're done
-        if (gameBootstrap != null && uiManager != null && modeController != null)
+        // If all components exist, we're done (ModeController is created by GameBootstrap, not a component)
+        if (gameBootstrap != null && uiManager != null)
         {
             hasRun = true;
             EditorApplication.update -= CheckAndFixBootstrap;
@@ -68,12 +69,12 @@ public class AutoFixBootstrap
             Debug.Log("✓ Added UIManager component");
         }
 
-        var modeController = bootstrap.GetComponent<WordPuzzle.Modes.ModeController>();
-        if (modeController == null)
-        {
-            modeController = bootstrap.AddComponent<WordPuzzle.Modes.ModeController>();
-            Debug.Log("✓ Added ModeController component");
-        }
+        // Note: ModeController is not a MonoBehaviour, so it's created in GameBootstrap, not here
+        // var modeController = bootstrap.GetComponent<WordPuzzle.Modes.ModeController>();
+        // if (modeController == null)
+        // {
+        //     Debug.Log("ModeController will be created by GameBootstrap");
+        // }
 
         // Find screens
         GameplayScreen gameplayScreenComp = null;
@@ -95,7 +96,7 @@ public class AutoFixBootstrap
 
         // Wire GameBootstrap
         var bootstrapSO = new SerializedObject(gameBootstrap);
-        bootstrapSO.FindProperty("modeController").objectReferenceValue = modeController;
+        // modeController is created in GameBootstrap.InitializeGameSystems(), not wired here
         bootstrapSO.FindProperty("uiManager").objectReferenceValue = uiManager;
         bootstrapSO.FindProperty("gameplayScreen").objectReferenceValue = gameplayScreenComp;
         bootstrapSO.FindProperty("mainMenuScreen").objectReferenceValue = mainMenuScreenComp;
@@ -109,10 +110,10 @@ public class AutoFixBootstrap
         uiManagerSO.FindProperty("resultsScreen").objectReferenceValue = resultsScreenComp;
         uiManagerSO.ApplyModifiedProperties();
 
-        // Wire ModeController
-        var modeControllerSO = new SerializedObject(modeController);
-        modeControllerSO.FindProperty("timerDisplay").objectReferenceValue = timerDisplayComp;
-        modeControllerSO.ApplyModifiedProperties();
+        // Note: ModeController is not a MonoBehaviour and is created in GameBootstrap.InitializeGameSystems()
+        // var modeControllerSO = new SerializedObject(modeController);
+        // modeControllerSO.FindProperty("timerDisplay").objectReferenceValue = timerDisplayComp;
+        // modeControllerSO.ApplyModifiedProperties();
 
         EditorSceneManager.SaveOpenScenes();
         Debug.Log("=== AutoFixBootstrap: Complete ===");

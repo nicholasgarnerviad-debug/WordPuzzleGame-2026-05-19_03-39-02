@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEditor;
 using UnityEditor.SceneManagement;
+using WordPuzzle.UI;
 
 [InitializeOnLoad]
 public class InitializeScene
@@ -46,7 +47,7 @@ public class InitializeScene
             // Add GameBootstrap
             if (bootstrap.GetComponent("WordPuzzle.GameBootstrap") == null)
             {
-                var asm = System.Reflection.Assembly.Load("WordPuzzle.Game.Bootstrap");
+                var asm = System.Reflection.Assembly.Load("Game.Bootstrap");
                 var type = asm.GetType("WordPuzzle.GameBootstrap");
                 bootstrap.AddComponent(type);
                 Debug.Log("✓ Added GameBootstrap");
@@ -55,19 +56,10 @@ public class InitializeScene
             // Add UIManager
             if (bootstrap.GetComponent("WordPuzzle.UI.UIManager") == null)
             {
-                var asm = System.Reflection.Assembly.Load("WordPuzzle.UI");
+                var asm = System.Reflection.Assembly.Load("Game.UI");
                 var type = asm.GetType("WordPuzzle.UI.UIManager");
                 bootstrap.AddComponent(type);
                 Debug.Log("✓ Added UIManager");
-            }
-
-            // Add ModeController
-            if (bootstrap.GetComponent("WordPuzzle.Modes.ModeController") == null)
-            {
-                var asm = System.Reflection.Assembly.Load("WordPuzzle.Game.Modes");
-                var type = asm.GetType("WordPuzzle.Modes.ModeController");
-                bootstrap.AddComponent(type);
-                Debug.Log("✓ Added ModeController");
             }
 
             // Find screen components
@@ -91,13 +83,12 @@ public class InitializeScene
             // Get components
             var gameBootstrap = bootstrap.GetComponent("WordPuzzle.GameBootstrap") as MonoBehaviour;
             var uiManager = bootstrap.GetComponent("WordPuzzle.UI.UIManager") as MonoBehaviour;
-            var modeController = bootstrap.GetComponent("WordPuzzle.Modes.ModeController") as MonoBehaviour;
 
-            if (gameBootstrap != null && uiManager != null && modeController != null)
+            // ModeController is created by GameBootstrap, not added as a component
+            if (gameBootstrap != null && uiManager != null)
             {
                 // Wire GameBootstrap
                 var bootstrapSO = new SerializedObject(gameBootstrap);
-                bootstrapSO.FindProperty("modeController").objectReferenceValue = modeController;
                 bootstrapSO.FindProperty("uiManager").objectReferenceValue = uiManager;
                 bootstrapSO.FindProperty("gameplayScreen").objectReferenceValue = gameplayScreenComp;
                 bootstrapSO.FindProperty("mainMenuScreen").objectReferenceValue = mainMenuScreenComp;
@@ -112,12 +103,6 @@ public class InitializeScene
                 uiManagerSO.FindProperty("resultsScreen").objectReferenceValue = resultsScreenComp;
                 uiManagerSO.ApplyModifiedProperties();
                 Debug.Log("✓ Wired UIManager");
-
-                // Wire ModeController
-                var modeControllerSO = new SerializedObject(modeController);
-                modeControllerSO.FindProperty("timerDisplay").objectReferenceValue = timerDisplayComp;
-                modeControllerSO.ApplyModifiedProperties();
-                Debug.Log("✓ Wired ModeController");
 
                 EditorSceneManager.SaveScene(EditorSceneManager.GetActiveScene());
                 Debug.Log("=== InitializeScene: Setup Complete ===");

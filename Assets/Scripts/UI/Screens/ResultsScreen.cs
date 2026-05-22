@@ -1,6 +1,7 @@
 using System;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.Events;
 using TMPro;
 using WordPuzzle.Modes;
 
@@ -19,20 +20,20 @@ namespace WordPuzzle.UI
         public event Action OnPlayAgain;
         public event Action OnMainMenu;
 
-        private Action playAgainAction;
-        private Action mainMenuAction;
+        private UnityAction playAgainAction;
+        private UnityAction mainMenuAction;
 
         private void OnEnable()
         {
             if (playAgainButton != null)
             {
-                playAgainAction = () => OnPlayAgain?.Invoke();
+                playAgainAction = new UnityAction(() => OnPlayAgain?.Invoke());
                 playAgainButton.onClick.AddListener(playAgainAction);
             }
 
             if (mainMenuButton != null)
             {
-                mainMenuAction = () => OnMainMenu?.Invoke();
+                mainMenuAction = new UnityAction(() => OnMainMenu?.Invoke());
                 mainMenuButton.onClick.AddListener(mainMenuAction);
             }
         }
