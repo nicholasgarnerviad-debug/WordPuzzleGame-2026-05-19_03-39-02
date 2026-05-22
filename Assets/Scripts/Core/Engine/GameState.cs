@@ -1,12 +1,15 @@
 using System;
 using System.Collections.Generic;
+using WordPuzzle.Puzzle;
 
-/// <summary>
-/// Immutable game state snapshot. All state is read-only; new states are created
-/// via WithX() methods rather than mutation. Enables undo/redo, time travel, and
-/// functional state transitions.
-/// </summary>
-public sealed class GameState
+namespace WordPuzzle.State
+{
+    /// <summary>
+    /// Immutable game state snapshot. All state is read-only; new states are created
+    /// via WithX() methods rather than mutation. Enables undo/redo, time travel, and
+    /// functional state transitions.
+    /// </summary>
+    public sealed class GameState
 {
     public readonly WordPuzzle puzzle;
     public readonly List<string> wordChain;
@@ -46,4 +49,6 @@ public sealed class GameState
 
     public override string ToString() =>
         $"GameState(puzzle={puzzle.puzzleId}, chain_length={wordChain.Count}, score={score}, elapsed={elapsedTime:F1}s)";
+    }
+}
 }
