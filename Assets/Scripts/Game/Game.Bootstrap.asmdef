@@ -1,0 +1,19 @@
+{
+    "name": "Game.Bootstrap",
+    "rootNamespace": "WordPuzzle",
+    "references": [
+        "Game.UI",
+        "Game.Modes",
+        "Game.State",
+        "Game.Puzzle"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
