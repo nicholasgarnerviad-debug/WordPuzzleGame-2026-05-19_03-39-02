@@ -41,7 +41,7 @@ namespace WordPuzzle.Modes
             timeRemaining -= deltaTime;
             if (timeRemaining < 0) timeRemaining = 0;
 
-            stateManager.UpdateElapsedTime(TOTAL_TIME - timeRemaining);
+            // Time tracking is managed internally by the mode
         }
 
         public GameModeStats GetStats()

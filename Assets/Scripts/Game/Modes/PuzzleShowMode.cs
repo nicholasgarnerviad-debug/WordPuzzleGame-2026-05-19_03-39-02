@@ -46,8 +46,7 @@ namespace WordPuzzle.Modes
 
         public void Tick(float deltaTime)
         {
-            if (stateManager != null)
-                stateManager.UpdateElapsedTime(deltaTime);
+            // Time tracking is handled internally by the mode
         }
 
         public GameModeStats GetStats()
