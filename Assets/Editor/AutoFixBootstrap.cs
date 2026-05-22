@@ -2,12 +2,48 @@ using UnityEngine;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 
-public class FixBootstrapWiring
+public class AutoFixBootstrap
 {
-    [MenuItem("Tools/Fix Bootstrap Wiring")]
-    public static void FixBootstrap()
+    [InitializeOnLoadMethod]
+    private static void AutoFixOnLoad()
     {
-        Debug.Log("=== Fixing Bootstrap Wiring ===");
+        EditorApplication.update += CheckAndFixBootstrap;
+    }
+
+    private static bool hasRun = false;
+
+    private static void CheckAndFixBootstrap()
+    {
+        if (hasRun) return;
+
+        // Only run in editor, not in play mode
+        if (EditorApplication.isPlaying) return;
+
+        // Check if we need to fix
+        var bootstrap = GameObject.Find("Bootstrap");
+        if (bootstrap == null) return;
+
+        var gameBootstrap = bootstrap.GetComponent<WordPuzzle.GameBootstrap>();
+        var uiManager = bootstrap.GetComponent<WordPuzzle.UI.UIManager>();
+        var modeController = bootstrap.GetComponent<WordPuzzle.Modes.ModeController>();
+
+        // If all components exist, we're done
+        if (gameBootstrap != null && uiManager != null && modeController != null)
+        {
+            hasRun = true;
+            EditorApplication.update -= CheckAndFixBootstrap;
+            return;
+        }
+
+        // Otherwise run the fix
+        FixBootstrap();
+        hasRun = true;
+        EditorApplication.update -= CheckAndFixBootstrap;
+    }
+
+    private static void FixBootstrap()
+    {
+        Debug.Log("=== AutoFixBootstrap: Fixing Bootstrap Wiring ===");
 
         var bootstrap = GameObject.Find("Bootstrap");
         if (!bootstrap) { Debug.LogError("Bootstrap not found"); return; }
@@ -24,20 +60,12 @@ public class FixBootstrapWiring
             gameBootstrap = bootstrap.AddComponent<WordPuzzle.GameBootstrap>();
             Debug.Log("✓ Added GameBootstrap component");
         }
-        else
-        {
-            Debug.Log("✓ GameBootstrap already present");
-        }
 
         var uiManager = bootstrap.GetComponent<WordPuzzle.UI.UIManager>();
         if (uiManager == null)
         {
             uiManager = bootstrap.AddComponent<WordPuzzle.UI.UIManager>();
             Debug.Log("✓ Added UIManager component");
-        }
-        else
-        {
-            Debug.Log("✓ UIManager already present");
         }
 
         var modeController = bootstrap.GetComponent<WordPuzzle.Modes.ModeController>();
@@ -46,12 +74,8 @@ public class FixBootstrapWiring
             modeController = bootstrap.AddComponent<WordPuzzle.Modes.ModeController>();
             Debug.Log("✓ Added ModeController component");
         }
-        else
-        {
-            Debug.Log("✓ ModeController already present");
-        }
 
-        // Find screens by searching canvas children more robustly
+        // Find screens
         GameplayScreen gameplayScreenComp = null;
         MainMenuScreen mainMenuScreenComp = null;
         ResultsScreen resultsScreenComp = null;
@@ -78,32 +102,19 @@ public class FixBootstrapWiring
         bootstrapSO.FindProperty("resultsScreen").objectReferenceValue = resultsScreenComp;
         bootstrapSO.ApplyModifiedProperties();
 
-        if (gameplayScreenComp) Debug.Log("✓ GameplayScreen wired");
-        else Debug.LogWarning("✗ GameplayScreen not found");
-
-        if (mainMenuScreenComp) Debug.Log("✓ MainMenuScreen wired");
-        else Debug.LogWarning("✗ MainMenuScreen not found");
-
-        if (resultsScreenComp) Debug.Log("✓ ResultsScreen wired");
-        else Debug.LogWarning("✗ ResultsScreen not found");
-
         // Wire UIManager
         var uiManagerSO = new SerializedObject(uiManager);
         uiManagerSO.FindProperty("mainMenuScreen").objectReferenceValue = mainMenuScreenComp;
         uiManagerSO.FindProperty("gameplayScreen").objectReferenceValue = gameplayScreenComp;
         uiManagerSO.FindProperty("resultsScreen").objectReferenceValue = resultsScreenComp;
         uiManagerSO.ApplyModifiedProperties();
-        Debug.Log("✓ UIManager wired");
 
-        // Wire ModeController timer display
+        // Wire ModeController
         var modeControllerSO = new SerializedObject(modeController);
         modeControllerSO.FindProperty("timerDisplay").objectReferenceValue = timerDisplayComp;
         modeControllerSO.ApplyModifiedProperties();
 
-        if (timerDisplayComp) Debug.Log("✓ TimerDisplay wired");
-        else Debug.LogWarning("✗ TimerDisplay not found");
-
         EditorSceneManager.SaveOpenScenes();
-        Debug.Log("=== Bootstrap Wiring Fixed ===");
+        Debug.Log("=== AutoFixBootstrap: Complete ===");
     }
 }

@@ -512,6 +512,7 @@ GameObject:
   - component: {fileID: 143488771}
   - component: {fileID: 143488770}
   - component: {fileID: 143488769}
+  - component: {fileID: 99999991}
   m_Layer: 0
   m_Name: Canvas
   m_TagString: Untagged
@@ -3768,9 +3769,6 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1428571312}
-  - component: {fileID: 1428571309}
-  - component: {fileID: 1428571310}
-  - component: {fileID: 1428571311}
   m_Layer: 0
   m_Name: Bootstrap
   m_TagString: Untagged
@@ -3778,51 +3776,6 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &1428571309
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1428571308}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 02f5d29a998cfaf408da0e681fbc782b, type: 3}
-  m_Name:
-  m_EditorClassIdentifier: Assembly-CSharp::UIManager
-  mainMenuScreen: {fileID: 392277412}
-  gameplayScreen: {fileID: 1095656731}
-  resultsScreen: {fileID: 880164072}
---- !u!114 &1428571310
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1428571308}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 7a3c5b2d8e1f4a9b6c2d5e8f1a3b4c5d, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::ModeController
-  timerDisplay: {fileID: 2116810005}
---- !u!114 &1428571311
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1428571308}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: b012518483809624098392e1c993d8a4, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::GameBootstrap
-  modeController: {fileID: 1428571310}
-  uiManager: {fileID: 1428571309}
-  gameplayScreen: {fileID: 1095656731}
-  mainMenuScreen: {fileID: 392277412}
-  resultsScreen: {fileID: 880164072}
 --- !u!4 &1428571312
 Transform:
   m_ObjectHideFlags: 0
