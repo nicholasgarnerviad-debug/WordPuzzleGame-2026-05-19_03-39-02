@@ -1,6 +1,9 @@
-public enum Difficulty
+namespace WordPuzzle.Puzzle
 {
-    Easy,
-    Medium,
-    Hard
+    public enum Difficulty
+    {
+        Easy,
+        Medium,
+        Hard
+    }
 }

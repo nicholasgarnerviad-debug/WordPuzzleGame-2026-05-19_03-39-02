@@ -3,7 +3,9 @@
     "rootNamespace": "",
     "references": [
         "Assembly-CSharp",
-        "Tests"
+        "Tests",
+        "Game.State",
+        "Game.Puzzle"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

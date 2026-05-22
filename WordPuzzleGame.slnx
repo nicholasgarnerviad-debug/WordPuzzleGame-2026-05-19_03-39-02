@@ -1,4 +1,5 @@
 ﻿<Solution>
+  <Project Path="Game.State.csproj" />
   <Project Path="Assembly-CSharp.csproj" />
   <Project Path="Game.Puzzle.csproj" />
   <Project Path="Unit.Tests.csproj" />

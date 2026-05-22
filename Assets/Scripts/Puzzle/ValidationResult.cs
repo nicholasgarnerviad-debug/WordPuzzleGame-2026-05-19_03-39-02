@@ -1,95 +1,98 @@
-public class ValidationResult
+namespace WordPuzzle.Puzzle
 {
-    private bool _isValid;
-    private string _message;
-    private bool _isNextStep;
-    private bool _isProgress;
-    private int _distanceToStart;
-    private int _distanceToEnd;
-
-    public bool IsValid
+    public class ValidationResult
     {
-        get => _isValid;
-        set => _isValid = value;
-    }
+        private bool _isValid;
+        private string _message;
+        private bool _isNextStep;
+        private bool _isProgress;
+        private int _distanceToStart;
+        private int _distanceToEnd;
 
-    public string Message
-    {
-        get => _message;
-        set => _message = value;
-    }
+        public bool IsValid
+        {
+            get => _isValid;
+            set => _isValid = value;
+        }
 
-    public bool IsNextStep
-    {
-        get => _isNextStep;
-        set => _isNextStep = value;
-    }
+        public string Message
+        {
+            get => _message;
+            set => _message = value;
+        }
 
-    public bool IsProgress
-    {
-        get => _isProgress;
-        set => _isProgress = value;
-    }
+        public bool IsNextStep
+        {
+            get => _isNextStep;
+            set => _isNextStep = value;
+        }
 
-    public int DistanceToStart
-    {
-        get => _distanceToStart;
-        set => _distanceToStart = value;
-    }
+        public bool IsProgress
+        {
+            get => _isProgress;
+            set => _isProgress = value;
+        }
 
-    public int DistanceToEnd
-    {
-        get => _distanceToEnd;
-        set => _distanceToEnd = value;
-    }
+        public int DistanceToStart
+        {
+            get => _distanceToStart;
+            set => _distanceToStart = value;
+        }
 
-    // Legacy field names for backward compatibility
-    public bool isValid
-    {
-        get => IsValid;
-        set => IsValid = value;
-    }
+        public int DistanceToEnd
+        {
+            get => _distanceToEnd;
+            set => _distanceToEnd = value;
+        }
 
-    public string message
-    {
-        get => Message;
-        set => Message = value;
-    }
+        // Legacy field names for backward compatibility
+        public bool isValid
+        {
+            get => IsValid;
+            set => IsValid = value;
+        }
 
-    public bool isNextStep
-    {
-        get => IsNextStep;
-        set => IsNextStep = value;
-    }
+        public string message
+        {
+            get => Message;
+            set => Message = value;
+        }
 
-    public bool isProgress
-    {
-        get => IsProgress;
-        set => IsProgress = value;
-    }
+        public bool isNextStep
+        {
+            get => IsNextStep;
+            set => IsNextStep = value;
+        }
 
-    public int distanceToStart
-    {
-        get => DistanceToStart;
-        set => DistanceToStart = value;
-    }
+        public bool isProgress
+        {
+            get => IsProgress;
+            set => IsProgress = value;
+        }
 
-    public int distanceToEnd
-    {
-        get => DistanceToEnd;
-        set => DistanceToEnd = value;
-    }
+        public int distanceToStart
+        {
+            get => DistanceToStart;
+            set => DistanceToStart = value;
+        }
 
-    public ValidationResult() { }
+        public int distanceToEnd
+        {
+            get => DistanceToEnd;
+            set => DistanceToEnd = value;
+        }
 
-    public ValidationResult(bool valid, string msg, bool nextStep,
-                           bool progress, int distStart, int distEnd)
-    {
-        IsValid = valid;
-        Message = msg;
-        IsNextStep = nextStep;
-        IsProgress = progress;
-        DistanceToStart = distStart;
-        DistanceToEnd = distEnd;
+        public ValidationResult() { }
+
+        public ValidationResult(bool valid, string msg, bool nextStep,
+                               bool progress, int distStart, int distEnd)
+        {
+            IsValid = valid;
+            Message = msg;
+            IsNextStep = nextStep;
+            IsProgress = progress;
+            DistanceToStart = distStart;
+            DistanceToEnd = distEnd;
+        }
     }
 }

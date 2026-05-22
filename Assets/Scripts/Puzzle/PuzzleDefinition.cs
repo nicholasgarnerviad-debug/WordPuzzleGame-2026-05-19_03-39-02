@@ -1,82 +1,85 @@
-public class PuzzleDefinition
+namespace WordPuzzle.Puzzle
 {
-    private int _puzzleId;
-    private string _startWord;
-    private string _endWord;
-    private int _optimalSteps;
-    private string[] _solution;
-    private int _seedValue;
-
-    public int PuzzleId
+    public class PuzzleDefinition
     {
-        get => _puzzleId;
-        set => _puzzleId = value;
-    }
+        private int _puzzleId;
+        private string _startWord;
+        private string _endWord;
+        private int _optimalSteps;
+        private string[] _solution;
+        private int _seedValue;
 
-    public string StartWord
-    {
-        get => _startWord;
-        set => _startWord = value;
-    }
+        public int PuzzleId
+        {
+            get => _puzzleId;
+            set => _puzzleId = value;
+        }
 
-    public string EndWord
-    {
-        get => _endWord;
-        set => _endWord = value;
-    }
+        public string StartWord
+        {
+            get => _startWord;
+            set => _startWord = value;
+        }
 
-    public int OptimalSteps
-    {
-        get => _optimalSteps;
-        set => _optimalSteps = value;
-    }
+        public string EndWord
+        {
+            get => _endWord;
+            set => _endWord = value;
+        }
 
-    public string[] Solution
-    {
-        get => _solution;
-        set => _solution = value;
-    }
+        public int OptimalSteps
+        {
+            get => _optimalSteps;
+            set => _optimalSteps = value;
+        }
 
-    public int SeedValue
-    {
-        get => _seedValue;
-        set => _seedValue = value;
-    }
+        public string[] Solution
+        {
+            get => _solution;
+            set => _solution = value;
+        }
 
-    // Legacy field names for backward compatibility with object initializers
-    public int puzzleId
-    {
-        get => PuzzleId;
-        set => PuzzleId = value;
-    }
+        public int SeedValue
+        {
+            get => _seedValue;
+            set => _seedValue = value;
+        }
 
-    public string startWord
-    {
-        get => StartWord;
-        set => StartWord = value;
-    }
+        // Legacy field names for backward compatibility with object initializers
+        public int puzzleId
+        {
+            get => PuzzleId;
+            set => PuzzleId = value;
+        }
 
-    public string endWord
-    {
-        get => EndWord;
-        set => EndWord = value;
-    }
+        public string startWord
+        {
+            get => StartWord;
+            set => StartWord = value;
+        }
 
-    public int optimalSteps
-    {
-        get => OptimalSteps;
-        set => OptimalSteps = value;
-    }
+        public string endWord
+        {
+            get => EndWord;
+            set => EndWord = value;
+        }
 
-    public string[] solution
-    {
-        get => Solution;
-        set => Solution = value;
-    }
+        public int optimalSteps
+        {
+            get => OptimalSteps;
+            set => OptimalSteps = value;
+        }
 
-    public int seedValue
-    {
-        get => SeedValue;
-        set => SeedValue = value;
+        public string[] solution
+        {
+            get => Solution;
+            set => Solution = value;
+        }
+
+        public int seedValue
+        {
+            get => SeedValue;
+            set => SeedValue = value;
+        }
     }
 }

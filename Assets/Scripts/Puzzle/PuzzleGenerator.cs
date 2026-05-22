@@ -1,7 +1,9 @@
 using System.Collections.Generic;
 using System.Linq;
 
-public class PuzzleGenerator : IPuzzleGenerator
+namespace WordPuzzle.Puzzle
+{
+    public class PuzzleGenerator : IPuzzleGenerator
 {
     private WordGraph wordGraph;
     private Dictionary<int, TierData> tierCache;
@@ -198,8 +200,9 @@ public class PuzzleGenerator : IPuzzleGenerator
     }
 }
 
-public interface IPuzzleGenerator
-{
-    PuzzleDefinition GetTierPuzzle(int tierId, int puzzleIndex);
-    PuzzleDefinition GenerateRandomPuzzle(Difficulty difficulty);
+    public interface IPuzzleGenerator
+    {
+        PuzzleDefinition GetTierPuzzle(int tierId, int puzzleIndex);
+        PuzzleDefinition GenerateRandomPuzzle(Difficulty difficulty);
+    }
 }
