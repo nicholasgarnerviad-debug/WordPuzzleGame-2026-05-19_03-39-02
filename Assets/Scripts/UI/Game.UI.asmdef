@@ -1,0 +1,16 @@
+{
+    "name": "Game.UI",
+    "rootNamespace": "WordPuzzle.UI",
+    "references": [
+        "Game.Modes"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
