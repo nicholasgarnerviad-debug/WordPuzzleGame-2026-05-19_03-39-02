@@ -1,129 +1,78 @@
-using System;
-using UnityEngine;
+using WordPuzzle.State;
 
-public class TimeAttackMode : MonoBehaviour, IGameMode
+namespace WordPuzzle.Modes
 {
-    private GameModeContext context;
-    private float timeRemaining;
-    private float currentTimeLimit;
-    private int roundCount;
-    private TimeAttackModeStats stats;
-    private bool isActive;
-    private System.Random random;
-
-    public event Action<float> TimeChanged;
-
-    public float GetTimeRemaining() => timeRemaining;
-
-    public void Initialize(GameModeContext context)
+    /// <summary>
+    /// Time Attack mode: Complete as many words as possible in 60 seconds.
+    /// Any valid one-letter transition counts (not limited to solution path).
+    /// </summary>
+    public class TimeAttackMode : IGameMode
     {
-        this.context = context;
-        this.stats = new TimeAttackModeStats();
-        this.random = new System.Random();
-    }
+        private GameStateManager stateManager;
+        private WordPuzzle currentPuzzle;
+        private float timeRemaining;
+        private const float TOTAL_TIME = 60f;
 
-    public void StartGame()
-    {
-        isActive = true;
-        roundCount = 0;
-        stats.sessionStartTime = Time.time;
-        StartNewRound();
-        Logger.Log("Time Attack Mode started");
-    }
-
-    public void HandleInput(GameAction action)
-    {
-        if (!isActive)
-            return;
-
-        context.stateManager.Dispatch(action);
-        var state = context.stateManager.GetCurrentState();
-
-        if (state.isWon)
+        public void Initialize(GameStateManager stateManager)
         {
-            OnPuzzleComplete();
-        }
-    }
-
-    public void Tick(float deltaTime)
-    {
-        if (!isActive) return;
-
-        timeRemaining -= deltaTime;
-        TimeChanged?.Invoke(timeRemaining);
-
-        if (timeRemaining <= 0)
-        {
-            OnTimeUp();
-        }
-    }
-
-    public void OnGameOver()
-    {
-        isActive = false;
-        context.RaiseGameOver();
-    }
-
-    public ModeStats GetStats()
-    {
-        float elapsedTime = Time.time - stats.sessionStartTime;
-        return new ModeStats
-        {
-            modeName = "Time Attack",
-            coinsEarned = stats.totalCoinsEarned,
-            puzzlesCompleted = roundCount,
-            totalTime = (int)elapsedTime
-        };
-    }
-
-    private void StartNewRound()
-    {
-        roundCount++;
-
-        if (roundCount == 1)
-        {
-            currentTimeLimit = Constants.TIME_ATTACK_START;
-        }
-        else
-        {
-            currentTimeLimit = Mathf.Max(Constants.TIME_ATTACK_MIN, currentTimeLimit - Constants.TIME_ATTACK_DECREMENT);
+            this.stateManager = stateManager ?? throw new System.ArgumentNullException(nameof(stateManager));
         }
 
-        timeRemaining = currentTimeLimit;
+        public void StartGame(WordPuzzle puzzle)
+        {
+            if (stateManager == null)
+                throw new System.InvalidOperationException("Must call Initialize first");
 
-        // Generate random medium puzzle
-        var puzzleDefinition = context.puzzleGenerator.GenerateRandomPuzzle(Difficulty.Medium);
-        var puzzle = new WordPuzzle(
-            puzzleDefinition.puzzleId,
-            puzzleDefinition.startWord,
-            puzzleDefinition.endWord,
-            puzzleDefinition.optimalSteps,
-            puzzleDefinition.solution,
-            puzzleDefinition.seedValue,
-            Difficulty.Medium
-        );
+            currentPuzzle = puzzle ?? throw new System.ArgumentNullException(nameof(puzzle));
+            stateManager.StartNewPuzzle(puzzle);
+            timeRemaining = TOTAL_TIME;
+        }
 
-        context.stateManager.StartNewPuzzle(puzzle);
-        Logger.Log($"Time Attack: Round {roundCount}, Time: {currentTimeLimit}s");
-    }
+        public void HandleWordSubmission(string word)
+        {
+            if (stateManager == null || currentPuzzle == null || timeRemaining <= 0) return;
+            stateManager.SubmitWord(word);
+        }
 
-    private async void OnPuzzleComplete()
-    {
-        int reward = Constants.TIME_ATTACK_BASE_REWARD + (int)(Constants.TIME_ATTACK_BONUS_PER_SECOND * timeRemaining);
-        await context.economy.AddCoinsAsync(reward, "time_attack");
-        stats.totalCoinsEarned += reward;
-        stats.bestRoundReached = Mathf.Max(stats.bestRoundReached, roundCount);
+        public void Tick(float deltaTime)
+        {
+            if (stateManager == null) return;
 
-        Logger.Log($"Puzzle completed! Earned {reward} coins");
+            timeRemaining -= deltaTime;
+            if (timeRemaining < 0) timeRemaining = 0;
 
-        StartNewRound();
-    }
+            stateManager.UpdateElapsedTime(TOTAL_TIME - timeRemaining);
+        }
 
-    private void OnTimeUp()
-    {
-        isActive = false;
-        Logger.Log($"Time Attack ended after {roundCount} rounds");
-        context.RaiseGameOver();
+        public GameModeStats GetStats()
+        {
+            var state = stateManager?.GetCurrentState();
+            var timeUsed = TOTAL_TIME - timeRemaining;
+
+            return new GameModeStats
+            {
+                modeName = "Time Attack",
+                wordsFound = state?.wordsFound ?? 0,
+                totalTime = timeUsed,
+                score = state?.score ?? 0,
+                accuracy = 100f // All submissions must be valid
+            };
+        }
+
+        public void Reset()
+        {
+            timeRemaining = TOTAL_TIME;
+            currentPuzzle = null;
+        }
+
+        public bool IsTimeUp()
+        {
+            return timeRemaining <= 0;
+        }
+
+        public float GetTimeRemaining()
+        {
+            return timeRemaining;
+        }
     }
 }
-
