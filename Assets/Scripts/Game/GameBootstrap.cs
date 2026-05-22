@@ -22,6 +22,14 @@ namespace WordPuzzle
 
         private void Start()
         {
+            // Validate critical dependencies
+            if (uiManager == null)
+            {
+                Debug.LogError("UIManager not assigned to GameBootstrap!");
+                enabled = false;
+                return;
+            }
+
             InitializeGameSystems();
             WireEventHandlers();
             ShowMainMenu();
@@ -37,10 +45,15 @@ namespace WordPuzzle
             var wordValidator = new WordValidator();
             var wordGraphBuilder = new WordGraphBuilder();
             puzzleGenerator = new PuzzleGenerator(wordGraphBuilder, wordValidator);
+
+            Debug.Log("Game systems initialized");
         }
 
         private void WireEventHandlers()
         {
+            if (uiManager == null)
+                return;
+
             // Wire main menu mode selection
             uiManager.GetMainMenu().OnClassicModeSelected += StartClassicMode;
             uiManager.GetMainMenu().OnPuzzleShowSelected += StartPuzzleShowMode;
@@ -52,6 +65,24 @@ namespace WordPuzzle
             // Wire results
             uiManager.GetResults().OnPlayAgain += PlayAgain;
             uiManager.GetResults().OnMainMenu += ShowMainMenu;
+
+            Debug.Log("Event handlers wired");
+        }
+
+        private void OnDestroy()
+        {
+            if (uiManager == null)
+                return;
+
+            // Unsubscribe from all events to prevent memory leaks
+            uiManager.GetMainMenu().OnClassicModeSelected -= StartClassicMode;
+            uiManager.GetMainMenu().OnPuzzleShowSelected -= StartPuzzleShowMode;
+            uiManager.GetMainMenu().OnTimeAttackSelected -= StartTimeAttackMode;
+            uiManager.GetGameplay().OnWordSubmitted -= OnWordSubmitted;
+            uiManager.GetResults().OnPlayAgain -= PlayAgain;
+            uiManager.GetResults().OnMainMenu -= ShowMainMenu;
+
+            Debug.Log("Event handlers cleaned up");
         }
 
         private void Update()
@@ -66,12 +97,14 @@ namespace WordPuzzle
 
         private void ShowMainMenu()
         {
+            Debug.Log("Showing main menu");
             activeMode = null;
             uiManager.ShowMainMenu();
         }
 
         private void StartClassicMode()
         {
+            Debug.Log("Starting Classic Mode");
             activeMode = new ClassicMode();
             modeController.SetMode(activeMode);
             StartNewGame();
@@ -79,6 +112,7 @@ namespace WordPuzzle
 
         private void StartPuzzleShowMode()
         {
+            Debug.Log("Starting Puzzle Show Mode");
             activeMode = new PuzzleShowMode();
             modeController.SetMode(activeMode);
             StartNewGame();
@@ -86,6 +120,7 @@ namespace WordPuzzle
 
         private void StartTimeAttackMode()
         {
+            Debug.Log("Starting Time Attack Mode");
             activeMode = new TimeAttackMode();
             modeController.SetMode(activeMode);
             StartNewGame();
@@ -94,6 +129,14 @@ namespace WordPuzzle
         private void StartNewGame()
         {
             var puzzle = puzzleGenerator.GenerateRandomPuzzle(Difficulty.Easy);
+
+            // Validate puzzle generation
+            if (puzzle == null)
+            {
+                Debug.LogError("Failed to generate puzzle!");
+                return;
+            }
+
             modeController.StartGame(puzzle);
             uiManager.ShowGameplay();
 
@@ -101,6 +144,8 @@ namespace WordPuzzle
             uiManager.GetGameplay().SetPuzzleDisplay(state.puzzle.startWord, state.puzzle.endWord);
             uiManager.GetGameplay().SetScore(0);
             UpdateGameplayUI();
+
+            Debug.Log($"Game started: {state.puzzle.startWord} → {state.puzzle.endWord}");
         }
 
         private void OnWordSubmitted(string word)
@@ -113,10 +158,12 @@ namespace WordPuzzle
             if (wordAdded)
             {
                 uiManager.GetGameplay().ShowFeedback("✓", Color.green);
+                Debug.Log($"Word accepted: {word}");
             }
             else
             {
                 uiManager.GetGameplay().ShowFeedback("✗", Color.red);
+                Debug.Log($"Word rejected: {word}");
             }
         }
 
@@ -151,6 +198,7 @@ namespace WordPuzzle
 
         private void EndGame()
         {
+            Debug.Log("Game over - showing results");
             activeMode = null;
             var stats = modeController.GetCurrentStats();
             uiManager.GetResults().DisplayStats(stats);
@@ -159,6 +207,8 @@ namespace WordPuzzle
 
         private void PlayAgain()
         {
+            // Return to main menu (user can select same or different mode)
+            Debug.Log("Play again - returning to main menu");
             ShowMainMenu();
         }
     }
