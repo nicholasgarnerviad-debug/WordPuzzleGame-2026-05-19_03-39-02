@@ -1,42 +1,73 @@
-using System.Collections.Generic;
 using UnityEngine;
+using WordPuzzle.Modes;
 
-public class UIManager : MonoBehaviour
+namespace WordPuzzle.UI
 {
-    public static UIManager Instance { get; private set; }
-
-    private readonly Dictionary<System.Type, MonoBehaviour> screens = new();
-
-    private void Awake()
+    /// <summary>
+    /// Central UI manager. Coordinates screen transitions and event wiring.
+    /// Singleton pattern for easy access from mode implementations.
+    /// </summary>
+    public class UIManager : MonoBehaviour
     {
-        if (Instance != null && Instance != this)
+        public static UIManager Instance { get; private set; }
+
+        [SerializeField] private MainMenuScreen mainMenuScreen;
+        [SerializeField] private GameplayScreen gameplayScreen;
+        [SerializeField] private ResultsScreen resultsScreen;
+
+        private void Awake()
         {
-            Destroy(gameObject);
-            return;
+            if (Instance != null && Instance != this)
+            {
+                Destroy(gameObject);
+                return;
+            }
+            Instance = this;
         }
-        Instance = this;
-    }
 
-    public void RegisterScreen<T>(T screen) where T : MonoBehaviour
-    {
-        screens[typeof(T)] = screen;
-        screen.gameObject.SetActive(false);
-    }
-
-    public void ShowScreen<T>() where T : MonoBehaviour
-    {
-        HideAllScreens();
-        if (screens.TryGetValue(typeof(T), out var screen))
-            screen.gameObject.SetActive(true);
-        else
-            Logger.LogWarning($"[UIManager] Screen {typeof(T).Name} not registered");
-    }
-
-    public void HideAllScreens()
-    {
-        foreach (var screen in screens.Values)
+        private void OnEnable()
         {
-            if (screen != null) screen.gameObject.SetActive(false);
+            gameplayScreen.OnWordSubmitted += OnWordSubmitted;
+            resultsScreen.OnPlayAgain += OnPlayAgain;
+            resultsScreen.OnMainMenu += OnMainMenu;
         }
+
+        private void OnDisable()
+        {
+            gameplayScreen.OnWordSubmitted -= OnWordSubmitted;
+            resultsScreen.OnPlayAgain -= OnPlayAgain;
+            resultsScreen.OnMainMenu -= OnMainMenu;
+        }
+
+        public void ShowMainMenu()
+        {
+            mainMenuScreen.Show();
+            gameplayScreen.Hide();
+            resultsScreen.Hide();
+        }
+
+        public void ShowGameplay()
+        {
+            mainMenuScreen.Hide();
+            gameplayScreen.Show();
+            resultsScreen.Hide();
+        }
+
+        public void ShowResults()
+        {
+            mainMenuScreen.Hide();
+            gameplayScreen.Hide();
+            resultsScreen.Show();
+        }
+
+        // Screen accessors
+        public MainMenuScreen GetMainMenu() => mainMenuScreen;
+        public GameplayScreen GetGameplay() => gameplayScreen;
+        public ResultsScreen GetResults() => resultsScreen;
+
+        // Dummy handlers to wire up (will be overridden by bootstrap)
+        private void OnWordSubmitted(string word) { }
+        private void OnPlayAgain() { }
+        private void OnMainMenu() { }
     }
 }
