@@ -3,6 +3,7 @@ using WordPuzzle.Puzzle;
 using WordPuzzle.State;
 using WordPuzzle.Modes;
 using WordPuzzle.UI;
+using WordPuzzle.Persistence;
 
 namespace WordPuzzle
 {
@@ -13,10 +14,13 @@ namespace WordPuzzle
     /// </summary>
     public class GameBootstrap : MonoBehaviour
     {
+        [SerializeField] private ModeController modeController;
         [SerializeField] private UIManager uiManager;
+        [SerializeField] private GameplayScreen gameplayScreen;
+        [SerializeField] private MainMenuScreen mainMenuScreen;
+        [SerializeField] private ResultsScreen resultsScreen;
 
         private GameStateManager stateManager;
-        private ModeController modeController;
         private PuzzleGenerator puzzleGenerator;
         private IGameMode activeMode;
 
@@ -37,16 +41,110 @@ namespace WordPuzzle
 
         private void InitializeGameSystems()
         {
-            // Create core game systems
-            stateManager = new GameStateManager();
-            modeController = new ModeController(stateManager);
+            try
+            {
+                // Create puzzle generator with word graph and tier cache
+                var wordGraph = new WordGraph();
+                var tierCache = new System.Collections.Generic.Dictionary<int, TierData>();
 
-            // Create puzzle generator with word graph and tier cache
-            var wordGraph = new WordGraph();
-            var tierCache = new System.Collections.Generic.Dictionary<int, TierData>();
-            puzzleGenerator = new PuzzleGenerator(wordGraph, tierCache);
+                // Load dictionary words from tier definitions
+                LoadDictionaryWordsFromTiers(wordGraph, tierCache);
 
-            Debug.Log("Game systems initialized");
+                // Create word validator (depends on word graph)
+                var wordValidator = new WordValidator(wordGraph);
+
+                // Create data manager (handles persistence and tier loading)
+                var dataManager = new DataManager();
+
+                // Create state manager with all dependencies
+                stateManager = new GameStateManager(wordValidator, dataManager);
+
+                // Use serialized ModeController or create new one
+                if (modeController == null)
+                {
+                    modeController = new ModeController(stateManager);
+                }
+
+                // Create puzzle generator (depends on word graph and tier cache)
+                puzzleGenerator = new PuzzleGenerator(wordGraph, tierCache);
+
+                Debug.Log("Game systems initialized successfully");
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogError($"Failed to initialize game systems: {ex.Message}\n{ex.StackTrace}");
+                enabled = false;
+            }
+        }
+
+        private void LoadDictionaryWordsFromTiers(WordGraph wordGraph, System.Collections.Generic.Dictionary<int, TierData> tierCache)
+        {
+            // Load tier definitions from Resources/Data/tier_definitions.json
+            TextAsset tierFile = Resources.Load<TextAsset>("Data/tier_definitions");
+
+            if (tierFile == null)
+            {
+                Debug.LogError("tier_definitions.json not found in Resources/Data/");
+                return;
+            }
+
+            try
+            {
+                TierDefinitionsWrapper wrapper = JsonUtility.FromJson<TierDefinitionsWrapper>(tierFile.text);
+
+                if (wrapper?.tiers == null)
+                {
+                    Debug.LogError("tier_definitions.json has no tiers array");
+                    return;
+                }
+
+                // Extract all unique words from all puzzle solutions
+                var uniqueWords = new System.Collections.Generic.HashSet<string>();
+
+                foreach (var tier in wrapper.tiers)
+                {
+                    // Cache the tier
+                    tierCache[tier.tierId] = tier;
+
+                    // Extract words from all puzzles in this tier
+                    if (tier.puzzles != null)
+                    {
+                        foreach (var puzzle in tier.puzzles)
+                        {
+                            // Add start and end words
+                            if (!string.IsNullOrEmpty(puzzle.startWord))
+                                uniqueWords.Add(puzzle.startWord.ToLower());
+                            if (!string.IsNullOrEmpty(puzzle.endWord))
+                                uniqueWords.Add(puzzle.endWord.ToLower());
+
+                            // Add all solution words
+                            if (puzzle.solution != null)
+                            {
+                                foreach (var word in puzzle.solution)
+                                {
+                                    if (!string.IsNullOrEmpty(word))
+                                        uniqueWords.Add(word.ToLower());
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Add all collected words to the word graph
+                foreach (var word in uniqueWords)
+                {
+                    wordGraph.AddWord(word);
+                }
+
+                // Build adjacency list for efficient pathfinding
+                wordGraph.BuildAdjacencies();
+
+                Debug.Log($"Dictionary loaded: {uniqueWords.Count} unique words from {wrapper.tiers.Length} tiers");
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogError($"Failed to load dictionary from tier definitions: {ex.Message}");
+            }
         }
 
         private void WireEventHandlers()
@@ -128,14 +226,25 @@ namespace WordPuzzle
 
         private void StartNewGame()
         {
-            var puzzle = puzzleGenerator.GenerateRandomPuzzle(Difficulty.Easy);
+            var puzzleDefinition = puzzleGenerator.GenerateRandomPuzzle(Difficulty.Easy);
 
             // Validate puzzle generation
-            if (puzzle == null)
+            if (puzzleDefinition == null)
             {
                 Debug.LogError("Failed to generate puzzle!");
                 return;
             }
+
+            // Convert PuzzleDefinition to WordPuzzle for compatibility with GameStateManager
+            var puzzle = new WordPuzzle(
+                puzzleDefinition.puzzleId,
+                puzzleDefinition.startWord,
+                puzzleDefinition.endWord,
+                puzzleDefinition.optimalSteps,
+                puzzleDefinition.solution,
+                puzzleDefinition.seedValue,
+                Difficulty.Easy
+            );
 
             modeController.StartGame(puzzle);
             uiManager.ShowGameplay();

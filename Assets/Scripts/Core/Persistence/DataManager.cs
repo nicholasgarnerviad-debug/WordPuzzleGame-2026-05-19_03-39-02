@@ -1,8 +1,11 @@
 using UnityEngine;
 using System.Threading.Tasks;
 using System.Collections.Generic;
+using WordPuzzle.Persistence;
 
-public class DataManager : IDataManager
+namespace WordPuzzle.Persistence
+{
+    public class DataManager : IDataManager
 {
     private const string SAVE_FILE_KEY = "wordpuzzle_save";
     private const string PROGRESS_FILE_KEY = "wordpuzzle_progress";
@@ -197,4 +200,5 @@ public class DataManager : IDataManager
             }
         };
     }
+}
 }

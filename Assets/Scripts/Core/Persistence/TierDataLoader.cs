@@ -1,7 +1,10 @@
 using UnityEngine;
 using System.Threading.Tasks;
+using WordPuzzle.Persistence;
 
-public class TierDataLoader
+namespace WordPuzzle.Persistence
+{
+    public class TierDataLoader
 {
     public async Task<TierData> LoadTierAsync(int tierId)
     {
@@ -37,8 +40,9 @@ public class TierDataLoader
     }
 }
 
-[System.Serializable]
-public class TierDefinitionsWrapper
-{
-    public TierData[] tiers;
+    [System.Serializable]
+    public class TierDefinitionsWrapper
+    {
+        public TierData[] tiers;
+    }
 }

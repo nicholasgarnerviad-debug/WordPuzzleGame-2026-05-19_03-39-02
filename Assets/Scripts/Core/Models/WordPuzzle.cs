@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using WordPuzzle.Puzzle;
 
 public class WordPuzzle
 {
@@ -23,11 +24,4 @@ public class WordPuzzle
         seedValue = seed;
         difficulty = diff;
     }
-}
-
-public enum Difficulty
-{
-    Easy,
-    Medium,
-    Hard
 }
