@@ -1,6 +1,8 @@
 using NUnit.Framework;
 using System.Collections.Generic;
+using WordPuzzle.Puzzle;
 
+[TestFixture]
 public class WordValidatorTests
 {
     private WordValidator validator;

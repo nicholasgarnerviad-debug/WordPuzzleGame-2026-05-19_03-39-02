@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using WordPuzzle.Puzzle;
+using WordPuzzle.State;
 
 // Shared mock implementations for testing
 public class MockWordValidator : IWordValidator

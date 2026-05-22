@@ -1,6 +1,8 @@
 using NUnit.Framework;
 using System.Threading.Tasks;
+using WordPuzzle.State;
 
+[TestFixture]
 public class EconomyManagerTests
 {
     private EconomyManager manager;

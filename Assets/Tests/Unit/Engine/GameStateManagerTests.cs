@@ -1,5 +1,7 @@
 using NUnit.Framework;
 using System.Collections.Generic;
+using WordPuzzle.State;
+using WordPuzzle.Puzzle;
 
 [TestFixture]
 public class GameStateManagerTests

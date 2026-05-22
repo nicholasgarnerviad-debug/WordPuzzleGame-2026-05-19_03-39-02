@@ -1,10 +1,14 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using WordPuzzle.Puzzle;
+using WordPuzzle.State;
 using UnityEngine;
 
-public class GameStateManager : IGameStateManager
+namespace WordPuzzle.State
 {
+    public class GameStateManager : IGameStateManager
+    {
     private GameState currentState;
     private WordPuzzle currentPuzzle;
     private IWordValidator wordValidator;
@@ -370,27 +374,28 @@ public class GameStateManager : IGameStateManager
             subscribers.Remove(observer);
         }
     }
-}
 
-public interface IGameStateManager
-{
-    GameState GetCurrentState();
-    void StartNewPuzzle(WordPuzzle puzzle);
-    void Dispatch(GameAction action);
-    IDisposable Subscribe(Action<GameState> observer);
+    public interface IGameStateManager
+    {
+        GameState GetCurrentState();
+        void StartNewPuzzle(WordPuzzle puzzle);
+        void Dispatch(GameAction action);
+        IDisposable Subscribe(Action<GameState> observer);
 
-    // UI Integration Methods
-    char[] GetAvailableLetters();
-    int GetCurrentScore();
-    bool IsValidWord(string word);
-    int SubmitWord(string word);
-    int GetCurrentStreak();
-    int GetWordsRemaining();
-    void SetWordsRemaining(int count);
-    float GetTimeRemaining();
-    void SetTimeRemaining(float time);
-    string GetBestWord();
-    int GetLongestStreak();
-    ResultsScreen.GameStats GetFinalStats();
-    void ResetTracking();
+        // UI Integration Methods
+        char[] GetAvailableLetters();
+        int GetCurrentScore();
+        bool IsValidWord(string word);
+        int SubmitWord(string word);
+        int GetCurrentStreak();
+        int GetWordsRemaining();
+        void SetWordsRemaining(int count);
+        float GetTimeRemaining();
+        void SetTimeRemaining(float time);
+        string GetBestWord();
+        int GetLongestStreak();
+        ResultsScreen.GameStats GetFinalStats();
+        void ResetTracking();
+    }
+
 }

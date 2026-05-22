@@ -1,5 +1,7 @@
 using NUnit.Framework;
+using WordPuzzle.Puzzle;
 
+[TestFixture]
 public class WordGraphTests
 {
     private WordGraph graph;
