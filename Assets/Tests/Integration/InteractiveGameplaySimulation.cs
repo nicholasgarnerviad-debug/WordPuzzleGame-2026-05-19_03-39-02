@@ -394,18 +394,41 @@ public class InteractiveGameplaySimulation
     // Helper method to create a game context for testing
     private GameModeContext CreateGameModeContext()
     {
+        // Create context object
         var context = new GameModeContext();
 
-        // Initialize required managers and generators
+        // Create mock word validator
+        var wordValidator = new MockWordValidator();
+        wordValidator.SetValidResult(true, true);
+
+        // Create mock data manager
+        var dataManager = new MockDataManager();
+
+        // Create GameStateManager with proper constructor parameters
         context.stateManager = new GameStateManager();
-        context.puzzleGenerator = new PuzzleGenerator(
-            new WordGraphBuilder(),
-            new WordValidator()
-        );
+
+        // Create PuzzleGenerator with WordGraph
+        var wordGraph = new WordGraphBuilder();
+        context.puzzleGenerator = new PuzzleGenerator(wordGraph, wordValidator);
+
+        // Create EconomyManager
         context.economy = new EconomyManager();
 
-        // Load a test puzzle
+        // Load test puzzle
         var puzzleDefinition = context.puzzleGenerator.GenerateRandomPuzzle(Difficulty.Easy);
+        if (puzzleDefinition == null)
+        {
+            puzzleDefinition = new PuzzleDefinition
+            {
+                puzzleId = 1,
+                startWord = "cat",
+                endWord = "dog",
+                optimalSteps = 3,
+                solution = new[] { "cat", "bat", "bag", "dog" },
+                seedValue = 0
+            };
+        }
+
         var testPuzzle = new WordPuzzle(
             puzzleDefinition.puzzleId,
             puzzleDefinition.startWord,

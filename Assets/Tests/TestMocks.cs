@@ -203,17 +203,41 @@ public class MockPuzzleGenerator : IPuzzleGenerator
 
 public class MockDataManager : IDataManager
 {
+    private Dictionary<string, object> persistedData = new Dictionary<string, object>();
+    private GameStateSnapshot lastGameState;
+    private PlayerProgress lastPlayerProgress;
+
     public Task SaveGameStateAsync(GameStateSnapshot snapshot)
-        => Task.CompletedTask;
+    {
+        lastGameState = snapshot;
+        persistedData["gameState"] = snapshot;
+        return Task.CompletedTask;
+    }
 
     public Task<GameStateSnapshot> LoadGameStateAsync()
-        => Task.FromResult(new GameStateSnapshot());
+    {
+        if (persistedData.TryGetValue("gameState", out var state) && state is GameStateSnapshot snapshot)
+        {
+            return Task.FromResult(snapshot);
+        }
+        return Task.FromResult(lastGameState ?? new GameStateSnapshot());
+    }
 
     public Task UpdatePlayerProgressAsync(PlayerProgress progress)
-        => Task.CompletedTask;
+    {
+        lastPlayerProgress = progress;
+        persistedData["playerProgress"] = progress;
+        return Task.CompletedTask;
+    }
 
     public Task<PlayerProgress> GetPlayerProgressAsync()
-        => Task.FromResult(new PlayerProgress());
+    {
+        if (persistedData.TryGetValue("playerProgress", out var progress) && progress is PlayerProgress playerProgress)
+        {
+            return Task.FromResult(playerProgress);
+        }
+        return Task.FromResult(lastPlayerProgress ?? new PlayerProgress());
+    }
 
     public Task<TierData> GetTierDataAsync(int tierId)
         => Task.FromResult(new TierData { tierId = tierId, isUnlocked = true });

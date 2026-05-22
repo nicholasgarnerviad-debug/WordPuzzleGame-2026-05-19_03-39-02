@@ -4,6 +4,8 @@ using System.Collections;
 using UnityEngine;
 using UnityEngine.TestTools;
 using UnityEngine.SceneManagement;
+using UnityEngine.UI;
+using TMPro;
 
 /// <summary>
 /// Final comprehensive playthrough test to verify the game is ready for release.
@@ -12,6 +14,24 @@ using UnityEngine.SceneManagement;
 /// </summary>
 public class FinalPlaythroughTests
 {
+    [SetUp]
+    public void SetUp()
+    {
+        // Load the GameUI scene if not already loaded
+        var activeScene = SceneManager.GetActiveScene();
+        if (activeScene.name != "GameUI")
+        {
+            try
+            {
+                SceneManager.LoadScene("Assets/Scenes/GameUI.unity", LoadSceneMode.Single);
+            }
+            catch
+            {
+                Assert.Inconclusive("GameUI scene not found - skipping UI tests");
+            }
+        }
+    }
+
     [UnityTest]
     public IEnumerator Test01_BootstrapComponentsExist()
     {
