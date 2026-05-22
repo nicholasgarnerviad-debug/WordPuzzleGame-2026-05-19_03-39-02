@@ -1,41 +1,23 @@
-﻿using System;
+﻿using WordPuzzle.State;
 
-public interface IGameMode
+namespace WordPuzzle.Modes
 {
-    void Initialize(GameModeContext context);
-    void StartGame();
-    void HandleInput(GameAction action);
-    void Tick(float deltaTime);
-    void OnGameOver();
-    ModeStats GetStats();
-}
-
-public class GameModeContext
-{
-    public IPuzzleGenerator puzzleGenerator;
-    public IWordValidator wordValidator;
-    public IGameStateManager stateManager;
-    public IEconomyManager economy;
-    public IDataManager dataManager;
-
-    public event Action<ModeStats> OnModeComplete;
-    public event Action OnGameOver;
-
-    public void RaiseModeComplete(ModeStats stats)
+    public interface IGameMode
     {
-        OnModeComplete?.Invoke(stats);
+        void Initialize(GameStateManager stateManager);
+        void StartGame(WordPuzzle puzzle);
+        void HandleWordSubmission(string word);
+        void Tick(float deltaTime);
+        GameModeStats GetStats();
+        void Reset();
     }
 
-    public void RaiseGameOver()
+    public struct GameModeStats
     {
-        OnGameOver?.Invoke();
+        public string modeName;
+        public int wordsFound;
+        public float totalTime;
+        public int score;
+        public float accuracy;
     }
-}
-
-public class ModeStats
-{
-    public string modeName;
-    public int coinsEarned;
-    public int puzzlesCompleted;
-    public int totalTime;
 }
