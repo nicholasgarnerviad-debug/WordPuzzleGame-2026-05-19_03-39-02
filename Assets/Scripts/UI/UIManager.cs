@@ -27,16 +27,24 @@ namespace WordPuzzle.UI
 
         private void OnEnable()
         {
-            gameplayScreen.OnWordSubmitted += OnWordSubmitted;
-            resultsScreen.OnPlayAgain += OnPlayAgain;
-            resultsScreen.OnMainMenu += OnMainMenu;
+            if (gameplayScreen != null)
+                gameplayScreen.OnWordSubmitted += OnWordSubmitted;
+            if (resultsScreen != null)
+            {
+                resultsScreen.OnPlayAgain += OnPlayAgain;
+                resultsScreen.OnMainMenu += OnMainMenu;
+            }
         }
 
         private void OnDisable()
         {
-            gameplayScreen.OnWordSubmitted -= OnWordSubmitted;
-            resultsScreen.OnPlayAgain -= OnPlayAgain;
-            resultsScreen.OnMainMenu -= OnMainMenu;
+            if (gameplayScreen != null)
+                gameplayScreen.OnWordSubmitted -= OnWordSubmitted;
+            if (resultsScreen != null)
+            {
+                resultsScreen.OnPlayAgain -= OnPlayAgain;
+                resultsScreen.OnMainMenu -= OnMainMenu;
+            }
         }
 
         public void ShowMainMenu()

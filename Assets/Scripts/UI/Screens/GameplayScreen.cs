@@ -19,14 +19,18 @@ namespace WordPuzzle.UI
 
         private void OnEnable()
         {
-            submitButton.onClick.AddListener(SubmitWord);
-            wordInputField.onSubmit.AddListener(OnInputSubmit);
+            if (submitButton != null)
+                submitButton.onClick.AddListener(SubmitWord);
+            if (wordInputField != null)
+                wordInputField.onSubmit.AddListener(OnInputSubmit);
         }
 
         private void OnDisable()
         {
-            submitButton.onClick.RemoveAllListeners();
-            wordInputField.onSubmit.RemoveAllListeners();
+            if (submitButton != null)
+                submitButton.onClick.RemoveAllListeners();
+            if (wordInputField != null)
+                wordInputField.onSubmit.RemoveAllListeners();
         }
 
         public void SetPuzzleDisplay(string startWord, string endWord)

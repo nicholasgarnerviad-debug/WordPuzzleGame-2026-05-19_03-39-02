@@ -27,10 +27,18 @@ namespace WordPuzzle
 
         private void Start()
         {
+            Debug.Log("=== GameBootstrap.Start() called ===");
+
+            // Try to get UIManager from same GameObject if not assigned
+            if (uiManager == null)
+            {
+                uiManager = GetComponent<UIManager>();
+            }
+
             // Validate critical dependencies
             if (uiManager == null)
             {
-                Debug.LogError("UIManager not assigned to GameBootstrap!");
+                Debug.LogError("UIManager not found on Bootstrap GameObject!");
                 enabled = false;
                 return;
             }
@@ -91,11 +99,24 @@ namespace WordPuzzle
 
             try
             {
+                Debug.Log($"Loading tier definitions from JSON: {tierFile.text.Length} characters");
                 TierDefinitionsWrapper wrapper = JsonUtility.FromJson<TierDefinitionsWrapper>(tierFile.text);
 
-                if (wrapper?.tiers == null)
+                if (wrapper == null)
+                {
+                    Debug.LogError("Failed to deserialize tier definitions - wrapper is null");
+                    return;
+                }
+
+                if (wrapper.tiers == null)
                 {
                     Debug.LogError("tier_definitions.json has no tiers array");
+                    return;
+                }
+
+                if (wrapper.tiers.Length == 0)
+                {
+                    Debug.LogError("tier_definitions.json tiers array is empty");
                     return;
                 }
 
