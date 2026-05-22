@@ -124,4 +124,15 @@ public class WordGraph
         List<string> path = GetShortestPath(word1, word2);
         return path.Count > 0 ? path.Count - 1 : -1;
     }
+
+    public List<string> GetWordsOfLength(int length)
+    {
+        var result = new List<string>();
+        foreach (string word in allWords)
+        {
+            if (word.Length == length)
+                result.Add(word);
+        }
+        return result;
+    }
 }

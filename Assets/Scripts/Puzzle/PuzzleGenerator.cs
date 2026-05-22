@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 
 public class PuzzleGenerator : IPuzzleGenerator
 {
@@ -32,8 +33,6 @@ public class PuzzleGenerator : IPuzzleGenerator
 
     public PuzzleDefinition GenerateRandomPuzzle(Difficulty difficulty)
     {
-        var sw = System.Diagnostics.Stopwatch.StartNew();
-
         int maxAttempts = 20;
         for (int attempt = 0; attempt < maxAttempts; attempt++)
         {
@@ -49,7 +48,7 @@ public class PuzzleGenerator : IPuzzleGenerator
             // Find end word at approximately targetDistance away
             var path = FindPathOfLength(startWord, targetDistance);
 
-            if (path.Count > 0 && path.Count > 1)
+            if (path.Count > 1)
             {
                 string endWord = path[path.Count - 1];
                 var puzzle = new PuzzleDefinition
@@ -62,13 +61,11 @@ public class PuzzleGenerator : IPuzzleGenerator
                     seedValue = random.Next()
                 };
 
-                sw.Stop();
                 return puzzle;
             }
         }
 
         // Fallback: return a simple puzzle if generation fails
-        sw.Stop();
         return CreateFallbackPuzzle();
     }
 
@@ -85,15 +82,17 @@ public class PuzzleGenerator : IPuzzleGenerator
 
     private string GetRandomWordOfLength(int length)
     {
-        // This would be populated from an actual word list
-        // For now, return test words
-        return length switch
-        {
-            3 => "cat",
-            4 => "word",
-            5 => "world",
-            _ => "cat"
-        };
+        if (wordGraph == null)
+            return null;
+
+        // Get all words of the requested length from the word graph
+        var wordsOfLength = wordGraph.GetWordsOfLength(length);
+        if (wordsOfLength.Count == 0)
+            return null;
+
+        // Return a random word from the filtered list
+        int randomIndex = random.Next(wordsOfLength.Count);
+        return wordsOfLength[randomIndex];
     }
 
     private int GetTargetDistance(Difficulty difficulty)
@@ -131,9 +130,8 @@ public class PuzzleGenerator : IPuzzleGenerator
             // Get neighbors from word graph
             if (wordGraph != null)
             {
-                // This would use actual word graph neighbors
-                // For now, simple demonstration
-                var neighbors = GetMockNeighbors(current);
+                // Query actual neighbors from the word graph
+                var neighbors = GetNeighborsFromGraph(current);
 
                 foreach (string neighbor in neighbors)
                 {
@@ -152,21 +150,38 @@ public class PuzzleGenerator : IPuzzleGenerator
         return new List<string>();
     }
 
-    private List<string> GetMockNeighbors(string word)
+    private List<string> GetNeighborsFromGraph(string word)
     {
-        // Mock neighbors for demo purposes
-        // In production, this would query wordGraph
+        // Use reflection to get neighbors from the word graph's adjacency list
+        // Since the adjacencyList is private, we use a fallback approach
         var neighbors = new List<string>();
 
-        // Simple mock data for testing
-        if (word == "cat") neighbors = new List<string> { "bat", "hat", "mat" };
-        if (word == "bat") neighbors = new List<string> { "cat", "hat", "mat", "bag" };
-        if (word == "hat") neighbors = new List<string> { "cat", "bat", "mat", "map" };
-        if (word == "mat") neighbors = new List<string> { "cat", "bat", "hat", "map" };
-        if (word == "bag") neighbors = new List<string> { "bat", "map", "dag" };
-        if (word == "map") neighbors = new List<string> { "hat", "mat", "bag", "nap" };
+        // Try to find neighbors by checking words with one letter difference
+        var allWords = wordGraph.GetWordsOfLength(word.Length);
+        foreach (string candidate in allWords)
+        {
+            if (candidate != word && HaveOneLetterDifference(word, candidate))
+                neighbors.Add(candidate);
+        }
 
         return neighbors;
+    }
+
+    private bool HaveOneLetterDifference(string word1, string word2)
+    {
+        if (word1.Length != word2.Length)
+            return false;
+
+        int differences = 0;
+        for (int i = 0; i < word1.Length; i++)
+        {
+            if (word1[i] != word2[i])
+                differences++;
+            if (differences > 1)
+                return false;
+        }
+
+        return differences == 1;
     }
 
     private PuzzleDefinition CreateFallbackPuzzle()
