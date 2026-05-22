@@ -26,6 +26,10 @@ public class InitializeScene
 
     private static void RunFixBootstrap()
     {
+        // Only run in edit mode, not during play
+        if (Application.isPlaying)
+            return;
+
         Debug.Log("=== InitializeScene: Setting up Bootstrap ===");
 
         var bootstrap = GameObject.Find("Bootstrap");
