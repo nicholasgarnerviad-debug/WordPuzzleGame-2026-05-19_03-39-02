@@ -1,125 +1,83 @@
-using UnityEngine;
-using System.Threading.Tasks;
+using System.Collections.Generic;
+using WordPuzzle.State;
 
-public class PuzzleShowMode : MonoBehaviour, IGameMode
+namespace WordPuzzle.Modes
 {
-    private GameModeContext context;
-    private int currentTier = 1;
-    private int currentPuzzleIndex = 0;
-    private int maxTiersUnlocked = 1;
-    private PuzzleShowModeStats stats;
-
-    public void Initialize(GameModeContext context)
+    /// <summary>
+    /// Puzzle Show mode: The solution path is fully revealed. Player must follow
+    /// the exact solution path shown to complete the puzzle.
+    /// </summary>
+    public class PuzzleShowMode : IGameMode
     {
-        this.context = context;
-        stats = new PuzzleShowModeStats();
-    }
+        private GameStateManager stateManager;
+        private WordPuzzle currentPuzzle;
+        private int solutionIndex = 0;
 
-    public void StartGame()
-    {
-        currentTier = 1;
-        currentPuzzleIndex = 0;
-        stats.sessionStartTime = Time.time;
-        LoadPuzzleAtPosition(1, 0);
-    }
-
-    public void HandleInput(GameAction action)
-    {
-        if (context?.stateManager != null)
+        public void Initialize(GameStateManager stateManager)
         {
-            context.stateManager.Dispatch(action);
+            this.stateManager = stateManager ?? throw new System.ArgumentNullException(nameof(stateManager));
+        }
 
-            // Check if puzzle is won or lost
-            GameState state = context.stateManager.GetCurrentState();
-            if (state.isWon)
+        public void StartGame(WordPuzzle puzzle)
+        {
+            if (stateManager == null)
+                throw new System.InvalidOperationException("Must call Initialize first");
+
+            currentPuzzle = puzzle ?? throw new System.ArgumentNullException(nameof(puzzle));
+            stateManager.StartNewPuzzle(puzzle);
+            solutionIndex = 0;
+        }
+
+        public void HandleWordSubmission(string word)
+        {
+            if (stateManager == null || currentPuzzle == null) return;
+
+            // In show mode, we accept the solution words in order
+            if (solutionIndex < currentPuzzle.solution.Length)
             {
-                OnPuzzleComplete();
-            }
-            else if (state.isLost)
-            {
-                OnGameOver();
+                string expectedWord = currentPuzzle.solution[solutionIndex];
+                if (word.ToLower() == expectedWord.ToLower())
+                {
+                    stateManager.SubmitWord(word.ToLower());
+                    solutionIndex++;
+                }
             }
         }
-    }
 
-    public void Tick(float deltaTime)
-    {
-        // No-op
-    }
-
-    public void OnGameOver()
-    {
-        context.RaiseGameOver();
-    }
-
-    public ModeStats GetStats()
-    {
-        return new ModeStats
+        public void Tick(float deltaTime)
         {
-            modeName = "Puzzle Show",
-            coinsEarned = stats.totalCoinsEarned,
-            puzzlesCompleted = stats.totalPuzzlesCompleted,
-            totalTime = (int)(Time.time - stats.sessionStartTime)
-        };
-    }
-
-    private async void LoadPuzzleAtPosition(int tier, int index)
-    {
-        TierData tierData = await context.dataManager.GetTierDataAsync(tier);
-
-        if (index >= tierData.puzzles.Length)
-        {
-            currentTier++;
-            currentPuzzleIndex = 0;
-
-            if (currentTier > maxTiersUnlocked)
-            {
-                maxTiersUnlocked = currentTier;
-            }
-
-            if (currentTier <= Constants.MAX_TIERS)
-            {
-                LoadPuzzleAtPosition(currentTier, 0);
-            }
-            else
-            {
-                Debug.Log("All tiers complete!");
-                OnGameOver();
-            }
+            if (stateManager != null)
+                stateManager.UpdateElapsedTime(deltaTime);
         }
-        else
-        {
-            PuzzleDefinition puzzleDef = tierData.puzzles[index];
-            WordPuzzle puzzle = new WordPuzzle(
-                puzzleDef.puzzleId,
-                puzzleDef.startWord,
-                puzzleDef.endWord,
-                puzzleDef.optimalSteps,
-                puzzleDef.solution,
-                puzzleDef.seedValue,
-                Difficulty.Medium
-            );
 
-            context.stateManager.StartNewPuzzle(puzzle);
+        public GameModeStats GetStats()
+        {
+            var state = stateManager?.GetCurrentState();
+            return new GameModeStats
+            {
+                modeName = "Puzzle Show",
+                wordsFound = state?.wordsFound ?? 0,
+                totalTime = state?.elapsedTime ?? 0f,
+                score = state?.score ?? 0,
+                accuracy = 100f // Always perfect in show mode
+            };
+        }
+
+        public void Reset()
+        {
+            solutionIndex = 0;
+            currentPuzzle = null;
+        }
+
+        public bool IsGameOver()
+        {
+            if (currentPuzzle == null) return false;
+            return solutionIndex >= currentPuzzle.solution.Length;
+        }
+
+        public string[] GetFullSolution()
+        {
+            return currentPuzzle?.solution ?? new string[0];
         }
     }
-
-    private async void OnPuzzleComplete()
-    {
-        currentPuzzleIndex++;
-        stats.totalPuzzlesCompleted++;
-
-        int reward = Constants.PUZZLE_SHOW_BASE_REWARD;
-        await context.economy.AddCoinsAsync(reward, "puzzle_show");
-        stats.totalCoinsEarned += reward;
-
-        LoadPuzzleAtPosition(currentTier, currentPuzzleIndex);
-    }
-}
-
-public class PuzzleShowModeStats
-{
-    public int totalPuzzlesCompleted;
-    public int totalCoinsEarned;
-    public float sessionStartTime;
 }
