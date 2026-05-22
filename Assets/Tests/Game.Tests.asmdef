@@ -1,17 +1,16 @@
 {
     "name": "Game.Tests",
-    "rootNamespace": "WordPuzzle.Tests",
+    "rootNamespace": "",
     "references": [
+        "Assembly-CSharp",
+        "Tests",
         "Game.Bootstrap",
         "Game.UI",
         "Game.Modes",
         "Game.State",
-        "Game.Puzzle",
-        "Tests"
+        "Game.Puzzle"
     ],
-    "includePlatforms": [
-        "Editor"
-    ],
+    "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
     "overrideReferences": true,
