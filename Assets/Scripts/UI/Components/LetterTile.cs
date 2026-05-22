@@ -38,6 +38,7 @@ namespace WordPuzzleGame.UI
 
     private char currentLetter = ' ';
     private Color originalColor = Color.white;
+    private Color lastColor = Color.white;
 
     private void Awake()
     {
@@ -128,13 +129,15 @@ namespace WordPuzzleGame.UI
 
     /// <summary>
     /// Changes the tile's background color.
+    /// Cached to avoid redundant property assignments if the color hasn't changed.
     /// </summary>
     /// <param name="color">The color to apply</param>
     public void SetColor(Color color)
     {
-        if (tileImage != null)
+        if (tileImage != null && lastColor != color)
         {
             tileImage.color = color;
+            lastColor = color;
         }
     }
 

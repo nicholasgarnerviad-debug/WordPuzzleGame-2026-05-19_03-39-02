@@ -38,6 +38,7 @@ public class GameplayScreen : MonoBehaviour
     private IDisposable stateSubscription;
     private readonly List<LetterTile> letterTiles = new();
     private GameState currentState;
+    private LayoutGroup wordChainLayout;
 
     public void InjectDependencies(IGameStateManager sm, ModeController mc, UIManager ui)
     {
@@ -46,10 +47,19 @@ public class GameplayScreen : MonoBehaviour
         uiManager      = ui;
     }
 
+    private void CacheComponents()
+    {
+        if (wordListContent != null)
+        {
+            wordChainLayout = wordListContent.GetComponent<LayoutGroup>();
+        }
+    }
+
     private void OnEnable()
     {
         if (stateManager == null) return;
 
+        CacheComponents();
         stateSubscription = stateManager.Subscribe(OnStateChanged);
 
         if (letterTiles.Count == 0) BuildKeyboard();
@@ -157,8 +167,18 @@ public class GameplayScreen : MonoBehaviour
     {
         if (wordListContent != null && state.wordChain.Length > 0)
         {
+            // Batch layout updates to avoid redundant recalculation
+            if (wordChainLayout != null)
+                wordChainLayout.enabled = false;
+
             // Word chain display - could instantiate word items here if needed
             // For now, just validate the container exists
+
+            if (wordChainLayout != null)
+            {
+                wordChainLayout.enabled = true;
+                LayoutRebuilder.ForceRebuildLayoutHierarchy((RectTransform)wordListContent);
+            }
         }
     }
 
