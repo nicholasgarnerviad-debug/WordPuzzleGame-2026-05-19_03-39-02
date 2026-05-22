@@ -55,4 +55,38 @@ public class PuzzleShowModeIntegrationTests
         ModeStats stats = puzzleShowMode.GetStats();
         Assert.AreEqual(1, stats.puzzlesCompleted);
     }
+
+    [Test]
+    public void HandleWordSubmission_WrongWord_IsRejected()
+    {
+        // Arrange
+        mockContext.SetupTierData();
+        mockContext.SetupStateManager();
+        puzzleShowMode.StartGame();
+        var stateBefore = mockContext.stateManager.GetCurrentState();
+
+        // Act
+        puzzleShowMode.HandleInput(new SubmitWordAction("wrong")); // Not the expected solution word
+
+        // Assert
+        var stateAfter = mockContext.stateManager.GetCurrentState();
+        Assert.AreEqual(stateBefore.wordChain.Length, stateAfter.wordChain.Length, "Wrong word should not be added");
+    }
+
+    [Test]
+    public void GetStats_ReturnsPerfectAccuracy()
+    {
+        // Arrange
+        mockContext.SetupTierData();
+        mockContext.SetupStateManager();
+        puzzleShowMode.StartGame();
+
+        // Act
+        mockContext.stateManager.SetWonState(true);
+        puzzleShowMode.HandleInput(new SubmitWordAction("word")); // Correct solution word
+
+        // Assert
+        var stats = puzzleShowMode.GetStats();
+        Assert.AreEqual(100f, stats.accuracy, "Puzzle Show mode should return high accuracy");
+    }
 }

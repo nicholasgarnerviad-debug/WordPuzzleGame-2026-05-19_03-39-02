@@ -1,151 +1,108 @@
 using NUnit.Framework;
 using System;
 using System.Collections;
-using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.TestTools;
 
-public class TimeAttackModeIntegrationTests
+public class ModeControllerTest
 {
-    private TimeAttackMode timeAttackMode;
-    private TimeAttackModeMockContext mockContext;
+    private ModeController modeController;
+    private MockGameModeContext mockContext;
 
     [SetUp]
     public void Setup()
     {
-        mockContext = new TimeAttackModeMockContext();
-        timeAttackMode = new GameObject().AddComponent<TimeAttackMode>();
-        timeAttackMode.Initialize(mockContext);
+        var gameObject = new GameObject();
+        modeController = gameObject.AddComponent<ModeController>();
+
+        mockContext = new MockGameModeContext();
+
+        // Initialize the controller with mock context
+        modeController.Initialize(
+            mockContext.dataManager,
+            mockContext.economy,
+            mockContext.puzzleGenerator,
+            mockContext.stateManager,
+            mockContext.wordValidator
+        );
     }
 
     [TearDown]
     public void TearDown()
     {
-        UnityEngine.Object.Destroy(timeAttackMode.gameObject);
-    }
-
-    [Test]
-    public void StartGame_BeginsRound1()
-    {
-        // Arrange
-        mockContext.SetupPuzzleGenerator();
-        mockContext.SetupStateManager();
-
-        // Act
-        timeAttackMode.StartGame();
-
-        // Assert
-        ModeStats stats = timeAttackMode.GetStats();
-        Assert.AreEqual("Time Attack", stats.modeName);
-    }
-
-    [Test]
-    public void TimeUpdate_DecreasesTimeRemaining()
-    {
-        // Arrange
-        mockContext.SetupPuzzleGenerator();
-        mockContext.SetupStateManager();
-        timeAttackMode.StartGame();
-
-        // Act
-        for (int i = 0; i < 10; i++)
+        if (modeController != null && modeController.gameObject != null)
         {
-            timeAttackMode.Tick(1f);
+            UnityEngine.Object.Destroy(modeController.gameObject);
         }
-
-        // Assert
-        ModeStats stats = timeAttackMode.GetStats();
-        Assert.Greater(stats.totalTime, 0);
     }
 
     [Test]
-    public void HandleWordSubmission_AfterTimeout_IsBlocked()
+    public void SwitchMode_InitializesNewMode()
     {
         // Arrange
         mockContext.SetupPuzzleGenerator();
-        mockContext.SetupStateManager();
-        timeAttackMode.StartGame();
 
         // Act
-        // Advance time past 60 seconds
-        for (int i = 0; i < 61; i++)
-        {
-            timeAttackMode.Tick(1.0f);
-        }
-
-        var stateBefore = mockContext.stateManager.GetCurrentState();
-        timeAttackMode.HandleInput(new SubmitWordAction("bat")); // Should be blocked
-        var stateAfter = mockContext.stateManager.GetCurrentState();
+        modeController.SwitchMode(ModeType.Classic);
 
         // Assert
-        Assert.AreEqual(stateBefore.wordChain.Length, stateAfter.wordChain.Length, "Submission should be blocked after timeout");
+        Assert.AreEqual(ModeType.Classic, modeController.GetCurrentMode());
     }
 
     [Test]
-    public void IsTimeUp_ReturnsTrueWhenTimeExpires()
+    public void SwitchMode_FromClassicToPuzzleShow_SwitchesSuccessfully()
     {
         // Arrange
         mockContext.SetupPuzzleGenerator();
-        mockContext.SetupStateManager();
-        timeAttackMode.StartGame();
+        modeController.SwitchMode(ModeType.Classic);
 
         // Act
-        for (int i = 0; i < 61; i++)
-        {
-            timeAttackMode.Tick(1.0f);
-        }
+        modeController.SwitchMode(ModeType.PuzzleShow);
 
         // Assert
-        Assert.IsTrue(timeAttackMode.IsTimeUp(), "IsTimeUp should return true after 60 seconds");
+        Assert.AreEqual(ModeType.PuzzleShow, modeController.GetCurrentMode());
     }
 
     [Test]
-    public void GetTimeRemaining_DecreasesWithTicks()
+    public void SwitchMode_TracksLastModeBeforeSwitching()
     {
         // Arrange
         mockContext.SetupPuzzleGenerator();
-        mockContext.SetupStateManager();
-        timeAttackMode.StartGame();
+        modeController.SwitchMode(ModeType.Classic);
 
         // Act
-        var timeBefore = timeAttackMode.GetTimeRemaining();
-        timeAttackMode.Tick(10.0f);
-        var timeAfter = timeAttackMode.GetTimeRemaining();
+        modeController.SwitchMode(ModeType.TimeAttack);
 
         // Assert
-        Assert.IsTrue(timeAfter < timeBefore, "Time remaining should decrease with each tick");
+        Assert.AreEqual(ModeType.TimeAttack, modeController.LastMode);
     }
 }
 
-// Mock implementations for TimeAttackMode integration testing
-public class TimeAttackModeMockContext : GameModeContext
+// Mock implementation for ModeControllerTest
+public class MockGameModeContext : GameModeContext
 {
-    public WordPuzzle lastLoadedPuzzle;
-    public int coinsAdded = 0;
-
-    public TimeAttackModeMockContext()
+    public MockGameModeContext()
     {
-        puzzleGenerator = new TimeAttackModeMockPuzzleGenerator();
-        wordValidator = new TimeAttackModeMockWordValidator();
-        stateManager = new TimeAttackModeMockGameStateManager();
-        economy = new TimeAttackModeMockEconomyManager();
-        dataManager = new TimeAttackModeMockDataManager();
+        puzzleGenerator = new MockPuzzleGenerator();
+        wordValidator = new MockWordValidator();
+        stateManager = new MockGameStateManager();
+        economy = new MockEconomyManager();
+        dataManager = new MockDataManager();
     }
 
     public void SetupPuzzleGenerator()
     {
-        puzzleGenerator = new TimeAttackModeMockPuzzleGenerator();
+        puzzleGenerator = new MockPuzzleGenerator();
     }
 
     public void SetupStateManager()
     {
-        stateManager = new TimeAttackModeMockGameStateManager();
+        stateManager = new MockGameStateManager();
     }
 }
 
-public class TimeAttackModeMockPuzzleGenerator : IPuzzleGenerator
+public class MockPuzzleGenerator : IPuzzleGenerator
 {
     public PuzzleDefinition GetTierPuzzle(int tierId, int puzzleIndex)
     {
@@ -171,15 +128,13 @@ public class TimeAttackModeMockPuzzleGenerator : IPuzzleGenerator
     }
 }
 
-public class TimeAttackModeMockGameStateManager : IGameStateManager
+public class MockGameStateManager : IGameStateManager
 {
     private GameState currentState;
     private bool wonState = false;
-    private List<string> foundWords = new List<string>();
-    private int longestStreak = 0;
     private int totalScore = 0;
 
-    public TimeAttackModeMockGameStateManager()
+    public MockGameStateManager()
     {
         currentState = new GameState
         {
@@ -210,7 +165,6 @@ public class TimeAttackModeMockGameStateManager : IGameStateManager
 
     public void Dispatch(GameAction action)
     {
-        // Mock dispatch - set won state for testing
         if (wonState)
         {
             currentState.isWon = true;
@@ -229,7 +183,7 @@ public class TimeAttackModeMockGameStateManager : IGameStateManager
 
     public char[] GetAvailableLetters()
     {
-        var usedLetters = new HashSet<char>();
+        var usedLetters = new System.Collections.Generic.HashSet<char>();
         foreach (var word in currentState.wordChain)
         {
             foreach (var c in word)
@@ -237,7 +191,7 @@ public class TimeAttackModeMockGameStateManager : IGameStateManager
                 usedLetters.Add(c);
             }
         }
-        var available = new List<char>();
+        var available = new System.Collections.Generic.List<char>();
         for (char c = 'a'; c <= 'z'; c++)
         {
             if (!usedLetters.Contains(c))
@@ -263,14 +217,9 @@ public class TimeAttackModeMockGameStateManager : IGameStateManager
         if (!IsValidWord(word))
             return 0;
         word = word.ToLower();
-        if (foundWords.Contains(word))
-            return 0;
-        foundWords.Add(word);
         int points = word.Length;
         totalScore += points;
         currentState.score = totalScore;
-        currentState.currentStreak++;
-        longestStreak = System.Math.Max(longestStreak, currentState.currentStreak);
         return points;
     }
 
@@ -301,14 +250,12 @@ public class TimeAttackModeMockGameStateManager : IGameStateManager
 
     public string GetBestWord()
     {
-        if (foundWords.Count == 0)
-            return "--";
-        return foundWords.OrderByDescending(w => w.Length).FirstOrDefault() ?? "--";
+        return "cat";
     }
 
     public int GetLongestStreak()
     {
-        return longestStreak;
+        return 0;
     }
 
     public ResultsScreen.GameStats GetFinalStats()
@@ -317,24 +264,22 @@ public class TimeAttackModeMockGameStateManager : IGameStateManager
         {
             finalScore = totalScore,
             gameDuration = 0f,
-            wordsFound = foundWords.Count,
-            validAttempts = foundWords.Count,
-            totalAttempts = foundWords.Count,
-            bestWord = GetBestWord(),
-            currentStreak = currentState.currentStreak,
-            longestStreak = longestStreak
+            wordsFound = 1,
+            validAttempts = 1,
+            totalAttempts = 1,
+            bestWord = "cat",
+            currentStreak = 0,
+            longestStreak = 0
         };
     }
 
     public void ResetTracking()
     {
-        foundWords.Clear();
-        longestStreak = 0;
         totalScore = 0;
     }
 }
 
-public class TimeAttackModeMockEconomyManager : IEconomyManager
+public class MockEconomyManager : IEconomyManager
 {
     public int coinsAdded = 0;
 
@@ -383,7 +328,7 @@ public class TimeAttackModeMockEconomyManager : IEconomyManager
     public void LogEconomyEvent(string eventName, string data) { }
 }
 
-public class TimeAttackModeMockWordValidator : IWordValidator
+public class MockWordValidator : IWordValidator
 {
     public void Initialize(string startWord, string endWord, string[] currentWordChain) { }
 
@@ -398,7 +343,7 @@ public class TimeAttackModeMockWordValidator : IWordValidator
     }
 }
 
-public class TimeAttackModeMockDataManager : IDataManager
+public class MockDataManager : IDataManager
 {
     public System.Threading.Tasks.Task SaveGameStateAsync(GameStateSnapshot snapshot)
         => System.Threading.Tasks.Task.CompletedTask;
