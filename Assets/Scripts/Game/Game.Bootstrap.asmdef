@@ -1,11 +1,11 @@
 {
     "name": "Game.Bootstrap",
-    "rootNamespace": "WordPuzzle",
+    "rootNamespace": "WordPuzzle.Bootstrap",
     "references": [
-        "Game.UI",
-        "Game.Modes",
         "Game.State",
-        "Game.Puzzle"
+        "Game.Puzzle",
+        "Game.Modes",
+        "Game.UI"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
