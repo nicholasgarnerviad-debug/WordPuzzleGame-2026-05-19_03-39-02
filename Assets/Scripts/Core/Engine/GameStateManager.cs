@@ -38,7 +38,8 @@ namespace WordPuzzle.State
                 new List<string>(workingState.wordChain),
                 workingState.score,
                 workingState.foundWords.Count,
-                workingState.elapsedTime
+                workingState.elapsedTime,
+                workingState.currentInput
             );
         }
 
@@ -154,9 +155,15 @@ namespace WordPuzzle.State
                 {
                     workingState.isWon = true;
                 }
+
+                // Reset validator with current state
+                wordValidator.Initialize(word, currentPuzzle.endWord, workingState.wordChain.ToArray());
             }
             else
             {
+                // Track invalid attempt
+                workingState.invalidAttempts++;
+
                 // Invalid word - lose a life and reset streak
                 workingState.lives--;
                 workingState.currentInput = "";
@@ -284,20 +291,14 @@ namespace WordPuzzle.State
 
         public int SubmitWord(string word)
         {
-            if (workingState == null || !IsValidWord(word))
+            if (workingState == null)
                 return 0;
 
-            word = word.ToLower();
-            if (workingState.foundWords.Contains(word))
-                return 0;
+            int scoreBefore = workingState.score;
+            Dispatch(new SubmitWordAction { word = word });
+            int scoreAfter = workingState.score;
 
-            workingState.foundWords.Add(word);
-            int points = word.Length;
-            workingState.score += points;
-            workingState.currentStreak++;
-            workingState.longestStreak = Mathf.Max(workingState.longestStreak, workingState.currentStreak);
-
-            return points;
+            return scoreAfter - scoreBefore;
         }
 
         public int GetCurrentStreak()
@@ -351,7 +352,7 @@ namespace WordPuzzle.State
             if (workingState == null)
                 return new GameStats();
 
-            int totalAttempts = workingState.foundWords.Count;
+            int totalAttempts = workingState.foundWords.Count + workingState.invalidAttempts;
             float accuracy = totalAttempts > 0 ? (workingState.foundWords.Count / (float)totalAttempts * 100f) : 0f;
 
             return new GameStats
@@ -395,9 +396,10 @@ namespace WordPuzzle.State
         public List<string> foundWords;
         public int longestStreak;
         public float elapsedTime;
+        public int invalidAttempts = 0;
     }
 
-    private class Unsubscriber : IDisposable
+    internal class Unsubscriber : IDisposable
     {
         private List<Action<GameState>> subscribers;
         private Action<GameState> observer;
