@@ -2,7 +2,8 @@
     "name": "Unit.Tests",
     "rootNamespace": "",
     "references": [
-        "Assembly-CSharp"
+        "Assembly-CSharp",
+        "Tests"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
