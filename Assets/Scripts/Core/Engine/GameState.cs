@@ -51,4 +51,3 @@ namespace WordPuzzle.State
         $"GameState(puzzle={puzzle.puzzleId}, chain_length={wordChain.Count}, score={score}, elapsed={elapsedTime:F1}s)";
     }
 }
-}
