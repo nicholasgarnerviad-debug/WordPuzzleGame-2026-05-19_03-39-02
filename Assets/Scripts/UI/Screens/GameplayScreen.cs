@@ -177,6 +177,12 @@ public class GameplayScreen : MonoBehaviour
             if (wordChainLayout != null)
                 wordChainLayout.enabled = false;
 
+            // Clear old word items FIRST
+            foreach (Transform child in wordListContent)
+            {
+                Destroy(child.gameObject);
+            }
+
             // Populate word chain display
             foreach (var word in state.wordChain)
             {
