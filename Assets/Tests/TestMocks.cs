@@ -199,6 +199,27 @@ public class MockPuzzleGenerator : IPuzzleGenerator
     }
 }
 
+public class MockDataManager : IDataManager
+{
+    public Task SaveGameStateAsync(GameStateSnapshot snapshot)
+        => Task.CompletedTask;
+
+    public Task<GameStateSnapshot> LoadGameStateAsync()
+        => Task.FromResult(new GameStateSnapshot());
+
+    public Task UpdatePlayerProgressAsync(PlayerProgress progress)
+        => Task.CompletedTask;
+
+    public Task<PlayerProgress> GetPlayerProgressAsync()
+        => Task.FromResult(new PlayerProgress());
+
+    public Task<TierData> GetTierDataAsync(int tierId)
+        => Task.FromResult(new TierData { tierId = tierId, isUnlocked = true });
+
+    public Task LoadAllTierDataAsync()
+        => Task.CompletedTask;
+}
+
 public class MockEconomyManager : IEconomyManager
 {
     public int coinsAdded = 0;
