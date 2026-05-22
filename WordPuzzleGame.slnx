@@ -7,6 +7,7 @@
   <Project Path="Assembly-CSharp-Editor.csproj" />
   <Project Path="GoogleMobileAds.Editor.csproj" />
   <Project Path="Game.Modes.csproj" />
+  <Project Path="Game.Tests.csproj" />
   <Project Path="Integration.Tests.csproj" />
-  <Project Path="Tests.csproj" />
+  <Project Path="Game.Bootstrap.csproj" />
 </Solution>
