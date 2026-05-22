@@ -5,9 +5,9 @@ using UnityEngine;
 
 /// <summary>
 /// Test context object that holds references to game managers and generators.
-/// Used by integration tests to manage game state during test execution.
+/// Inherits from MonoBehaviour to enable proper cleanup in test TearDown.
 /// </summary>
-public class GameModeContext
+public class GameModeContext : MonoBehaviour
 {
     public GameStateManager stateManager;
     public ModeController modeController;
