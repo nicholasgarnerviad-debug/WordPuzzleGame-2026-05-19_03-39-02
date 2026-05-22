@@ -2,6 +2,7 @@ using NUnit.Framework;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
+[TestFixture]
 public class CrossModeEconomyTests
 {
     private IEconomyManager economyManager;
@@ -103,94 +104,5 @@ public class CrossModeEconomyTests
 
         // Assert
         Assert.AreEqual(0, remaining);  // Should stay at 0
-    }
-}
-
-/// <summary>
-/// Mock implementation of IDataManager for testing in isolation.
-/// Uses in-memory storage to avoid side effects from PlayerPrefs or other persistence systems.
-/// </summary>
-public class MockDataManager : IDataManager
-{
-    private PlayerProgress savedProgress;
-
-    public MockDataManager()
-    {
-        // Initialize with default PlayerProgress
-        savedProgress = new PlayerProgress();
-    }
-
-    public Task SaveGameStateAsync(GameStateSnapshot snapshot)
-    {
-        // Mock implementation - no-op for this test context
-        return Task.CompletedTask;
-    }
-
-    public Task<GameStateSnapshot> LoadGameStateAsync()
-    {
-        // Mock implementation - return empty snapshot
-        return Task.FromResult(new GameStateSnapshot());
-    }
-
-    public Task UpdatePlayerProgressAsync(PlayerProgress progress)
-    {
-        // Clone to simulate JSON deserialization creating new object instances
-        savedProgress = ClonePlayerProgress(progress);
-        return Task.CompletedTask;
-    }
-
-    public Task<PlayerProgress> GetPlayerProgressAsync()
-    {
-        // Return a clone to simulate JSON deserialization
-        if (savedProgress == null)
-            return Task.FromResult<PlayerProgress>(null);
-
-        return Task.FromResult(ClonePlayerProgress(savedProgress));
-    }
-
-    private PlayerProgress ClonePlayerProgress(PlayerProgress original)
-    {
-        if (original == null)
-            return null;
-
-        return new PlayerProgress
-        {
-            totalCoins = original.totalCoins,
-            totalPuzzlesCompleted = original.totalPuzzlesCompleted,
-            highestTierUnlocked = original.highestTierUnlocked,
-            tierProgress = new Dictionary<int, TierProgress>(original.tierProgress),
-            totalHintsEarned = original.totalHintsEarned,
-            totalRevealsEarned = original.totalRevealsEarned,
-            totalUndosEarned = original.totalUndosEarned,
-            classicStats = original.classicStats != null
-                ? new ClassicModeStats
-                {
-                    gamesPlayed = original.classicStats.gamesPlayed,
-                    gamesWon = original.classicStats.gamesWon,
-                    totalCoinsEarned = original.classicStats.totalCoinsEarned,
-                    totalPuzzlesCompleted = original.classicStats.totalPuzzlesCompleted
-                }
-                : null,
-            timeAttackStats = original.timeAttackStats != null
-                ? new TimeAttackModeStats
-                {
-                    gamesPlayed = original.timeAttackStats.gamesPlayed,
-                    bestRoundReached = original.timeAttackStats.bestRoundReached,
-                    totalCoinsEarned = original.timeAttackStats.totalCoinsEarned
-                }
-                : null
-        };
-    }
-
-    public Task<TierData> GetTierDataAsync(int tierId)
-    {
-        // Mock implementation - return empty TierData
-        return Task.FromResult(new TierData());
-    }
-
-    public Task LoadAllTierDataAsync()
-    {
-        // Mock implementation - no-op for this test context
-        return Task.CompletedTask;
     }
 }

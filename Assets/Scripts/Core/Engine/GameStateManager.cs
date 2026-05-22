@@ -357,6 +357,7 @@ namespace WordPuzzle.State
         longestStreak = 0;
         totalScore = 0;
     }
+    }
 
     private class Unsubscriber : IDisposable
     {

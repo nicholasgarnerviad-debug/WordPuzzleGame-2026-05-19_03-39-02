@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.TestTools;
 
+[TestFixture]
 public class ClassicModeIntegrationTests
 {
     private ClassicMode classicMode;
