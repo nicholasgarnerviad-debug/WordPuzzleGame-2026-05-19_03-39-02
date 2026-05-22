@@ -1,0 +1,17 @@
+{
+    "name": "Game.Modes",
+    "rootNamespace": "WordPuzzle.Modes",
+    "references": [
+        "Game.State",
+        "Game.Puzzle"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
