@@ -149,6 +149,7 @@ namespace WordPuzzleGame.UI
         if (tileImage != null)
         {
             tileImage.color = originalColor;
+            lastColor = originalColor;
         }
     }
 

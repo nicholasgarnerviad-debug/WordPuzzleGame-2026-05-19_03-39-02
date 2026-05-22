@@ -167,12 +167,25 @@ public class GameplayScreen : MonoBehaviour
     {
         if (wordListContent != null && state.wordChain.Length > 0)
         {
+            // Validate cache if stale (Fix Option A)
+            if (wordChainLayout == null)
+            {
+                wordChainLayout = wordListContent.GetComponent<LayoutGroup>();
+            }
+
             // Batch layout updates to avoid redundant recalculation
             if (wordChainLayout != null)
                 wordChainLayout.enabled = false;
 
-            // Word chain display - could instantiate word items here if needed
-            // For now, just validate the container exists
+            // Populate word chain display
+            foreach (var word in state.wordChain)
+            {
+                if (wordItemPrefab != null && wordListContent != null)
+                {
+                    var wordItem = Instantiate(wordItemPrefab, wordListContent);
+                    wordItem.text = word;
+                }
+            }
 
             if (wordChainLayout != null)
             {
