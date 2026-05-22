@@ -4,6 +4,7 @@
     "references": [
         "Assembly-CSharp",
         "Tests",
+        "Game.Modes",
         "Game.State",
         "Game.Puzzle"
     ],
