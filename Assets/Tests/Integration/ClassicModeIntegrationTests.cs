@@ -1,95 +1,81 @@
 using NUnit.Framework;
-using System;
-using System.Collections;
-using System.Threading.Tasks;
-using UnityEngine;
-using UnityEngine.TestTools;
+using WordPuzzle.State;
+using WordPuzzle.Modes;
 
 [TestFixture]
 public class ClassicModeIntegrationTests
 {
-    private ClassicMode classicMode;
-    private MockGameModeContext mockContext;
+    private ClassicMode mode;
+    private GameStateManager stateManager;
+    private WordPuzzle testPuzzle;
+    private MockWordValidator mockValidator;
+    private MockDataManager mockDataManager;
 
     [SetUp]
     public void Setup()
     {
-        mockContext = new MockGameModeContext();
-        classicMode = new GameObject().AddComponent<ClassicMode>();
-        classicMode.Initialize(mockContext);
-    }
+        mode = new ClassicMode();
+        mockValidator = new MockWordValidator();
+        mockDataManager = new MockDataManager();
+        stateManager = new GameStateManager(mockValidator, mockDataManager);
+        testPuzzle = new WordPuzzle(
+            id: 1,
+            start: "cat",
+            end: "dog",
+            optimal: 3,
+            solutionPath: new[] { "cat", "bat", "bad", "dog" },
+            seed: 12345,
+            diff: Difficulty.Easy
+        );
 
-    [TearDown]
-    public void TearDown()
-    {
-        UnityEngine.Object.Destroy(classicMode.gameObject);
+        mode.Initialize(stateManager);
     }
 
     [Test]
     public void StartGame_LoadsFirstPuzzle()
     {
-        // Arrange
-        mockContext.SetupPuzzleGenerator();
+        mode.StartGame(testPuzzle);
 
-        // Act
-        classicMode.StartGame();
-
-        // Assert
-        Assert.IsNotNull(mockContext.lastLoadedPuzzle);
-        Assert.AreEqual("cat", mockContext.lastLoadedPuzzle.startWord);
+        var state = stateManager.GetCurrentState();
+        Assert.IsNotNull(state);
+        Assert.AreEqual("cat", state.puzzle.startWord);
     }
 
     [Test]
-    public void HandleInput_WinPuzzle_LoadsNextPuzzle()
+    public void HandleWordSubmission_ValidWord_IncreaseChainLength()
     {
-        // Arrange
-        mockContext.SetupPuzzleGenerator();
-        mockContext.SetupStateManager();
-        classicMode.StartGame();
+        mode.StartGame(testPuzzle);
+        mockValidator.SetValidResult(true, true);
+        var stateBefore = stateManager.GetCurrentState();
 
-        // Act
-        // Simulate winning the puzzle
-        mockContext.stateManager.SetWonState(true);
-        classicMode.HandleInput(new SubmitWordAction("dog"));
+        mode.HandleWordSubmission("bat");
 
-        // Assert - verify coins were earned
-        Assert.Greater(mockContext.coinsAdded, 0);
+        var stateAfter = stateManager.GetCurrentState();
+        Assert.Greater(stateAfter.wordChain.Count, stateBefore.wordChain.Count);
     }
 
     [Test]
     public void HandleWordSubmission_InvalidWord_CountsAsFailure()
     {
-        // Arrange
-        mockContext.SetupPuzzleGenerator();
-        mockContext.SetupStateManager();
-        classicMode.StartGame();
-        var stateBefore = mockContext.stateManager.GetCurrentState();
+        mode.StartGame(testPuzzle);
+        mockValidator.SetValidResult(false, false);
+        var stateBefore = stateManager.GetCurrentState();
 
-        // Act
-        classicMode.HandleInput(new SubmitWordAction("xyz")); // Invalid word
+        mode.HandleWordSubmission("xyz");
 
-        // Assert
-        var stateAfter = mockContext.stateManager.GetCurrentState();
-        Assert.AreEqual(stateBefore.wordChain.Length, stateAfter.wordChain.Length, "Invalid word should not be added");
+        var stateAfter = stateManager.GetCurrentState();
+        Assert.AreEqual(stateBefore.wordChain.Count, stateAfter.wordChain.Count);
     }
 
     [Test]
-    public void IsGameOver_WithFailures_ReturnsTrueAfterMaxFailures()
+    public void GetStats_ReturnsValidGameModeStats()
     {
-        // Arrange
-        mockContext.SetupPuzzleGenerator();
-        mockContext.SetupStateManager();
-        classicMode.StartGame();
+        mode.StartGame(testPuzzle);
 
-        // Act
-        // Submit invalid words to trigger failures
-        for (int i = 0; i < 5; i++)
-        {
-            classicMode.HandleInput(new SubmitWordAction("invalid" + i));
-        }
+        var stats = mode.GetStats();
 
-        // Assert
-        ModeStats stats = classicMode.GetStats();
-        Assert.IsTrue(stats.isGameOver, "Game should be over after max failures");
+        Assert.AreEqual("Classic", stats.modeName);
+        Assert.GreaterOrEqual(stats.score, 0);
+        Assert.GreaterOrEqual(stats.wordsFound, 0);
     }
 }

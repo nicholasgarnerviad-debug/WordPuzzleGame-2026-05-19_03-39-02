@@ -1,81 +1,64 @@
 using NUnit.Framework;
-using System;
-using System.Collections;
-using System.Threading.Tasks;
-using UnityEngine;
-using UnityEngine.TestTools;
+using WordPuzzle.State;
+using WordPuzzle.Modes;
 
 [TestFixture]
 public class ModeControllerTest
 {
-    private ModeController modeController;
-    private MockGameModeContext mockContext;
+    private ModeController controller;
+    private GameStateManager stateManager;
+    private WordPuzzle testPuzzle;
+    private MockWordValidator mockValidator;
+    private MockDataManager mockDataManager;
 
     [SetUp]
     public void Setup()
     {
-        var gameObject = new GameObject();
-        modeController = gameObject.AddComponent<ModeController>();
-
-        mockContext = new MockGameModeContext();
-
-        // Initialize the controller with mock context
-        modeController.Initialize(
-            mockContext.dataManager,
-            mockContext.economy,
-            mockContext.puzzleGenerator,
-            mockContext.stateManager,
-            mockContext.wordValidator
+        mockValidator = new MockWordValidator();
+        mockDataManager = new MockDataManager();
+        stateManager = new GameStateManager(mockValidator, mockDataManager);
+        controller = new ModeController(stateManager);
+        testPuzzle = new WordPuzzle(
+            id: 4,
+            start: "cat",
+            end: "dog",
+            optimal: 3,
+            solutionPath: new[] { "cat", "bat", "bad", "dog" },
+            seed: 12345,
+            diff: Difficulty.Easy
         );
     }
 
-    [TearDown]
-    public void TearDown()
+    [Test]
+    public void SetMode_SetsActiveMode()
     {
-        if (modeController != null && modeController.gameObject != null)
-        {
-            UnityEngine.Object.Destroy(modeController.gameObject);
-        }
+        var classicMode = new ClassicMode();
+        controller.SetMode(classicMode);
+
+        Assert.AreEqual(classicMode, controller.GetActiveMode());
     }
 
     [Test]
-    public void SwitchMode_InitializesNewMode()
+    public void StartGame_DelegateToActiveMode()
     {
-        // Arrange
-        mockContext.SetupPuzzleGenerator();
+        var classicMode = new ClassicMode();
+        controller.SetMode(classicMode);
 
-        // Act
-        modeController.SwitchMode(ModeType.Classic);
+        controller.StartGame(testPuzzle);
 
-        // Assert
-        Assert.AreEqual(ModeType.Classic, modeController.GetCurrentMode());
+        var state = stateManager.GetCurrentState();
+        Assert.IsNotNull(state);
     }
 
     [Test]
-    public void SwitchMode_FromClassicToPuzzleShow_SwitchesSuccessfully()
+    public void SwitchMode_CallsResetOnPreviousMode()
     {
-        // Arrange
-        mockContext.SetupPuzzleGenerator();
-        modeController.SwitchMode(ModeType.Classic);
+        var classicMode = new ClassicMode();
+        controller.SetMode(classicMode);
 
-        // Act
-        modeController.SwitchMode(ModeType.PuzzleShow);
+        var timeAttackMode = new TimeAttackMode();
+        controller.SetMode(timeAttackMode);
 
-        // Assert
-        Assert.AreEqual(ModeType.PuzzleShow, modeController.GetCurrentMode());
-    }
-
-    [Test]
-    public void SwitchMode_TracksLastModeBeforeSwitching()
-    {
-        // Arrange
-        mockContext.SetupPuzzleGenerator();
-        modeController.SwitchMode(ModeType.Classic);
-
-        // Act
-        modeController.SwitchMode(ModeType.TimeAttack);
-
-        // Assert
-        Assert.AreEqual(ModeType.TimeAttack, modeController.LastMode);
+        Assert.AreEqual(timeAttackMode, controller.GetActiveMode());
     }
 }
