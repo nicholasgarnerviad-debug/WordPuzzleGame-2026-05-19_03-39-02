@@ -19,25 +19,49 @@ namespace WordPuzzle.UI
         public event Action OnPlayAgain;
         public event Action OnMainMenu;
 
+        private Action playAgainAction;
+        private Action mainMenuAction;
+
         private void OnEnable()
         {
-            playAgainButton.onClick.AddListener(() => OnPlayAgain?.Invoke());
-            mainMenuButton.onClick.AddListener(() => OnMainMenu?.Invoke());
+            if (playAgainButton != null)
+            {
+                playAgainAction = () => OnPlayAgain?.Invoke();
+                playAgainButton.onClick.AddListener(playAgainAction);
+            }
+
+            if (mainMenuButton != null)
+            {
+                mainMenuAction = () => OnMainMenu?.Invoke();
+                mainMenuButton.onClick.AddListener(mainMenuAction);
+            }
         }
 
         private void OnDisable()
         {
-            playAgainButton.onClick.RemoveAllListeners();
-            mainMenuButton.onClick.RemoveAllListeners();
+            if (playAgainButton != null && playAgainAction != null)
+                playAgainButton.onClick.RemoveListener(playAgainAction);
+
+            if (mainMenuButton != null && mainMenuAction != null)
+                mainMenuButton.onClick.RemoveListener(mainMenuAction);
         }
 
         public void DisplayStats(GameModeStats stats)
         {
-            modeNameText.text = $"{stats.modeName} Mode Results";
-            wordsFoundText.text = $"Words Found: {stats.wordsFound}";
-            accuracyText.text = $"Accuracy: {stats.accuracy:F1}%";
-            timeText.text = $"Time: {stats.totalTime:F1}s";
-            scoreText.text = $"Score: {stats.score}";
+            if (modeNameText != null)
+                modeNameText.text = $"{stats.modeName} Mode Results";
+
+            if (wordsFoundText != null)
+                wordsFoundText.text = $"Words Found: {stats.wordsFound}";
+
+            if (accuracyText != null)
+                accuracyText.text = $"Accuracy: {stats.accuracy:F1}%";
+
+            if (timeText != null)
+                timeText.text = $"Time: {stats.totalTime:F1}s";
+
+            if (scoreText != null)
+                scoreText.text = $"Score: {stats.score}";
         }
 
         public void Show() => gameObject.SetActive(true);
