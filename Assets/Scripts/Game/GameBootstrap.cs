@@ -27,6 +27,7 @@ namespace WordPuzzle
 
         private void Start()
         {
+            // Force recompile
             Debug.Log("=== GameBootstrap.Start() called ===");
 
             // Try to get UIManager from same GameObject if not assigned
@@ -55,8 +56,8 @@ namespace WordPuzzle
                 // Create puzzle generator with word graph and tier cache
                 var wordGraph = new WordGraph();
 
-                // Load dictionary words from tier definitions into word graph
-                LoadDictionaryWordsFromTiers(wordGraph);
+                // Add basic test words to word graph
+                AddTestWordsToGraph(wordGraph);
 
                 // Create word validator (depends on word graph)
                 var wordValidator = new WordValidator(wordGraph);
@@ -86,6 +87,27 @@ namespace WordPuzzle
             }
         }
 
+        private void AddTestWordsToGraph(WordGraph wordGraph)
+        {
+            // Add test words for basic game functionality
+            string[] testWords = new string[] {
+                "cat", "bat", "bag", "dog",
+                "head", "heat", "teat", "tail",
+                "cold", "coal", "coil", "curl", "warm",
+                "love", "live", "late", "hate",
+                "make", "take",
+                "read", "bead", "bean", "book"
+            };
+
+            foreach (var word in testWords)
+            {
+                wordGraph.AddWord(word.ToLower());
+            }
+
+            wordGraph.BuildAdjacencies();
+            Debug.Log($"Added {testWords.Length} test words to word graph");
+        }
+
         private void LoadDictionaryWordsFromTiers(WordGraph wordGraph)
         {
             // Load tier definitions from Resources/Data/tier_definitions.json
@@ -99,8 +121,10 @@ namespace WordPuzzle
 
             try
             {
-                Debug.Log($"Loading tier definitions from JSON: {tierFile.text.Length} characters");
-                TierDefinitionsWrapper wrapper = JsonUtility.FromJson<TierDefinitionsWrapper>(tierFile.text);
+                string jsonText = tierFile.text;
+                Debug.Log($"Loading tier definitions from JSON: {jsonText.Length} characters");
+                Debug.Log($"JSON content (first 200 chars): {jsonText.Substring(0, System.Math.Min(200, jsonText.Length))}");
+                TierDefinitionsWrapper wrapper = JsonUtility.FromJson<TierDefinitionsWrapper>(jsonText);
 
                 if (wrapper == null)
                 {
