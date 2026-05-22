@@ -1,5 +1,6 @@
 namespace WordPuzzle.Puzzle
 {
+    [System.Serializable]
     public class PuzzleDefinition
     {
         private int _puzzleId;

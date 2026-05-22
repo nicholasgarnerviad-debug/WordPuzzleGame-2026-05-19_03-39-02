@@ -1,6 +1,7 @@
 using UnityEngine;
 using System.Threading.Tasks;
 using WordPuzzle.Persistence;
+using WordPuzzle.Puzzle;
 
 namespace WordPuzzle.Persistence
 {

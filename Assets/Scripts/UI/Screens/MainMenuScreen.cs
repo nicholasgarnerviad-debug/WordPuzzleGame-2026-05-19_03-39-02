@@ -30,5 +30,9 @@ namespace WordPuzzle.UI
 
         public void Show() => gameObject.SetActive(true);
         public void Hide() => gameObject.SetActive(false);
+
+        public void SelectClassicMode() => OnClassicModeSelected?.Invoke();
+        public void SelectPuzzleShowMode() => OnPuzzleShowSelected?.Invoke();
+        public void SelectTimeAttackMode() => OnTimeAttackSelected?.Invoke();
     }
 }
