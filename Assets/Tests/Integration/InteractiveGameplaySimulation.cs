@@ -208,7 +208,7 @@ public class InteractiveGameplaySimulation
         Assert.IsNotNull(initialState.startWord, "Puzzle should have start word");
         Assert.IsNotNull(initialState.endWord, "Puzzle should have end word");
         // Puzzle Show Mode provides the complete solution path
-        Assert.That(initialState.wordChain.Count, Is.GreaterThanOrEqualTo(1),
+        Assert.That(initialState.wordChain.Count, Is.GreaterThan(0),
             "Solution words should be available in Puzzle Show mode");
     }
 
@@ -249,7 +249,7 @@ public class InteractiveGameplaySimulation
 
         var stats = puzzleShowMode.GetStats();
         Assert.That(stats.modeName, Is.EqualTo("Puzzle Show"), "Mode name should be 'Puzzle Show'");
-        Assert.That(stats.puzzlesCompleted, Is.GreaterThanOrEqualTo(0), "Puzzles completed should be non-negative");
+        Assert.That(stats.puzzlesCompleted, Is.EqualTo(0), "Puzzles completed should be 0 before completing any puzzles");
     }
 
     [UnityTest]
@@ -322,7 +322,7 @@ public class InteractiveGameplaySimulation
         yield return null;
 
         var currentState = gameContext.stateManager.GetCurrentState();
-        Assert.That(currentState.score, Is.GreaterThanOrEqualTo(0), "Score should be valid");
+        Assert.That(currentState.score, Is.GreaterThanOrEqualTo(0), "Score should be non-negative after valid submission");
     }
 
     [UnityTest]
@@ -336,8 +336,8 @@ public class InteractiveGameplaySimulation
 
         var stats = timeAttackMode.GetStats();
         Assert.That(stats.modeName, Is.EqualTo("Time Attack"), "Mode name should be 'Time Attack'");
-        Assert.That(stats.totalTime, Is.GreaterThanOrEqualTo(0f), "Total time should be non-negative");
-        Assert.That(stats.coinsEarned, Is.GreaterThanOrEqualTo(0), "Coins earned should be non-negative");
+        Assert.That(stats.totalTime, Is.EqualTo(0f), "Total time should be 0 at game start");
+        Assert.That(stats.coinsEarned, Is.EqualTo(0), "Coins earned should be 0 at game start");
     }
 
     [UnityTest]
@@ -365,8 +365,8 @@ public class InteractiveGameplaySimulation
 
         var updatedState = gameContext.stateManager.GetCurrentState();
         Assert.IsNotNull(updatedState, "State should persist after action dispatch");
-        Assert.That(updatedState.wordChain.Count, Is.GreaterThanOrEqualTo(initialChainLength),
-            "Word chain should not decrease after valid word submission");
+        Assert.That(updatedState.wordChain.Count, Is.GreaterThan(initialChainLength),
+            "Word chain should increase after valid word submission");
     }
 
     [UnityTest]
@@ -386,8 +386,8 @@ public class InteractiveGameplaySimulation
         }
 
         var finalState = gameContext.stateManager.GetCurrentState();
-        Assert.That(finalState.score, Is.GreaterThanOrEqualTo(scoreAtStart),
-            "Score should not decrease after valid word submissions");
+        Assert.That(finalState.score, Is.GreaterThan(scoreAtStart),
+            "Score should increase after valid word submissions");
     }
 
 
