@@ -3,6 +3,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using WordPuzzle.UI;
+using WordPuzzle.UI.Components;
 
 namespace WordPuzzle.Tests.Unit.UI
 {

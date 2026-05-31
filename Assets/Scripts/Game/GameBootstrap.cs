@@ -374,9 +374,11 @@ namespace WordPuzzle
         private void UpdatePowerUpUI()
         {
             var state = stateManager.GetCurrentState();
-            uiManager.GetGameplay().SetHintCount(state.hintsRemaining);
-            uiManager.GetGameplay().SetRevealCount(state.revealsRemaining);
-            uiManager.GetGameplay().EnableUndoButton(state.wordChain.Count > 1);
+            var gameplay = uiManager.GetGameplay();
+            gameplay.SetHintCount(state.hintsRemaining);
+            gameplay.SetRevealCount(state.revealsRemaining);
+            gameplay.EnableUndoButton(state.wordChain.Count > 1);
+            gameplay.SetRevealedIndices(state.revealedLetterIndices);
         }
 
         private void CheckGameOver()
