@@ -10,9 +10,20 @@ namespace WordPuzzle.Modes
     /// </summary>
     public class PuzzleShowMode : IGameMode
     {
+        public const int MaxTier = 6;
+
         private GameStateManager stateManager;
         private WordPuzzle.Puzzle.WordPuzzle currentPuzzle;
         private int solutionIndex = 0;
+        private int currentTier = 1;
+
+        public int CurrentTier => currentTier;
+        public bool AllTiersComplete => currentTier > MaxTier;
+
+        public void AdvanceTier()
+        {
+            if (currentTier <= MaxTier) currentTier++;
+        }
 
         public void Initialize(GameStateManager stateManager)
         {
@@ -47,7 +58,7 @@ namespace WordPuzzle.Modes
 
         public void Tick(float deltaTime)
         {
-            // Time tracking is handled internally by the mode
+            stateManager?.IncrementElapsedTime(deltaTime);
         }
 
         public GameModeStats GetStats()

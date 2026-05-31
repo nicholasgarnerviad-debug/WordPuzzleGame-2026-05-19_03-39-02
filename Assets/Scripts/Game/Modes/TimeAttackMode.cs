@@ -49,6 +49,8 @@ namespace WordPuzzle.Modes
             timeRemaining -= deltaTime;
             if (timeRemaining < 0) timeRemaining = 0;
 
+            stateManager.IncrementElapsedTime(deltaTime);
+
             // Notify subscribers of time change
             TimeChanged?.Invoke(timeRemaining);
         }
@@ -72,6 +74,11 @@ namespace WordPuzzle.Modes
         {
             timeRemaining = TOTAL_TIME;
             currentPuzzle = null;
+        }
+
+        public bool IsGameOver()
+        {
+            return timeRemaining <= 0;
         }
 
         public bool IsTimeUp()

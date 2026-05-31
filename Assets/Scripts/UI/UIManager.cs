@@ -1,5 +1,4 @@
 using UnityEngine;
-using WordPuzzle.Modes;
 
 namespace WordPuzzle.UI
 {
@@ -14,6 +13,7 @@ namespace WordPuzzle.UI
         [SerializeField] private MainMenuScreen mainMenuScreen;
         [SerializeField] private GameplayScreen gameplayScreen;
         [SerializeField] private ResultsScreen resultsScreen;
+        [SerializeField] private PuzzleLibraryScreen libraryScreen;
 
         private void Awake()
         {
@@ -25,33 +25,12 @@ namespace WordPuzzle.UI
             Instance = this;
         }
 
-        private void OnEnable()
-        {
-            if (gameplayScreen != null)
-                gameplayScreen.OnWordSubmitted += OnWordSubmitted;
-            if (resultsScreen != null)
-            {
-                resultsScreen.OnPlayAgain += OnPlayAgain;
-                resultsScreen.OnMainMenu += OnMainMenu;
-            }
-        }
-
-        private void OnDisable()
-        {
-            if (gameplayScreen != null)
-                gameplayScreen.OnWordSubmitted -= OnWordSubmitted;
-            if (resultsScreen != null)
-            {
-                resultsScreen.OnPlayAgain -= OnPlayAgain;
-                resultsScreen.OnMainMenu -= OnMainMenu;
-            }
-        }
-
         public void ShowMainMenu()
         {
             mainMenuScreen.Show();
             gameplayScreen.Hide();
             resultsScreen.Hide();
+            if (libraryScreen != null) libraryScreen.Hide();
         }
 
         public void ShowGameplay()
@@ -59,6 +38,7 @@ namespace WordPuzzle.UI
             mainMenuScreen.Hide();
             gameplayScreen.Show();
             resultsScreen.Hide();
+            if (libraryScreen != null) libraryScreen.Hide();
         }
 
         public void ShowResults()
@@ -66,16 +46,22 @@ namespace WordPuzzle.UI
             mainMenuScreen.Hide();
             gameplayScreen.Hide();
             resultsScreen.Show();
+            if (libraryScreen != null) libraryScreen.Hide();
+        }
+
+        public void ShowLibrary()
+        {
+            mainMenuScreen.Hide();
+            gameplayScreen.Hide();
+            resultsScreen.Hide();
+            if (libraryScreen != null) libraryScreen.Show();
         }
 
         // Screen accessors
         public MainMenuScreen GetMainMenu() => mainMenuScreen;
         public GameplayScreen GetGameplay() => gameplayScreen;
         public ResultsScreen GetResults() => resultsScreen;
+        public PuzzleLibraryScreen GetLibrary() => libraryScreen;
 
-        // Dummy handlers to wire up (will be overridden by bootstrap)
-        private void OnWordSubmitted(string word) { }
-        private void OnPlayAgain() { }
-        private void OnMainMenu() { }
     }
 }

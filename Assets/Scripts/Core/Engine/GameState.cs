@@ -14,46 +14,45 @@ namespace WordPuzzle.State
         public readonly WordPuzzleModel puzzle;
         public readonly List<string> wordChain;
         public readonly int score;
-    public readonly int wordsFound;
-    public readonly float elapsedTime;
-    public readonly string currentInput;
+        public readonly int wordsFound;
+        public readonly float elapsedTime;
+        public readonly string currentInput;
+        public readonly int hintsRemaining;
+        public readonly int revealsRemaining;
+        public readonly HashSet<int> revealedLetterIndices;
 
         public GameState(
-        WordPuzzleModel puzzle,
-        List<string> wordChain = null,
-        int score = 0,
-        int wordsFound = 0,
-        float elapsedTime = 0f,
-        string currentInput = ""
-    )
-    {
-        this.puzzle = puzzle ?? throw new ArgumentNullException(nameof(puzzle));
-        this.wordChain = wordChain ?? new List<string> { puzzle.startWord };
-        this.score = score;
-        this.wordsFound = wordsFound;
-        this.elapsedTime = elapsedTime;
-        this.currentInput = currentInput ?? "";
-    }
+            WordPuzzleModel puzzle,
+            List<string> wordChain = null,
+            int score = 0,
+            int wordsFound = 0,
+            float elapsedTime = 0f,
+            string currentInput = "",
+            int hintsRemaining = 0,
+            int revealsRemaining = 0,
+            HashSet<int> revealedLetterIndices = null
+        )
+        {
+            this.puzzle = puzzle ?? throw new ArgumentNullException(nameof(puzzle));
+            this.wordChain = wordChain ?? new List<string> { puzzle.startWord };
+            this.score = score;
+            this.wordsFound = wordsFound;
+            this.elapsedTime = elapsedTime;
+            this.currentInput = currentInput ?? "";
+            this.hintsRemaining = hintsRemaining;
+            this.revealsRemaining = revealsRemaining;
+            this.revealedLetterIndices = revealedLetterIndices ?? new HashSet<int>();
+        }
 
-    // Functional builders - return new GameState instead of mutating
-    public GameState WithWordChain(List<string> newChain) =>
-        new GameState(puzzle, newChain, score, wordsFound, elapsedTime, currentInput);
+        public GameState WithScore(int newScore) =>
+            new GameState(puzzle, wordChain, newScore, wordsFound, elapsedTime, currentInput, hintsRemaining, revealsRemaining, revealedLetterIndices);
 
-    public GameState WithScore(int newScore) =>
-        new GameState(puzzle, wordChain, newScore, wordsFound, elapsedTime, currentInput);
+        public GameState WithWordsFound(int newCount) =>
+            new GameState(puzzle, wordChain, score, newCount, elapsedTime, currentInput, hintsRemaining, revealsRemaining, revealedLetterIndices);
 
-    public GameState WithWordsFound(int newCount) =>
-        new GameState(puzzle, wordChain, score, newCount, elapsedTime, currentInput);
+        public bool IsPuzzleComplete => wordChain.Count > 0 && wordChain[wordChain.Count - 1] == puzzle.endWord;
 
-    public GameState WithElapsedTime(float newTime) =>
-        new GameState(puzzle, wordChain, score, wordsFound, newTime, currentInput);
-
-    public GameState WithCurrentInput(string newInput) =>
-        new GameState(puzzle, wordChain, score, wordsFound, elapsedTime, newInput);
-
-    public bool IsPuzzleComplete => wordChain.Count > 0 && wordChain[wordChain.Count - 1] == puzzle.endWord;
-
-    public override string ToString() =>
-        $"GameState(puzzle={puzzle.puzzleId}, chain_length={wordChain.Count}, score={score}, elapsed={elapsedTime:F1}s)";
+        public override string ToString() =>
+            $"GameState(puzzle={puzzle.puzzleId}, chain_length={wordChain.Count}, score={score}, elapsed={elapsedTime:F1}s)";
     }
 }

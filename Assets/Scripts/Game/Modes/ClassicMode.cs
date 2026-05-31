@@ -46,8 +46,7 @@ namespace WordPuzzle.Modes
 
         public void Tick(float deltaTime)
         {
-            // Classic mode doesn't have a timer, but we still track elapsed time
-            // Time tracking is handled internally by the mode
+            stateManager?.IncrementElapsedTime(deltaTime);
         }
 
         public GameModeStats GetStats()
@@ -71,6 +70,12 @@ namespace WordPuzzle.Modes
             stateManager = null;
             currentPuzzle = null;
             failureCount = 0;
+        }
+
+        public bool IsGameOver()
+        {
+            if (stateManager == null || currentPuzzle == null) return false;
+            return stateManager.GetCurrentState().IsPuzzleComplete;
         }
     }
 }

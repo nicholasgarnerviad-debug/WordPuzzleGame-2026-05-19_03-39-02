@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using UnityEngine;
 
 namespace WordPuzzle.Puzzle
 {
@@ -9,66 +10,143 @@ namespace WordPuzzle.Puzzle
         private Dictionary<int, TierData> tierCache;
         private System.Random random;
 
+        private const int MaxBfsDepth = 10;
+        private const int MaxGenerationAttempts = 20;
+
         public PuzzleGenerator(WordGraph wordGraph, Dictionary<int, TierData> tierCache = null)
         {
-            this.wordGraph = wordGraph;
+            this.wordGraph = wordGraph ?? throw new System.ArgumentNullException(nameof(wordGraph));
             this.tierCache = tierCache ?? new Dictionary<int, TierData>();
             this.random = new System.Random();
+        }
+
+        /// <summary>
+        /// Load tier data from a JSON text asset and populate the tier cache.
+        /// Expects TierDefinitionsWrapper format (same as Resources/Data/tier_definitions).
+        /// </summary>
+        public void Initialize(string jsonText)
+        {
+            if (string.IsNullOrEmpty(jsonText))
+                return;
+
+            try
+            {
+                var wrapper = JsonUtility.FromJson<TierDefinitionsWrapper>(jsonText);
+                if (wrapper?.tiers == null)
+                    return;
+
+                tierCache.Clear();
+                foreach (var tier in wrapper.tiers)
+                    tierCache[tier.tierId] = tier;
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogError($"PuzzleGenerator.Initialize failed: {ex.Message}");
+            }
         }
 
         public PuzzleDefinition GetTierPuzzle(int tierId, int puzzleIndex)
         {
             if (!tierCache.ContainsKey(tierId))
-            {
                 return null;
-            }
 
             TierData tier = tierCache[tierId];
-
-            if (puzzleIndex >= tier.puzzles.Length)
-            {
+            if (tier.puzzles == null || puzzleIndex >= tier.puzzles.Length)
                 return null;
-            }
 
             return tier.puzzles[puzzleIndex];
         }
 
+        /// <summary>
+        /// Return a random puzzle from the specified tier (1-based). Falls back to
+        /// GenerateRandomPuzzle when the tier is not cached.
+        /// </summary>
+        public PuzzleDefinition GetRandomTierPuzzle(int tierId)
+        {
+            if (!tierCache.ContainsKey(tierId))
+                return GenerateRandomPuzzle(DifficultyForTier(tierId));
+
+            TierData tier = tierCache[tierId];
+            if (tier.puzzles == null || tier.puzzles.Length == 0)
+                return GenerateRandomPuzzle(DifficultyForTier(tierId));
+
+            int index = random.Next(tier.puzzles.Length);
+            return tier.puzzles[index];
+        }
+
         public PuzzleDefinition GenerateRandomPuzzle(Difficulty difficulty)
         {
-            int maxAttempts = 20;
-            for (int attempt = 0; attempt < maxAttempts; attempt++)
-            {
-                // Get words of appropriate length based on difficulty
-                int wordLength = GetWordLengthForDifficulty(difficulty);
-                string startWord = GetRandomWordOfLength(wordLength);
+            int wordLength = GetWordLengthForDifficulty(difficulty);
+            int targetDistance = GetTargetDistance(difficulty);
 
+            for (int attempt = 0; attempt < MaxGenerationAttempts; attempt++)
+            {
+                string startWord = GetRandomWordOfLength(wordLength);
                 if (string.IsNullOrEmpty(startWord))
                     continue;
 
-                int targetDistance = GetTargetDistance(difficulty);
-
-                // Find end word at approximately targetDistance away
                 var path = FindPathOfLength(startWord, targetDistance);
-
                 if (path.Count > 1)
-                {
-                    string endWord = path[path.Count - 1];
-                    var puzzle = new PuzzleDefinition
-                    {
-                        puzzleId = random.Next(10000, 99999),
-                        startWord = startWord,
-                        endWord = endWord,
-                        optimalSteps = path.Count - 1,
-                        solution = path.ToArray(),
-                        seedValue = random.Next()
-                    };
+                    return BuildPuzzle(path);
+            }
 
-                    return puzzle;
+            return CreateFallbackPuzzle();
+        }
+
+        /// <summary>
+        /// BFS validation: returns true when a word-ladder path exists between
+        /// start and end (both must already be in the word graph).
+        /// </summary>
+        public bool ValidatePuzzle(string start, string end)
+        {
+            if (string.IsNullOrEmpty(start) || string.IsNullOrEmpty(end))
+                return false;
+            if (start == end)
+                return true;
+
+            start = start.ToLower();
+            end = end.ToLower();
+
+            if (!wordGraph.IsValidWord(start) || !wordGraph.IsValidWord(end))
+                return false;
+
+            var queue = new Queue<string>();
+            var visited = new HashSet<string>();
+
+            queue.Enqueue(start);
+            visited.Add(start);
+
+            while (queue.Count > 0)
+            {
+                string current = queue.Dequeue();
+                foreach (string neighbor in GetNeighborsFromGraph(current))
+                {
+                    if (neighbor == end)
+                        return true;
+                    if (!visited.Contains(neighbor))
+                    {
+                        visited.Add(neighbor);
+                        queue.Enqueue(neighbor);
+                    }
                 }
             }
 
-            // Fallback: return a simple puzzle if generation fails
-            return CreateFallbackPuzzle();
+            return false;
+        }
+
+        // ── private helpers ────────────────────────────────────────────────
+
+        private PuzzleDefinition BuildPuzzle(List<string> path)
+        {
+            return new PuzzleDefinition
+            {
+                puzzleId = random.Next(10000, 99999),
+                startWord = path[0],
+                endWord = path[path.Count - 1],
+                optimalSteps = path.Count - 1,
+                solution = path.ToArray(),
+                seedValue = random.Next()
+            };
         }
 
         private int GetWordLengthForDifficulty(Difficulty difficulty)
@@ -82,21 +160,6 @@ namespace WordPuzzle.Puzzle
             };
         }
 
-        private string GetRandomWordOfLength(int length)
-        {
-            if (wordGraph == null)
-                return null;
-
-            // Get all words of the requested length from the word graph
-            var wordsOfLength = wordGraph.GetWordsOfLength(length);
-            if (wordsOfLength.Count == 0)
-                return null;
-
-            // Return a random word from the filtered list
-            int randomIndex = random.Next(wordsOfLength.Count);
-            return wordsOfLength[randomIndex];
-        }
-
         private int GetTargetDistance(Difficulty difficulty)
         {
             return difficulty switch
@@ -108,9 +171,23 @@ namespace WordPuzzle.Puzzle
             };
         }
 
+        private static Difficulty DifficultyForTier(int tierId)
+        {
+            if (tierId <= 2) return Difficulty.Easy;
+            if (tierId <= 4) return Difficulty.Medium;
+            return Difficulty.Hard;
+        }
+
+        private string GetRandomWordOfLength(int length)
+        {
+            var words = wordGraph.GetWordsOfLength(length);
+            if (words.Count == 0)
+                return null;
+            return words[random.Next(words.Count)];
+        }
+
         private List<string> FindPathOfLength(string start, int targetLength)
         {
-            // BFS to find path of approximately targetLength
             var queue = new Queue<(string word, List<string> path)>();
             var visited = new HashSet<string>();
 
@@ -121,72 +198,53 @@ namespace WordPuzzle.Puzzle
             {
                 var (current, path) = queue.Dequeue();
 
-                // If we reach target distance, return path
                 if (path.Count - 1 == targetLength)
                     return path;
 
-                // Don't go beyond target distance
-                if (path.Count - 1 > targetLength)
+                if (path.Count - 1 >= MaxBfsDepth || path.Count - 1 > targetLength)
                     continue;
 
-                // Get neighbors from word graph
-                if (wordGraph != null)
+                foreach (string neighbor in GetNeighborsFromGraph(current))
                 {
-                    // Query actual neighbors from the word graph
-                    var neighbors = GetNeighborsFromGraph(current);
-
-                    foreach (string neighbor in neighbors)
+                    if (!visited.Contains(neighbor))
                     {
-                        if (!visited.Contains(neighbor))
-                        {
-                            visited.Add(neighbor);
-                            var newPath = new List<string>(path);
-                            newPath.Add(neighbor);
-                            queue.Enqueue((neighbor, newPath));
-                        }
+                        visited.Add(neighbor);
+                        var newPath = new List<string>(path) { neighbor };
+                        queue.Enqueue((neighbor, newPath));
                     }
                 }
             }
 
-            // Return any valid path if we didn't reach exact target
             return new List<string>();
         }
 
         private List<string> GetNeighborsFromGraph(string word)
         {
-            // Use reflection to get neighbors from the word graph's adjacency list
-            // Since the adjacencyList is private, we use a fallback approach
             var neighbors = new List<string>();
-
-            // Try to find neighbors by checking words with one letter difference
-            var allWords = wordGraph.GetWordsOfLength(word.Length);
-            foreach (string candidate in allWords)
+            var candidates = wordGraph.GetWordsOfLength(word.Length);
+            foreach (string candidate in candidates)
             {
                 if (candidate != word && HaveOneLetterDifference(word, candidate))
                     neighbors.Add(candidate);
             }
-
             return neighbors;
         }
 
-        private bool HaveOneLetterDifference(string word1, string word2)
+        private static bool HaveOneLetterDifference(string a, string b)
         {
-            if (word1.Length != word2.Length)
+            if (a.Length != b.Length)
                 return false;
 
-            int differences = 0;
-            for (int i = 0; i < word1.Length; i++)
+            int diff = 0;
+            for (int i = 0; i < a.Length; i++)
             {
-                if (word1[i] != word2[i])
-                    differences++;
-                if (differences > 1)
+                if (a[i] != b[i] && ++diff > 1)
                     return false;
             }
-
-            return differences == 1;
+            return diff == 1;
         }
 
-        private PuzzleDefinition CreateFallbackPuzzle()
+        private static PuzzleDefinition CreateFallbackPuzzle()
         {
             return new PuzzleDefinition
             {
@@ -204,5 +262,13 @@ namespace WordPuzzle.Puzzle
     {
         PuzzleDefinition GetTierPuzzle(int tierId, int puzzleIndex);
         PuzzleDefinition GenerateRandomPuzzle(Difficulty difficulty);
+    }
+
+    // Used by Initialize() and TierDataLoader — defined here to avoid duplication
+    // if TierDataLoader already declares it in its own namespace, suppress with partial.
+    [System.Serializable]
+    internal class TierDefinitionsWrapper
+    {
+        public TierData[] tiers;
     }
 }

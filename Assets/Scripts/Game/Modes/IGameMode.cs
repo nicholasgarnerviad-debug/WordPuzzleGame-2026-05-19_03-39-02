@@ -19,6 +19,7 @@ namespace WordPuzzle.Modes
         void Tick(float deltaTime);
         GameModeStats GetStats();
         void Reset();
+        bool IsGameOver();
     }
 
     public struct GameModeStats

@@ -41,7 +41,10 @@ namespace WordPuzzle.State
                 workingState.score,
                 workingState.foundWords.Count,
                 workingState.elapsedTime,
-                workingState.currentInput
+                workingState.currentInput,
+                workingState.hintsRemaining,
+                workingState.revealsRemaining,
+                new HashSet<int>(workingState.revealedLetterIndices)
             );
         }
 
@@ -61,7 +64,11 @@ namespace WordPuzzle.State
                 timeRemaining = 0f,
                 foundWords = new List<string>(),
                 longestStreak = 0,
-                elapsedTime = 0f
+                elapsedTime = 0f,
+                hintsRemaining = 2,
+                revealsRemaining = 1,
+                undoHistory = new Stack<GameSnapshot>(),
+                revealedLetterIndices = new HashSet<int>()
             };
 
             wordValidator.Initialize(puzzle.startWord, puzzle.endWord, workingState.wordChain.ToArray());
@@ -183,7 +190,24 @@ namespace WordPuzzle.State
             if (workingState.isWon || workingState.isLost)
                 return;
 
-            // Hint logic would go here
+            // Check if hints are available
+            if (workingState.hintsRemaining <= 0)
+                return;
+
+            // Find next unrevealed letter in the target word
+            string targetWord = currentPuzzle.endWord;
+            for (int i = 0; i < targetWord.Length; i++)
+            {
+                if (!workingState.revealedLetterIndices.Contains(i))
+                {
+                    workingState.revealedLetterIndices.Add(i);
+                    workingState.hintsRemaining--;
+                    return; // Reveal one letter per hint
+                }
+            }
+
+            // All letters already revealed, decrement anyway but don't reveal more
+            workingState.hintsRemaining--;
         }
 
         private void HandleUseReveal()
@@ -191,7 +215,18 @@ namespace WordPuzzle.State
             if (workingState.isWon || workingState.isLost)
                 return;
 
-            // Reveal logic would go here
+            // Check if reveals are available
+            if (workingState.revealsRemaining <= 0)
+                return;
+
+            // Reveal entire target word by marking all letters as revealed
+            string targetWord = currentPuzzle.endWord;
+            for (int i = 0; i < targetWord.Length; i++)
+            {
+                workingState.revealedLetterIndices.Add(i);
+            }
+
+            workingState.revealsRemaining--;
         }
 
         private void HandleUndo()
@@ -199,17 +234,36 @@ namespace WordPuzzle.State
             if (workingState.wordChain.Count <= 1 || workingState.isWon || workingState.isLost)
                 return;
 
-            // Remove last word
-            var lastWord = workingState.wordChain[workingState.wordChain.Count - 1];
-            workingState.wordChain.RemoveAt(workingState.wordChain.Count - 1);
-            workingState.currentInput = "";
-
-            // Decrement score if this was a found word
-            if (workingState.foundWords.Contains(lastWord))
+            // Check if undo history is available
+            if (workingState.undoHistory.Count == 0)
             {
-                workingState.foundWords.Remove(lastWord);
-                workingState.score -= lastWord.Length;
+                // Fallback: simple word removal without full state restoration
+                var lastWord = workingState.wordChain[workingState.wordChain.Count - 1];
+                workingState.wordChain.RemoveAt(workingState.wordChain.Count - 1);
+                workingState.currentInput = "";
+
+                if (workingState.foundWords.Contains(lastWord))
+                {
+                    workingState.foundWords.Remove(lastWord);
+                    workingState.score -= lastWord.Length;
+                }
+
+                // Reset streak since we undid a valid step
+                workingState.currentStreak = Mathf.Max(0, workingState.currentStreak - 1);
+                return;
             }
+
+            // Restore from snapshot
+            var snapshot = workingState.undoHistory.Pop();
+            workingState.wordChain = new List<string>(snapshot.wordChain);
+            workingState.lives = snapshot.lives;
+            workingState.score = snapshot.score;
+            workingState.currentStreak = snapshot.currentStreak;
+            workingState.foundWords = new List<string>(snapshot.foundWords);
+            workingState.invalidAttempts = snapshot.invalidAttempts;
+            workingState.hintsRemaining = snapshot.hintsRemaining;
+            workingState.revealsRemaining = snapshot.revealsRemaining;
+            workingState.currentInput = "";
         }
 
         private void NotifySubscribers()
@@ -378,6 +432,27 @@ namespace WordPuzzle.State
                 workingState.currentStreak = 0;
             }
         }
+
+        public void IncrementElapsedTime(float deltaTime)
+        {
+            if (workingState == null || deltaTime <= 0f) return;
+            workingState.elapsedTime += deltaTime;
+        }
+    }
+
+    /// <summary>
+    /// Snapshot of game state for undo history. Stores complete state at a point in time.
+    /// </summary>
+    internal struct GameSnapshot
+    {
+        public List<string> wordChain;
+        public int lives;
+        public int score;
+        public int currentStreak;
+        public List<string> foundWords;
+        public int invalidAttempts;
+        public int hintsRemaining;
+        public int revealsRemaining;
     }
 
     /// <summary>
@@ -399,6 +474,12 @@ namespace WordPuzzle.State
         public int longestStreak;
         public float elapsedTime;
         public int invalidAttempts = 0;
+
+        // Economy tracking for Phase 2
+        public int hintsRemaining = 2;
+        public int revealsRemaining = 1;
+        public Stack<GameSnapshot> undoHistory = new Stack<GameSnapshot>();
+        public HashSet<int> revealedLetterIndices = new HashSet<int>(); // Track which letters have been revealed by hint
     }
 
     internal class Unsubscriber : IDisposable

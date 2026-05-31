@@ -123,4 +123,108 @@ public class GameStateManagerTests
         // Assert
         Assert.AreEqual(1, streak);
     }
+
+    // ── Phase 2 power-up mechanics ────────────────────────────────────
+
+    [Test]
+    public void StartNewPuzzle_InitializesPowerUps()
+    {
+        var puzzle = new PuzzleType(1, "cat", "dog", 3,
+            new[] { "cat", "bat", "bag", "dog" }, 0, Diff.Easy);
+        manager.StartNewPuzzle(puzzle);
+
+        var state = manager.GetCurrentState();
+        Assert.AreEqual(2, state.hintsRemaining);
+        Assert.AreEqual(1, state.revealsRemaining);
+        Assert.AreEqual(0, state.revealedLetterIndices.Count);
+    }
+
+    [Test]
+    public void Dispatch_UseHint_DecrementsHintsAndRevealsLetter()
+    {
+        var puzzle = new PuzzleType(1, "cat", "dog", 3,
+            new[] { "cat", "bat", "bag", "dog" }, 0, Diff.Easy);
+        manager.StartNewPuzzle(puzzle);
+
+        manager.Dispatch(new UseHintAction(0));
+
+        var state = manager.GetCurrentState();
+        Assert.AreEqual(1, state.hintsRemaining);
+        Assert.AreEqual(1, state.revealedLetterIndices.Count);
+        Assert.IsTrue(state.revealedLetterIndices.Contains(0));
+    }
+
+    [Test]
+    public void Dispatch_UseHint_RevealsDifferentLetterEachTime()
+    {
+        var puzzle = new PuzzleType(1, "cat", "dog", 3,
+            new[] { "cat", "bat", "bag", "dog" }, 0, Diff.Easy);
+        manager.StartNewPuzzle(puzzle);
+
+        manager.Dispatch(new UseHintAction(0));
+        manager.Dispatch(new UseHintAction(0));
+
+        var state = manager.GetCurrentState();
+        Assert.AreEqual(0, state.hintsRemaining);
+        Assert.AreEqual(2, state.revealedLetterIndices.Count);
+    }
+
+    [Test]
+    public void Dispatch_UseReveal_RevealsAllLetters()
+    {
+        var puzzle = new PuzzleType(1, "cat", "dog", 3,
+            new[] { "cat", "bat", "bag", "dog" }, 0, Diff.Easy);
+        manager.StartNewPuzzle(puzzle);
+
+        manager.Dispatch(new UseRevealAction());
+
+        var state = manager.GetCurrentState();
+        Assert.AreEqual(0, state.revealsRemaining);
+        Assert.AreEqual(puzzle.endWord.Length, state.revealedLetterIndices.Count);
+    }
+
+    [Test]
+    public void Dispatch_UseReveal_WhenExhausted_DoesNotGoNegative()
+    {
+        var puzzle = new PuzzleType(1, "cat", "dog", 3,
+            new[] { "cat", "bat", "bag", "dog" }, 0, Diff.Easy);
+        manager.StartNewPuzzle(puzzle);
+
+        manager.Dispatch(new UseRevealAction());
+        manager.Dispatch(new UseRevealAction()); // second call should be no-op
+
+        var state = manager.GetCurrentState();
+        Assert.AreEqual(0, state.revealsRemaining);
+    }
+
+    [Test]
+    public void Dispatch_Undo_RemovesLastWordFromChain()
+    {
+        var puzzle = new PuzzleType(1, "cat", "dog", 3,
+            new[] { "cat", "bat", "bag", "dog" }, 0, Diff.Easy);
+        manager.StartNewPuzzle(puzzle);
+        mockValidator.SetValidResult(true, true);
+        manager.Dispatch(new SubmitWordAction("bat"));
+
+        Assert.AreEqual(2, manager.GetCurrentState().wordChain.Count);
+
+        manager.Dispatch(new UndoStepAction());
+
+        var state = manager.GetCurrentState();
+        Assert.AreEqual(1, state.wordChain.Count);
+        Assert.AreEqual("cat", state.wordChain[0]);
+    }
+
+    [Test]
+    public void Dispatch_Undo_OnStartingChain_DoesNothing()
+    {
+        var puzzle = new PuzzleType(1, "cat", "dog", 3,
+            new[] { "cat", "bat", "bag", "dog" }, 0, Diff.Easy);
+        manager.StartNewPuzzle(puzzle);
+
+        manager.Dispatch(new UndoStepAction());
+
+        var state = manager.GetCurrentState();
+        Assert.AreEqual(1, state.wordChain.Count);
+    }
 }

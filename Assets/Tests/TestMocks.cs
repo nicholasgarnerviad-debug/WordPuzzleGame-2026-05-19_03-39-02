@@ -239,8 +239,8 @@ public class MockDataManager : IDataManager
         return Task.FromResult(lastPlayerProgress ?? new PlayerProgress());
     }
 
-    public Task<WordPuzzle.Persistence.TierData> GetTierDataAsync(int tierId)
-        => Task.FromResult(new WordPuzzle.Persistence.TierData { tierId = tierId, isUnlocked = true });
+    public Task<WordPuzzle.Puzzle.TierData> GetTierDataAsync(int tierId)
+        => Task.FromResult(new WordPuzzle.Puzzle.TierData { tierId = tierId, isUnlocked = true });
 
     public Task LoadAllTierDataAsync()
         => Task.CompletedTask;

@@ -27,9 +27,6 @@ namespace WordPuzzle
 
         private void Start()
         {
-            // Force recompile
-            Debug.Log("=== GameBootstrap.Start() called ===");
-
             // Try to get UIManager from same GameObject if not assigned
             if (uiManager == null)
             {
@@ -53,32 +50,24 @@ namespace WordPuzzle
         {
             try
             {
-                // Create puzzle generator with word graph and tier cache
                 var wordGraph = new WordGraph();
+                var tierCache = new System.Collections.Generic.Dictionary<int, WordPuzzle.Puzzle.TierData>();
 
-                // Add basic test words to word graph
-                AddTestWordsToGraph(wordGraph);
+                LoadWordLibrary(wordGraph);
+                LoadTierData(wordGraph, tierCache);
+                wordGraph.BuildAdjacencies();
 
-                // Create word validator (depends on word graph)
                 var wordValidator = new WordValidator(wordGraph);
-
-                // Create data manager (handles persistence and tier loading)
                 var dataManager = new DataManager();
 
-                // Create state manager with all dependencies
                 stateManager = new GameStateManager(wordValidator, dataManager);
 
-                // Use serialized ModeController or create new one
                 if (modeController == null)
                 {
                     modeController = new ModeController(stateManager);
                 }
 
-                // Create puzzle generator (uses word graph, tierCache will be loaded via IDataManager)
-                var tierCache = new System.Collections.Generic.Dictionary<int, WordPuzzle.Puzzle.TierData>();
                 puzzleGenerator = new PuzzleGenerator(wordGraph, tierCache);
-
-                Debug.Log("Game systems initialized successfully");
             }
             catch (System.Exception ex)
             {
@@ -87,32 +76,47 @@ namespace WordPuzzle
             }
         }
 
-        private void AddTestWordsToGraph(WordGraph wordGraph)
+        private void LoadWordLibrary(WordGraph wordGraph)
         {
-            // Add test words for basic game functionality
-            string[] testWords = new string[] {
-                "cat", "bat", "bag", "dog",
-                "head", "heat", "teat", "tail",
-                "cold", "coal", "coil", "curl", "warm",
-                "love", "live", "late", "hate",
-                "make", "take",
-                "read", "bead", "bean", "book"
-            };
-
-            foreach (var word in testWords)
+            TextAsset libraryFile = Resources.Load<TextAsset>("Data/word_library");
+            if (libraryFile == null)
             {
-                wordGraph.AddWord(word.ToLower());
+                Debug.LogWarning("word_library.json not found in Resources/Data/ — falling back to tier words only");
+                return;
             }
 
-            wordGraph.BuildAdjacencies();
-            Debug.Log($"Added {testWords.Length} test words to word graph");
+            try
+            {
+                var wrapper = JsonUtility.FromJson<WordLibraryWrapper>(libraryFile.text);
+                if (wrapper?.words == null)
+                {
+                    Debug.LogError("word_library.json could not be parsed (no 'words' array)");
+                    return;
+                }
+
+                int added = 0;
+                foreach (var word in wrapper.words)
+                {
+                    if (string.IsNullOrWhiteSpace(word)) continue;
+                    string normalized = word.Trim().ToLowerInvariant();
+                    if (System.Text.RegularExpressions.Regex.IsMatch(normalized, "^[a-z]+$"))
+                    {
+                        wordGraph.AddWord(normalized);
+                        added++;
+                    }
+                }
+
+                Debug.Log($"WordLibrary: loaded {added} words from Resources/Data/word_library.json");
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogError($"Failed to parse word_library.json: {ex.Message}");
+            }
         }
 
-        private void LoadDictionaryWordsFromTiers(WordGraph wordGraph)
+        private void LoadTierData(WordGraph wordGraph, System.Collections.Generic.Dictionary<int, WordPuzzle.Puzzle.TierData> tierCache)
         {
-            // Load tier definitions from Resources/Data/tier_definitions.json
             TextAsset tierFile = Resources.Load<TextAsset>("Data/tier_definitions");
-
             if (tierFile == null)
             {
                 Debug.LogError("tier_definitions.json not found in Resources/Data/");
@@ -121,73 +125,47 @@ namespace WordPuzzle
 
             try
             {
-                string jsonText = tierFile.text;
-                Debug.Log($"Loading tier definitions from JSON: {jsonText.Length} characters");
-                Debug.Log($"JSON content (first 200 chars): {jsonText.Substring(0, System.Math.Min(200, jsonText.Length))}");
-                TierDefinitionsWrapper wrapper = JsonUtility.FromJson<TierDefinitionsWrapper>(jsonText);
-
-                if (wrapper == null)
+                var wrapper = JsonUtility.FromJson<TierDefinitionsWrapper>(tierFile.text);
+                if (wrapper?.tiers == null || wrapper.tiers.Length == 0)
                 {
-                    Debug.LogError("Failed to deserialize tier definitions - wrapper is null");
+                    Debug.LogError("tier_definitions.json has no valid tiers");
                     return;
                 }
-
-                if (wrapper.tiers == null)
-                {
-                    Debug.LogError("tier_definitions.json has no tiers array");
-                    return;
-                }
-
-                if (wrapper.tiers.Length == 0)
-                {
-                    Debug.LogError("tier_definitions.json tiers array is empty");
-                    return;
-                }
-
-                // Extract all unique words from all puzzle solutions
-                var uniqueWords = new System.Collections.Generic.HashSet<string>();
 
                 foreach (var tier in wrapper.tiers)
                 {
-                    // Extract words from all puzzles in this tier
-                    if (tier.puzzles != null)
-                    {
-                        foreach (var puzzle in tier.puzzles)
-                        {
-                            // Add start and end words
-                            if (!string.IsNullOrEmpty(puzzle.startWord))
-                                uniqueWords.Add(puzzle.startWord.ToLower());
-                            if (!string.IsNullOrEmpty(puzzle.endWord))
-                                uniqueWords.Add(puzzle.endWord.ToLower());
+                    tierCache[tier.tierId] = tier;
+                    if (tier.puzzles == null) continue;
 
-                            // Add all solution words
-                            if (puzzle.solution != null)
+                    foreach (var puzzle in tier.puzzles)
+                    {
+                        if (!string.IsNullOrEmpty(puzzle.startWord))
+                            wordGraph.AddWord(puzzle.startWord.ToLowerInvariant());
+                        if (!string.IsNullOrEmpty(puzzle.endWord))
+                            wordGraph.AddWord(puzzle.endWord.ToLowerInvariant());
+                        if (puzzle.solution != null)
+                        {
+                            foreach (var word in puzzle.solution)
                             {
-                                foreach (var word in puzzle.solution)
-                                {
-                                    if (!string.IsNullOrEmpty(word))
-                                        uniqueWords.Add(word.ToLower());
-                                }
+                                if (!string.IsNullOrEmpty(word))
+                                    wordGraph.AddWord(word.ToLowerInvariant());
                             }
                         }
                     }
                 }
 
-                // Add all collected words to the word graph
-                foreach (var word in uniqueWords)
-                {
-                    wordGraph.AddWord(word);
-                }
-
-                // Build adjacency list for efficient pathfinding
-                wordGraph.BuildAdjacencies();
-
-                Debug.Log($"Dictionary loaded: {uniqueWords.Count} unique words from {wrapper.tiers.Length} tiers");
+                Debug.Log($"TierData: loaded {wrapper.tiers.Length} tiers");
             }
             catch (System.Exception ex)
             {
-                Debug.LogError($"Failed to load dictionary from tier definitions: {ex.Message}");
+                Debug.LogError($"Failed to parse tier_definitions.json: {ex.Message}");
             }
+        }
+
+        [System.Serializable]
+        private class WordLibraryWrapper
+        {
+            public string[] words;
         }
 
         private void WireEventHandlers()
@@ -199,15 +177,24 @@ namespace WordPuzzle
             uiManager.GetMainMenu().OnClassicModeSelected += StartClassicMode;
             uiManager.GetMainMenu().OnPuzzleShowSelected += StartPuzzleShowMode;
             uiManager.GetMainMenu().OnTimeAttackSelected += StartTimeAttackMode;
+            uiManager.GetMainMenu().OnLibrarySelected += ShowLibrary;
+
+            // Wire library back button
+            if (uiManager.GetLibrary() != null)
+                uiManager.GetLibrary().OnBackToMenu += ShowMainMenu;
 
             // Wire gameplay
             uiManager.GetGameplay().OnWordSubmitted += OnWordSubmitted;
+            uiManager.GetGameplay().OnBackToMenu += ShowMainMenu;
+
+            // Phase 2: Wire power-up handlers
+            uiManager.GetGameplay().OnHintUsed += OnHintUsed;
+            uiManager.GetGameplay().OnRevealUsed += OnRevealUsed;
+            uiManager.GetGameplay().OnUndoStep += OnUndoStep;
 
             // Wire results
             uiManager.GetResults().OnPlayAgain += PlayAgain;
             uiManager.GetResults().OnMainMenu += ShowMainMenu;
-
-            Debug.Log("Event handlers wired");
         }
 
         private void OnDestroy()
@@ -219,11 +206,20 @@ namespace WordPuzzle
             uiManager.GetMainMenu().OnClassicModeSelected -= StartClassicMode;
             uiManager.GetMainMenu().OnPuzzleShowSelected -= StartPuzzleShowMode;
             uiManager.GetMainMenu().OnTimeAttackSelected -= StartTimeAttackMode;
+            uiManager.GetMainMenu().OnLibrarySelected -= ShowLibrary;
+
+            if (uiManager.GetLibrary() != null)
+                uiManager.GetLibrary().OnBackToMenu -= ShowMainMenu;
             uiManager.GetGameplay().OnWordSubmitted -= OnWordSubmitted;
+            uiManager.GetGameplay().OnBackToMenu -= ShowMainMenu;
+
+            // Phase 2: Unsubscribe power-up handlers
+            uiManager.GetGameplay().OnHintUsed -= OnHintUsed;
+            uiManager.GetGameplay().OnRevealUsed -= OnRevealUsed;
+            uiManager.GetGameplay().OnUndoStep -= OnUndoStep;
+
             uiManager.GetResults().OnPlayAgain -= PlayAgain;
             uiManager.GetResults().OnMainMenu -= ShowMainMenu;
-
-            Debug.Log("Event handlers cleaned up");
         }
 
         private void Update()
@@ -232,21 +228,23 @@ namespace WordPuzzle
             {
                 activeMode.Tick(Time.deltaTime);
                 UpdateGameplayUI();
-                // TODO: Implement game-over checking via mode-agnostic interface method
-                // CheckGameOver();
+                CheckGameOver();
             }
         }
 
         private void ShowMainMenu()
         {
-            Debug.Log("Showing main menu");
             activeMode = null;
             uiManager.ShowMainMenu();
         }
 
+        private void ShowLibrary()
+        {
+            uiManager.ShowLibrary();
+        }
+
         private void StartClassicMode()
         {
-            Debug.Log("Starting Classic Mode");
             activeMode = new ClassicMode();
             modeController.SetMode(activeMode);
             StartNewGame();
@@ -254,7 +252,6 @@ namespace WordPuzzle
 
         private void StartPuzzleShowMode()
         {
-            Debug.Log("Starting Puzzle Show Mode");
             activeMode = new PuzzleShowMode();
             modeController.SetMode(activeMode);
             StartNewGame();
@@ -262,7 +259,6 @@ namespace WordPuzzle
 
         private void StartTimeAttackMode()
         {
-            Debug.Log("Starting Time Attack Mode");
             activeMode = new TimeAttackMode();
             modeController.SetMode(activeMode);
             StartNewGame();
@@ -270,16 +266,33 @@ namespace WordPuzzle
 
         private void StartNewGame()
         {
-            var puzzleDefinition = puzzleGenerator.GenerateRandomPuzzle(Difficulty.Easy);
+            PuzzleDefinition puzzleDefinition;
+            Difficulty difficulty;
 
-            // Validate puzzle generation
+            if (activeMode is PuzzleShowMode psm)
+            {
+                puzzleDefinition = puzzleGenerator.GetRandomTierPuzzle(psm.CurrentTier);
+                difficulty = psm.CurrentTier <= 2 ? Difficulty.Easy
+                          : psm.CurrentTier <= 4 ? Difficulty.Medium
+                          : Difficulty.Hard;
+            }
+            else if (activeMode is TimeAttackMode)
+            {
+                puzzleDefinition = puzzleGenerator.GenerateRandomPuzzle(Difficulty.Easy);
+                difficulty = Difficulty.Easy;
+            }
+            else
+            {
+                puzzleDefinition = puzzleGenerator.GenerateRandomPuzzle(Difficulty.Easy);
+                difficulty = Difficulty.Easy;
+            }
+
             if (puzzleDefinition == null)
             {
                 Debug.LogError("Failed to generate puzzle!");
                 return;
             }
 
-            // Convert PuzzleDefinition to WordPuzzle for compatibility with GameStateManager
             var puzzle = new WordPuzzleModel(
                 puzzleDefinition.puzzleId,
                 puzzleDefinition.startWord,
@@ -287,7 +300,7 @@ namespace WordPuzzle
                 puzzleDefinition.optimalSteps,
                 puzzleDefinition.solution,
                 puzzleDefinition.seedValue,
-                Difficulty.Easy
+                difficulty
             );
 
             modeController.StartGame(puzzle);
@@ -296,9 +309,8 @@ namespace WordPuzzle
             var state = stateManager.GetCurrentState();
             uiManager.GetGameplay().SetPuzzleDisplay(state.puzzle.startWord, state.puzzle.endWord);
             uiManager.GetGameplay().SetScore(0);
+            uiManager.GetGameplay().ShowFeedback("", Color.white);
             UpdateGameplayUI();
-
-            Debug.Log($"Game started: {state.puzzle.startWord} → {state.puzzle.endWord}");
         }
 
         private void OnWordSubmitted(string word)
@@ -311,13 +323,30 @@ namespace WordPuzzle
             if (wordAdded)
             {
                 uiManager.GetGameplay().ShowFeedback("✓", Color.green);
-                Debug.Log($"Word accepted: {word}");
             }
             else
             {
                 uiManager.GetGameplay().ShowFeedback("✗", Color.red);
-                Debug.Log($"Word rejected: {word}");
             }
+        }
+
+        // Phase 2: Power-up event handlers
+        private void OnHintUsed()
+        {
+            stateManager.Dispatch(new UseHintAction(0));
+            UpdatePowerUpUI();
+        }
+
+        private void OnRevealUsed()
+        {
+            stateManager.Dispatch(new UseRevealAction());
+            UpdatePowerUpUI();
+        }
+
+        private void OnUndoStep()
+        {
+            stateManager.Dispatch(new UndoStepAction());
+            UpdatePowerUpUI();
         }
 
         private void UpdateGameplayUI()
@@ -325,34 +354,53 @@ namespace WordPuzzle
             var state = stateManager.GetCurrentState();
             uiManager.GetGameplay().SetWordChain(state.wordChain.ToArray());
             uiManager.GetGameplay().SetScore(state.score);
+            UpdatePowerUpUI();
 
             if (activeMode is TimeAttackMode tam)
             {
                 uiManager.GetGameplay().SetTimer(tam.GetTimeRemaining());
+                uiManager.GetGameplay().SetTierIndicator("");
+            }
+            else if (activeMode is PuzzleShowMode psm)
+            {
+                uiManager.GetGameplay().SetTierIndicator($"Tier {psm.CurrentTier} / {PuzzleShowMode.MaxTier}");
+            }
+            else
+            {
+                uiManager.GetGameplay().SetTierIndicator("");
             }
         }
 
-        // TODO: Implement game-over checking via mode-agnostic interface method
-        // private void CheckGameOver()
-        // {
-        //     bool isGameOver = false;
-        //
-        //     if (activeMode is ClassicMode cm)
-        //         isGameOver = cm.IsGameOver();
-        //     else if (activeMode is TimeAttackMode tam)
-        //         isGameOver = tam.IsTimeUp();
-        //     else if (activeMode is PuzzleShowMode psm)
-        //         isGameOver = psm.IsGameOver();
-        //
-        //     if (isGameOver)
-        //     {
-        //         EndGame();
-        //     }
-        // }
+        private void UpdatePowerUpUI()
+        {
+            var state = stateManager.GetCurrentState();
+            uiManager.GetGameplay().SetHintCount(state.hintsRemaining);
+            uiManager.GetGameplay().SetRevealCount(state.revealsRemaining);
+            uiManager.GetGameplay().EnableUndoButton(state.wordChain.Count > 1);
+        }
+
+        private void CheckGameOver()
+        {
+            if (activeMode == null || !activeMode.IsGameOver()) return;
+
+            // PuzzleShowMode: advance to next tier and continue, or end if all tiers done
+            if (activeMode is PuzzleShowMode psm)
+            {
+                psm.AdvanceTier();
+                if (psm.AllTiersComplete)
+                {
+                    EndGame();
+                    return;
+                }
+                StartNewGame();
+                return;
+            }
+
+            EndGame();
+        }
 
         private void EndGame()
         {
-            Debug.Log("Game over - showing results");
             activeMode = null;
             var stats = modeController.GetCurrentStats();
             uiManager.GetResults().DisplayStats(stats);
@@ -361,8 +409,6 @@ namespace WordPuzzle
 
         private void PlayAgain()
         {
-            // Return to main menu (user can select same or different mode)
-            Debug.Log("Play again - returning to main menu");
             ShowMainMenu();
         }
     }

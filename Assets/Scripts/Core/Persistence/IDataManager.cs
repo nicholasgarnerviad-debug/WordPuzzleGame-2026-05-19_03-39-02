@@ -1,4 +1,5 @@
 using System.Threading.Tasks;
+using WordPuzzle.Puzzle;
 
 namespace WordPuzzle.Persistence
 {
@@ -33,23 +34,5 @@ namespace WordPuzzle.Persistence
         public string sessionId;
 
         public GameStateSnapshot() { }
-    }
-
-    public class TierData
-    {
-        public int tierId;
-        public PuzzleDefinition[] puzzles;
-        public bool isUnlocked;
-        public long unlockedTimestamp;
-    }
-
-    public class PuzzleDefinition
-    {
-        public int puzzleId;
-        public string startWord;
-        public string endWord;
-        public int optimalSteps;
-        public string[] solution;
-        public int seedValue;
     }
 }
