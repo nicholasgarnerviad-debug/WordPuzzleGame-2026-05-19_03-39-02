@@ -31,6 +31,10 @@ namespace WordPuzzle.UI
         // --- Toggle ---
         [SerializeField] private Toggle muteToggle;
 
+        // Task 7A/7B — accessibility + haptic toggles (assign in scene; no-op when null).
+        [SerializeField] private Toggle reduceMotionToggle;
+        [SerializeField] private Toggle hapticsToggle;
+
         // --- Buttons ---
         [SerializeField] private Button homeButton;
         [SerializeField] private Button resetProgressButton;
@@ -109,6 +113,10 @@ namespace WordPuzzle.UI
 
             if (muteToggle != null)
                 muteToggle.onValueChanged.AddListener(OnMuteToggleChanged);
+            if (reduceMotionToggle != null)
+                reduceMotionToggle.onValueChanged.AddListener(OnReduceMotionChanged);
+            if (hapticsToggle != null)
+                hapticsToggle.onValueChanged.AddListener(OnHapticsToggleChanged);
 
             if (homeButton != null)
             {
@@ -144,6 +152,10 @@ namespace WordPuzzle.UI
 
             if (muteToggle != null)
                 muteToggle.onValueChanged.RemoveListener(OnMuteToggleChanged);
+            if (reduceMotionToggle != null)
+                reduceMotionToggle.onValueChanged.RemoveListener(OnReduceMotionChanged);
+            if (hapticsToggle != null)
+                hapticsToggle.onValueChanged.RemoveListener(OnHapticsToggleChanged);
 
             if (homeButton != null)
                 homeButton.onClick.RemoveListener(OnHomeClicked);
@@ -177,6 +189,8 @@ namespace WordPuzzle.UI
                 if (musicVolumeSlider != null) musicVolumeSlider.value = currentSettings.musicVolume;
 
                 if (muteToggle != null) muteToggle.isOn = currentSettings.muted;
+                if (reduceMotionToggle != null) reduceMotionToggle.isOn = currentSettings.reduceMotion;
+                if (hapticsToggle != null) hapticsToggle.isOn = currentSettings.hapticsEnabled;
 
                 UpdateValueLabel(masterVolumeValueLabel, currentSettings.masterVolume);
                 UpdateValueLabel(sfxVolumeValueLabel, currentSettings.sfxVolume);
@@ -221,12 +235,26 @@ namespace WordPuzzle.UI
             ScheduleDebouncedSave();
         }
 
-        // --- Toggle handler ---
+        // --- Toggle handlers ---
         private void OnMuteToggleChanged(bool muted)
         {
             if (suppressEvents) return;
             currentSettings.muted = muted;
             ApplyAudioListenerVolume(currentSettings);
+            ScheduleDebouncedSave();
+        }
+
+        private void OnReduceMotionChanged(bool value)
+        {
+            if (suppressEvents) return;
+            currentSettings.reduceMotion = value;
+            ScheduleDebouncedSave();
+        }
+
+        private void OnHapticsToggleChanged(bool value)
+        {
+            if (suppressEvents) return;
+            currentSettings.hapticsEnabled = value;
             ScheduleDebouncedSave();
         }
 

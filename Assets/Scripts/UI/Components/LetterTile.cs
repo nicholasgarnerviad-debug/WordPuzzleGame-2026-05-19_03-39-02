@@ -3,6 +3,7 @@ using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using WordPuzzle.UI;
 
 namespace WordPuzzle.UI.Components
 {
@@ -122,8 +123,14 @@ namespace WordPuzzle.UI.Components
         }
 
         /// <summary>Punch-scale animation (ease-OutBack feel) over the given duration.</summary>
-        public IEnumerator PunchScale(float magnitude = 1.06f, float duration = 0.18f)
+        public IEnumerator PunchScale(float magnitude = 1.06f, float duration = 0.15f)
         {
+            if (UIAnimations.ReduceMotion)
+            {
+                if (rectTransform == null) rectTransform = GetComponent<RectTransform>();
+                rectTransform.localScale = Vector3.one;
+                yield break;
+            }
             if (rectTransform == null) rectTransform = GetComponent<RectTransform>();
             Vector3 baseScale = Vector3.one;
             float t = 0f;
@@ -144,6 +151,7 @@ namespace WordPuzzle.UI.Components
         /// <summary>Flashes the background to the given color, then reverts to the state color.</summary>
         public IEnumerator FlashColor(Color flash, float duration = 0.25f)
         {
+            if (UIAnimations.ReduceMotion) { ApplyStateVisuals(); yield break; }
             if (background == null) yield break;
             Color start = background.color;
             background.color = flash;
@@ -154,6 +162,13 @@ namespace WordPuzzle.UI.Components
         /// <summary>Y-axis rotation 0→90→0 reveal; state visuals re-apply at 90°.</summary>
         public IEnumerator FlipReveal(float duration = 0.22f)
         {
+            if (UIAnimations.ReduceMotion)
+            {
+                if (rectTransform == null) rectTransform = GetComponent<RectTransform>();
+                rectTransform.localRotation = Quaternion.identity;
+                ApplyStateVisuals();
+                yield break;
+            }
             if (rectTransform == null) rectTransform = GetComponent<RectTransform>();
             float half = duration * 0.5f;
             float t = 0f;

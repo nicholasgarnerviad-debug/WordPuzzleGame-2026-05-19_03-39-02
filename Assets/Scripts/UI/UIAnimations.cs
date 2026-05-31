@@ -6,9 +6,12 @@ namespace WordPuzzle.UI
     /// <summary>
     /// Reusable animation utility system for smooth UI feedback animations.
     /// Provides coroutine-based animations for button taps, tile interactions, word additions, and screen transitions.
+    /// Set ReduceMotion = true to skip all animations (accessibility gate, Task 7A).
     /// </summary>
     public static class UIAnimations
     {
+        /// <summary>Task 7A — when true, all animation coroutines apply end-state instantly and return.</summary>
+        public static bool ReduceMotion = false;
         /// <summary>
         /// Animates a button tap with scale down then back up effect.
         /// Animation: 1.0 → 0.95 → 1.0 with ease-out easing.
@@ -16,8 +19,9 @@ namespace WordPuzzle.UI
         /// <param name="button">The RectTransform of the button to animate</param>
         /// <param name="duration">Total animation duration in seconds (default 0.3s)</param>
         /// <returns>Coroutine for use with StartCoroutine()</returns>
-        public static IEnumerator ScaleButtonTap(RectTransform button, float duration = 0.3f)
+        public static IEnumerator ScaleButtonTap(RectTransform button, float duration = 0.15f)
         {
+            if (ReduceMotion) { button.localScale = Vector3.one; yield break; }
             Vector3 originalScale = button.localScale;
             float targetScale = 0.95f;
             float elapsedTime = 0f;
@@ -57,8 +61,9 @@ namespace WordPuzzle.UI
         /// <param name="tile">The RectTransform of the tile to animate</param>
         /// <param name="duration">Total animation duration in seconds (default 0.3s)</param>
         /// <returns>Coroutine for use with StartCoroutine()</returns>
-        public static IEnumerator ScaleTileTap(RectTransform tile, float duration = 0.3f)
+        public static IEnumerator ScaleTileTap(RectTransform tile, float duration = 0.15f)
         {
+            if (ReduceMotion) { tile.localScale = Vector3.one; yield break; }
             Vector3 originalScale = tile.localScale;
             float targetScale = 1.1f;
             float elapsedTime = 0f;
@@ -99,8 +104,14 @@ namespace WordPuzzle.UI
         /// <param name="word">The CanvasGroup of the word to animate</param>
         /// <param name="duration">Total animation duration in seconds (default 0.4s)</param>
         /// <returns>Coroutine for use with StartCoroutine()</returns>
-        public static IEnumerator WordAddAnimation(CanvasGroup word, float duration = 0.4f)
+        public static IEnumerator WordAddAnimation(CanvasGroup word, float duration = 0.18f)
         {
+            if (ReduceMotion)
+            {
+                word.alpha = 1f;
+                word.GetComponent<RectTransform>().localScale = Vector3.one;
+                yield break;
+            }
             RectTransform wordTransform = word.GetComponent<RectTransform>();
             Vector3 originalScale = wordTransform.localScale;
             float elapsedTime = 0f;
@@ -169,6 +180,30 @@ namespace WordPuzzle.UI
 
             // Ensure final alpha is exactly the target
             screen.alpha = targetAlpha;
+        }
+
+        /// <summary>
+        /// Settle-ease for row-accept: weighted ease-out (cubic) over ~180ms.
+        /// Non-bouncy — reaches end state smoothly. Task 7A.
+        /// </summary>
+        /// <param name="rt">The RectTransform to settle.</param>
+        /// <param name="duration">Settle duration in seconds (default 0.18s).</param>
+        /// <returns>Coroutine for use with StartCoroutine().</returns>
+        public static IEnumerator RowAcceptSettle(RectTransform rt, float duration = 0.18f)
+        {
+            if (ReduceMotion || rt == null) yield break;
+            Vector3 start = rt.localScale;
+            Vector3 end = Vector3.one;
+            float t = 0f;
+            while (t < duration)
+            {
+                t += Time.unscaledDeltaTime;
+                float p = Mathf.Clamp01(t / duration);
+                float eased = 1f - Mathf.Pow(1f - p, 3f); // ease-OutCubic
+                rt.localScale = Vector3.LerpUnclamped(start, end, eased);
+                yield return null;
+            }
+            rt.localScale = end;
         }
 
         /// <summary>

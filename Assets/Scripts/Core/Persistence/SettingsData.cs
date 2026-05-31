@@ -17,6 +17,12 @@ namespace WordPuzzle.Persistence
         // Mute toggle (gates AudioListener.volume).
         public bool muted = false;
 
+        // Task 7A — skip animations for accessibility.
+        public bool reduceMotion = false;
+
+        // Task 7B — device haptic feedback.
+        public bool hapticsEnabled = true;
+
         // Schema version; bump on breaking shape changes.
         public int version = 1;
 
@@ -30,6 +36,8 @@ namespace WordPuzzle.Persistence
                 sfxVolume = this.sfxVolume,
                 musicVolume = this.musicVolume,
                 muted = this.muted,
+                reduceMotion = this.reduceMotion,
+                hapticsEnabled = this.hapticsEnabled,
                 version = this.version
             };
         }

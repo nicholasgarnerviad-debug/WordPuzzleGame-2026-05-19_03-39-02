@@ -5,6 +5,7 @@ using WordPuzzle.Modes;
 using WordPuzzle.UI;
 using WordPuzzle.Persistence;
 using WordPuzzle.Game;
+// Task 7 — juice subsystems live in WordPuzzle.UI namespace (same as UIAnimations).
 using WordPuzzleModel = WordPuzzle.Puzzle.WordPuzzle;
 
 namespace WordPuzzle
@@ -60,6 +61,10 @@ namespace WordPuzzle
         private IEconomyManager economyManager;
         private IAdService adService;
         private AdPolicyService adPolicy;
+
+        // Task 7B/7C — Juice: haptics + SFX.
+        [SerializeField] private SfxManager sfxManager;
+        private IHaptics haptics;
 
         private void Start()
         {
@@ -130,6 +135,9 @@ namespace WordPuzzle
                 // so the game runs in Editor without an ad SDK.
                 adService = GetComponent<IAdService>() ?? (IAdService)new NullAdService();
                 adPolicy  = new AdPolicyService(adService);
+
+                // Task 7 — wire juice subsystems after all systems + UI are ready.
+                ApplyJuiceSettings();
             }
             catch (System.Exception ex)
             {
@@ -450,6 +458,10 @@ namespace WordPuzzle
             // Apply audio immediately so background music/SFX use the new value.
             SettingsScreen.ApplyAudioListenerVolume(cachedSettings);
 
+            // Task 7A — sync motion gate + sfx volume immediately.
+            UIAnimations.ReduceMotion = cachedSettings.reduceMotion;
+            if (sfxManager != null) sfxManager.SetSettings(cachedSettings);
+
             if (dataManagerRef == null) return;
             try
             {
@@ -751,6 +763,37 @@ namespace WordPuzzle
             if (cachedSettings == null) cachedSettings = new SettingsData();
 
             SettingsScreen.ApplyAudioListenerVolume(cachedSettings);
+            ApplyJuiceSettings();
+        }
+
+        // Task 7 — apply motion/haptics/sfx settings from cachedSettings.
+        private void ApplyJuiceSettings()
+        {
+            if (cachedSettings == null) return;
+
+            // 7A — motion gate (static field read by UIAnimations + LetterTile coroutines).
+            UIAnimations.ReduceMotion = cachedSettings.reduceMotion;
+
+            // 7B — haptics: construct once; use NullHaptics on platforms without Handheld.
+            if (haptics == null)
+            {
+#if UNITY_ANDROID || UNITY_IOS
+                haptics = new HandheldHaptics(() => cachedSettings != null && cachedSettings.hapticsEnabled);
+#else
+                haptics = new NullHaptics();
+#endif
+                var gameplay = uiManager?.GetGameplay();
+                if (gameplay != null) gameplay.SetHaptics(haptics);
+            }
+
+            // 7C — sfx: GetComponent fallback if not serialized.
+            if (sfxManager == null) sfxManager = GetComponent<SfxManager>();
+            if (sfxManager != null)
+            {
+                sfxManager.SetSettings(cachedSettings);
+                var gameplay = uiManager?.GetGameplay();
+                if (gameplay != null) gameplay.SetSfxManager(sfxManager);
+            }
         }
 
         // §5 — Show the Time Attack setup screen (replaces direct mode start).
@@ -952,19 +995,24 @@ namespace WordPuzzle
         }
 
         // Spec §1 — relay GameStateManager.OnWordSubmissionResult to the UI feedback layer.
-        // Minimal stub so the wiring in InitializeGameSystems compiles. mode-coder6 may
-        // refine this with typed reason rendering.
+        // Also fires Task 7 juice hooks (accept/reject sfx + haptics).
         private void OnWordSubmissionResultHandler(WordPuzzle.State.SubmissionResult result)
         {
             var gameplay = uiManager?.GetGameplay();
             if (gameplay == null) return;
+
             if (result.accepted)
             {
                 gameplay.ShowFeedback(string.IsNullOrEmpty(result.reason) ? "✓" : result.reason, Color.green);
+                // Task 7 — acceptance juice (sfx + haptics + glow settle).
+                gameplay.OnWordAccepted();
             }
-            else if (!string.IsNullOrEmpty(result.reason))
+            else
             {
-                gameplay.ShowFeedback(result.reason, Color.red);
+                if (!string.IsNullOrEmpty(result.reason))
+                    gameplay.ShowFeedback(result.reason, Color.red);
+                // Task 7 — rejection juice (shake gated on ReduceMotion inside, sfx + buzz).
+                gameplay.OnWordRejected();
             }
 
             if (isTutorialRun && tutorialOverlay != null)
@@ -1106,6 +1154,9 @@ namespace WordPuzzle
 
         private void EndGame()
         {
+            // Task 7 — win juice (sfx + buzz).
+            uiManager?.GetGameplay()?.OnGameWon();
+
             // Snapshot daily-run state before we tear down, then route to results.
             bool wasDailyRun = isDailyRun;
             int dailyIndex = pendingDailyIndex;

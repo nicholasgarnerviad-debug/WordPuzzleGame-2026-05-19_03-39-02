@@ -87,6 +87,16 @@ namespace WordPuzzle.UI
         private const float AUTOSCROLL_DURATION = 0.18f; // §3.4 180ms ease-out
         private const float CHAIN_ROW_HEIGHT  = TILE_SIZE_LADDER + 8f;
 
+        // Task 7B/7C — juice hooks (null-safe; no-op when unset).
+        private IHaptics _haptics;
+        private SfxManager _sfx;
+
+        /// <summary>Task 7B — inject haptics provider (call from GameBootstrap).</summary>
+        public void SetHaptics(IHaptics haptics) => _haptics = haptics;
+
+        /// <summary>Task 7C — inject SFX manager (call from GameBootstrap).</summary>
+        public void SetSfxManager(SfxManager sfx) => _sfx = sfx;
+
         // ---------- State ----------
         private string currentInput = "";
         private string currentStartWord = "";
@@ -269,6 +279,21 @@ namespace WordPuzzle.UI
         {
             currentInput += char.ToLower(c);
             UpdateCurrentInputDisplay();
+
+            // Task 7B/7C — letter placed juice.
+            _sfx?.PlayKeyPress();
+            _haptics?.LightTap();
+
+            // Task 7A — tile lock-in punch on the just-filled tile (respect ReduceMotion).
+            if (!UIAnimations.ReduceMotion && currentInputRow != null)
+            {
+                int idx = currentInput.Length - 1;
+                if (idx >= 0 && idx < currentInputRow.childCount)
+                {
+                    var tile = currentInputRow.GetChild(idx).GetComponent<LetterTile>();
+                    if (tile != null) StartCoroutine(tile.PunchScale());
+                }
+            }
         }
 
         private void HandleBackspacePressed()
@@ -544,13 +569,48 @@ namespace WordPuzzle.UI
         public void ShakeCurrentInput()
         {
             if (currentInputRow == null) return;
-            StartCoroutine(ShakeRoutine(currentInputRow, 0.32f));
-            for (int i = 0; i < currentInputRow.childCount; i++)
+            // Task 7A — skip shake when ReduceMotion is on (still show reason text via ShowFeedback).
+            if (!UIAnimations.ReduceMotion)
             {
-                var tile = currentInputRow.GetChild(i).GetComponent<LetterTile>();
-                if (tile != null)
-                    StartCoroutine(tile.FlashColor(HexToColor("#D9534F"), 0.25f));
+                StartCoroutine(ShakeRoutine(currentInputRow, 0.2f));
+                for (int i = 0; i < currentInputRow.childCount; i++)
+                {
+                    var tile = currentInputRow.GetChild(i).GetComponent<LetterTile>();
+                    if (tile != null)
+                        StartCoroutine(tile.FlashColor(HexToColor("#D9534F"), 0.25f));
+                }
             }
+        }
+
+        /// <summary>Task 7 — called by GameBootstrap on word accepted.</summary>
+        public void OnWordAccepted()
+        {
+            _sfx?.PlayAccept();
+            _haptics?.MediumTap();
+
+            // Brief glow settle on chain's newest row (unless ReduceMotion).
+            if (!UIAnimations.ReduceMotion && chainScrollContent != null
+                && chainScrollContent.childCount > 0)
+            {
+                var lastRow = chainScrollContent.GetChild(chainScrollContent.childCount - 1)
+                    as RectTransform;
+                if (lastRow != null) StartCoroutine(UIAnimations.RowAcceptSettle(lastRow));
+            }
+        }
+
+        /// <summary>Task 7 — called by GameBootstrap on word rejected.</summary>
+        public void OnWordRejected()
+        {
+            ShakeCurrentInput();
+            _sfx?.PlayReject();
+            _haptics?.Buzz();
+        }
+
+        /// <summary>Task 7 — called by GameBootstrap on EndGame (win).</summary>
+        public void OnGameWon()
+        {
+            _sfx?.PlayWin();
+            _haptics?.Buzz();
         }
 
         public void FlipRevealEndWord()
