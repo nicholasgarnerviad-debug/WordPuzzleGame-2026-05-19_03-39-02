@@ -1,4 +1,5 @@
 using System;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -12,11 +13,16 @@ namespace WordPuzzle.UI
         [SerializeField] private Button libraryButton;
         [SerializeField] private Button settingsButton;
 
+        // Task 1C — Daily puzzle entry point.
+        [SerializeField] private Button dailyButton;
+        [SerializeField] private TextMeshProUGUI dailyButtonLabel;
+
         public event Action OnClassicModeSelected;
         public event Action OnPuzzleShowSelected;
         public event Action OnTimeAttackSelected;
         public event Action OnLibrarySelected;
         public event Action OnSettingsSelected;
+        public event Action OnDailySelected;
 
         private void OnEnable()
         {
@@ -30,6 +36,8 @@ namespace WordPuzzle.UI
                 libraryButton.onClick.AddListener(() => OnLibrarySelected?.Invoke());
             if (settingsButton != null)
                 settingsButton.onClick.AddListener(() => OnSettingsSelected?.Invoke());
+            if (dailyButton != null)
+                dailyButton.onClick.AddListener(() => OnDailySelected?.Invoke());
         }
 
         private void OnDisable()
@@ -44,6 +52,8 @@ namespace WordPuzzle.UI
                 libraryButton.onClick.RemoveAllListeners();
             if (settingsButton != null)
                 settingsButton.onClick.RemoveAllListeners();
+            if (dailyButton != null)
+                dailyButton.onClick.RemoveAllListeners();
         }
 
         public void Show() => gameObject.SetActive(true);
@@ -53,5 +63,18 @@ namespace WordPuzzle.UI
         public void SelectPuzzleShowMode() => OnPuzzleShowSelected?.Invoke();
         public void SelectTimeAttackMode() => OnTimeAttackSelected?.Invoke();
         public void SelectSettings() => OnSettingsSelected?.Invoke();
+        public void SelectDaily() => OnDailySelected?.Invoke();
+
+        /// <summary>
+        /// Refresh the DAILY button label to reflect today's completion state.
+        /// Called by GameBootstrap on app start and whenever returning to MainMenu.
+        /// </summary>
+        public void SetDailyState(bool completedToday, int currentStreak)
+        {
+            if (dailyButtonLabel == null) return;
+            dailyButtonLabel.text = completedToday
+                ? $"DAILY  ✓  {currentStreak}"   // check + streak count
+                : "DAILY";
+        }
     }
 }

@@ -17,8 +17,20 @@ namespace WordPuzzle.UI
         [SerializeField] private Button playAgainButton;
         [SerializeField] private Button mainMenuButton;
 
+        // Task 1C — daily-streak surface. Optional; ShowDailyStreak no-ops if all three
+        // are null. When unwired, the streak summary is appended to modeNameText so
+        // players still see something without a scene edit.
+        [SerializeField] private TextMeshProUGUI streakText;
+        [SerializeField] private TextMeshProUGUI longestStreakText;
+        [SerializeField] private TextMeshProUGUI comeBackTomorrowText;
+
         public event Action OnPlayAgain;
         public event Action OnMainMenu;
+
+        // Style tokens (accent-gold for streak number, text-muted for the come-back line).
+        private static readonly Color C_ACCENT_GOLD = new Color32(0xC9, 0xB4, 0x58, 0xFF);
+        private static readonly Color C_TEXT_PRIMARY = new Color32(0xE7, 0xE1, 0xC4, 0xFF);
+        private static readonly Color C_TEXT_MUTED  = new Color32(0x8A, 0x93, 0xA1, 0xFF);
 
         private UnityAction playAgainAction;
         private UnityAction mainMenuAction;
@@ -82,6 +94,50 @@ namespace WordPuzzle.UI
 
             if (scoreText != null)
                 scoreText.text = $"Score: {stats.score}";
+        }
+
+        /// <summary>
+        /// Task 1C — render the daily-streak surface after a daily completion.
+        /// Accent-gold streak number; muted "Come back tomorrow" line. If the same
+        /// day has already been counted, swap the bottom line for an "already
+        /// counted today" notice.
+        /// </summary>
+        public void ShowDailyStreak(int currentStreak, int longestStreak, bool alreadyCountedToday)
+        {
+            string streakLine = $"Streak: <color=#C9B458>{currentStreak}</color> days";
+            string bestLine   = $"Best: {longestStreak}";
+            string footerLine = alreadyCountedToday
+                ? "Already counted today"
+                : "Come back tomorrow";
+
+            if (streakText != null)
+            {
+                streakText.richText = true;
+                streakText.text = streakLine;
+                streakText.color = C_TEXT_PRIMARY;
+                streakText.gameObject.SetActive(true);
+            }
+            if (longestStreakText != null)
+            {
+                longestStreakText.text = bestLine;
+                longestStreakText.color = C_ACCENT_GOLD;
+                longestStreakText.gameObject.SetActive(true);
+            }
+            if (comeBackTomorrowText != null)
+            {
+                comeBackTomorrowText.text = footerLine;
+                comeBackTomorrowText.color = C_TEXT_MUTED;
+                comeBackTomorrowText.gameObject.SetActive(true);
+            }
+
+            // Fallback when scene wiring is incomplete: append a short summary to
+            // the mode-name line so the streak is still visible in v1 builds.
+            if (streakText == null && longestStreakText == null && comeBackTomorrowText == null
+                && modeNameText != null)
+            {
+                modeNameText.richText = true;
+                modeNameText.text += $"\n<size=70%>Streak <color=#C9B458>{currentStreak}</color> · Best {longestStreak} · {footerLine}</size>";
+            }
         }
 
         public void Show() => gameObject.SetActive(true);

@@ -21,8 +21,22 @@ FROM  C  A  T            FROM  S  T  O  N  E
 | Mode | Timer | Puzzles | Win condition |
 |---|---|---|---|
 | **Classic** | None | Random 3–7 letter words, BFS-generated | Reach the end word; next puzzle auto-loads |
+| **Daily** | None | One puzzle per day, identical for every player (no server) | Reach the end word; counts toward your streak |
 | **Puzzle Show** | None | Curated tier library (15 puzzles per tier × 6 tiers = 90) | Reach end word; tap a card to play any unlocked puzzle |
 | **Time Attack** | 60s or 120s, Timed or Survival | Random 3–7 letter words back-to-back | Solve as many as you can before the timer runs out |
+
+### Daily Puzzle + Streak
+- Today's puzzle is derived from the player's **local date** with no network call:
+  `index = (Today − 2025-01-01).Days mod 450`. Every client on the same calendar day
+  picks the same `PuzzleDefinition` from `Assets/Resources/Data/daily_puzzles.json`
+  (450 entries, all pre-validated Hamming-1 + dictionary).
+- **Streak rules**: completing today's daily once increments `currentStreak` if yesterday
+  was also completed; a missed day resets the streak to 1; same-day re-completion never
+  double-counts; `longestStreak = max(longestStreak, currentStreak)`.
+- Persisted under PlayerPrefs key `daily_v1` (`DailyProgress`): last completion ISO date,
+  current + longest streak, last 60 completed dates, today's flag + index.
+- MainMenu shows `DAILY` (or `DAILY ✓ N` once today is done). Results screen surfaces
+  `Streak: N days` in accent gold + `Best: M` + a "Come back tomorrow" line.
 
 ### Time Attack sub-modes
 - **Timed**: Fixed countdown from 60s or 120s. No time rewards.

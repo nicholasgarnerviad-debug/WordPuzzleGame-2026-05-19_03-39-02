@@ -297,15 +297,32 @@ public class MockDataManager : IDataManager
         return Task.FromResult(lastSettings.Clone());
     }
 
-    // Spec §3.2: destructive reset wipes puzzle/player progress, retains settings.
+    private DailyProgress lastDailyProgress;
+
+    public Task SaveDailyProgressAsync(DailyProgress progress)
+    {
+        lastDailyProgress = progress ?? new DailyProgress();
+        persistedData["dailyProgress"] = lastDailyProgress;
+        return Task.CompletedTask;
+    }
+
+    public Task<DailyProgress> LoadDailyProgressAsync()
+    {
+        if (lastDailyProgress == null) lastDailyProgress = new DailyProgress();
+        return Task.FromResult(lastDailyProgress);
+    }
+
+    // Spec §3.2: destructive reset wipes puzzle/player/daily progress, retains settings.
     public Task ResetAllAsync()
     {
         lastPuzzleProgress = null;
         lastPlayerProgress = null;
         lastGameState = null;
+        lastDailyProgress = null;
         persistedData.Remove("puzzleProgress");
         persistedData.Remove("playerProgress");
         persistedData.Remove("gameState");
+        persistedData.Remove("dailyProgress");
         return Task.CompletedTask;
     }
 }

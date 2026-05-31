@@ -29,6 +29,10 @@ namespace WordPuzzle.Persistence
         Task SaveSettingsAsync(SettingsData settings);
         Task<SettingsData> LoadSettingsAsync();
 
+        // Daily puzzle + streak (Task 1B)
+        Task SaveDailyProgressAsync(DailyProgress progress);
+        Task<DailyProgress> LoadDailyProgressAsync();
+
         // Destructive: wipe all puzzle/player progress; keep settings (Spec §3.2)
         Task ResetAllAsync();
     }

@@ -12,11 +12,13 @@ namespace WordPuzzle.Persistence
     private const string PROGRESS_FILE_KEY = "wordpuzzle_progress";
     private const string PUZZLE_PROGRESS_KEY = "puzzle_progress_v1";  // Spec §3.2
     private const string SETTINGS_KEY = "settings_v1";                 // Spec §3 Settings
+    private const string DAILY_KEY = "daily_v1";                       // Task 1B
 
     private GameStateSnapshot currentGameState;
     private PlayerProgress playerProgress;
     private PuzzleProgressData puzzleProgress;
     private SettingsData settings;
+    private DailyProgress dailyProgress;
     private Dictionary<int, TierData> tierCache;
     private TierDataLoader tierLoader;
 
@@ -228,7 +230,41 @@ namespace WordPuzzle.Persistence
         return settings.Clone();
     }
 
-    // Spec §3.2: destructive reset — wipes puzzle progress + player progress,
+    // Task 1B — Daily puzzle / streak persistence.
+    public async Task SaveDailyProgressAsync(DailyProgress progress)
+    {
+        if (progress == null) progress = new DailyProgress();
+        dailyProgress = progress;
+        string json = JsonUtility.ToJson(progress);
+        PlayerPrefs.SetString(DAILY_KEY, json);
+        PlayerPrefs.Save();
+        await Task.Delay(0);
+    }
+
+    public async Task<DailyProgress> LoadDailyProgressAsync()
+    {
+        if (dailyProgress != null)
+        {
+            await Task.Delay(0);
+            return dailyProgress;
+        }
+        if (!PlayerPrefs.HasKey(DAILY_KEY))
+        {
+            dailyProgress = new DailyProgress();
+            await Task.Delay(0);
+            return dailyProgress;
+        }
+        string json = PlayerPrefs.GetString(DAILY_KEY);
+        DailyProgress data = null;
+        try { data = JsonUtility.FromJson<DailyProgress>(json); } catch { data = null; }
+        if (data == null) data = new DailyProgress();
+        if (data.completedDates == null) data.completedDates = new System.Collections.Generic.List<string>();
+        dailyProgress = data;
+        await Task.Delay(0);
+        return dailyProgress;
+    }
+
+    // Spec §3.2: destructive reset — wipes puzzle progress + player progress + daily streak,
     // keeps settings_v1 intact.
     public async Task ResetAllAsync()
     {
@@ -236,6 +272,7 @@ namespace WordPuzzle.Persistence
         currentGameState = null;
         playerProgress = null;
         puzzleProgress = null;
+        dailyProgress = null;
 
         // Wipe persisted keys (keep SETTINGS_KEY).
         if (PlayerPrefs.HasKey(PUZZLE_PROGRESS_KEY))
@@ -244,6 +281,8 @@ namespace WordPuzzle.Persistence
             PlayerPrefs.DeleteKey(PROGRESS_FILE_KEY);
         if (PlayerPrefs.HasKey(SAVE_FILE_KEY))
             PlayerPrefs.DeleteKey(SAVE_FILE_KEY);
+        if (PlayerPrefs.HasKey(DAILY_KEY))
+            PlayerPrefs.DeleteKey(DAILY_KEY);
 
         PlayerPrefs.Save();
 

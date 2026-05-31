@@ -4,6 +4,7 @@ using WordPuzzle.State;
 using WordPuzzle.Modes;
 using WordPuzzle.UI;
 using WordPuzzle.Persistence;
+using WordPuzzle.Game;
 using WordPuzzleModel = WordPuzzle.Puzzle.WordPuzzle;
 
 namespace WordPuzzle
@@ -35,6 +36,14 @@ namespace WordPuzzle
 
         // Spec §3 Settings — loaded once at boot, applied to AudioListener.
         private SettingsData cachedSettings;
+
+        // Task 1 — Daily puzzle + streak.
+        private IClock dailyClock = new SystemClock();
+        private DailyPuzzleService dailyPuzzleService;
+        private DailyProgress cachedDailyProgress;
+        private bool isDailyRun;                 // true while the active mode is the daily puzzle
+        private PuzzleDefinition pendingDailyPuzzle;
+        private int pendingDailyIndex = -1;
 
         private void Start()
         {
@@ -78,6 +87,8 @@ namespace WordPuzzle
                 BuildTierPuzzleLookup(tierCache);
                 LoadPuzzleProgressBlocking(dataManager, tierCache);
                 LoadSettingsBlocking(dataManager);
+                LoadDailyProgressBlocking(dataManager);
+                InitializeDailyPuzzleService();
 
                 stateManager = new GameStateManager(wordValidator, dataManager);
 
@@ -199,6 +210,7 @@ namespace WordPuzzle
             // Wire main menu mode selection
             uiManager.GetMainMenu().OnClassicModeSelected += StartClassicMode;
             uiManager.GetMainMenu().OnPuzzleShowSelected += StartPuzzleShowMode;
+            uiManager.GetMainMenu().OnDailySelected += StartDailyMode;
             uiManager.GetMainMenu().OnTimeAttackSelected += ShowTimeAttackSetup;
             uiManager.GetMainMenu().OnLibrarySelected += ShowLibrary;
             uiManager.GetMainMenu().OnSettingsSelected += ShowSettings;
@@ -261,6 +273,7 @@ namespace WordPuzzle
             // Unsubscribe from all events to prevent memory leaks
             uiManager.GetMainMenu().OnClassicModeSelected -= StartClassicMode;
             uiManager.GetMainMenu().OnPuzzleShowSelected -= StartPuzzleShowMode;
+            uiManager.GetMainMenu().OnDailySelected -= StartDailyMode;
             uiManager.GetMainMenu().OnTimeAttackSelected -= ShowTimeAttackSetup;
             uiManager.GetMainMenu().OnLibrarySelected -= ShowLibrary;
             uiManager.GetMainMenu().OnSettingsSelected -= ShowSettings;
@@ -309,7 +322,25 @@ namespace WordPuzzle
         private void ShowMainMenu()
         {
             activeMode = null;
+            isDailyRun = false;
+            pendingDailyPuzzle = null;
+            pendingDailyIndex = -1;
             uiManager.ShowMainMenu();
+            RefreshDailyButtonState();
+        }
+
+        // Task 1C — keep the DAILY button label in sync with persisted streak state.
+        private void RefreshDailyButtonState()
+        {
+            var menu = uiManager?.GetMainMenu();
+            if (menu == null) return;
+            if (cachedDailyProgress == null)
+            {
+                menu.SetDailyState(false, 0);
+                return;
+            }
+            DailyStreakRules.RefreshTodayFlag(cachedDailyProgress, dailyClock.TodayIso);
+            menu.SetDailyState(cachedDailyProgress.todayCompleted, cachedDailyProgress.currentStreak);
         }
 
         private void ShowLibrary()
@@ -381,6 +412,31 @@ namespace WordPuzzle
 
         private void StartClassicMode()
         {
+            isDailyRun = false;
+            pendingDailyPuzzle = null;
+            activeMode = new ClassicMode();
+            modeController.SetMode(activeMode);
+            StartNewGame();
+        }
+
+        // Task 1A — Daily puzzle entry point.
+        // Reuses ClassicMode mechanics (no timer, no tier-gate) but injects a
+        // deterministic puzzle from DailyPuzzleService instead of the random generator.
+        private void StartDailyMode()
+        {
+            if (dailyPuzzleService == null || dailyPuzzleService.PoolCount == 0)
+            {
+                Debug.LogError("[Daily] DailyPuzzleService not initialized or pool empty; aborting.");
+                return;
+            }
+            pendingDailyPuzzle = dailyPuzzleService.GetTodayPuzzle();
+            pendingDailyIndex = dailyPuzzleService.TodayIndex();
+            if (pendingDailyPuzzle == null)
+            {
+                Debug.LogError("[Daily] Today's puzzle is null; pool may be malformed.");
+                return;
+            }
+            isDailyRun = true;
             activeMode = new ClassicMode();
             modeController.SetMode(activeMode);
             StartNewGame();
@@ -457,6 +513,31 @@ namespace WordPuzzle
 
         // Spec §3.7 — load PuzzleProgressData and apply tier-unlock cascade
         // (any tier with tierId <= currentTier is unlocked).
+        // Task 1B — load DailyProgress at boot.
+        private void LoadDailyProgressBlocking(IDataManager dataManager)
+        {
+            try
+            {
+                var task = dataManager.LoadDailyProgressAsync();
+                cachedDailyProgress = task.IsCompleted ? task.Result : task.GetAwaiter().GetResult();
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogWarning($"DailyProgress load failed; using defaults: {ex.Message}");
+                cachedDailyProgress = new DailyProgress();
+            }
+            if (cachedDailyProgress == null) cachedDailyProgress = new DailyProgress();
+            DailyStreakRules.RefreshTodayFlag(cachedDailyProgress, dailyClock.TodayIso);
+        }
+
+        // Task 1A — load daily puzzle pool from Resources and bind to the system clock.
+        private void InitializeDailyPuzzleService()
+        {
+            dailyPuzzleService = DailyPuzzleService.LoadFromResources(dailyClock);
+            if (dailyPuzzleService.PoolCount == 0)
+                Debug.LogWarning("[Daily] pool empty — DAILY button will be disabled at runtime.");
+        }
+
         private void LoadPuzzleProgressBlocking(IDataManager dataManager,
             System.Collections.Generic.Dictionary<int, WordPuzzle.Puzzle.TierData> tierCache)
         {
@@ -629,7 +710,13 @@ namespace WordPuzzle
             PuzzleDefinition puzzleDefinition;
             Difficulty difficulty;
 
-            if (activeMode is PuzzleShowMode psm)
+            if (isDailyRun && pendingDailyPuzzle != null)
+            {
+                // Task 1A — deterministic daily puzzle.
+                puzzleDefinition = pendingDailyPuzzle;
+                difficulty = Difficulty.Easy;
+            }
+            else if (activeMode is PuzzleShowMode psm)
             {
                 puzzleDefinition = puzzleGenerator.GetRandomTierPuzzle(psm.CurrentTier);
                 difficulty = psm.CurrentTier <= 2 ? Difficulty.Easy
@@ -830,10 +917,44 @@ namespace WordPuzzle
 
         private void EndGame()
         {
+            // Snapshot daily-run state before we tear down, then route to results.
+            bool wasDailyRun = isDailyRun;
+            int dailyIndex = pendingDailyIndex;
+            isDailyRun = false;
+            pendingDailyPuzzle = null;
+            pendingDailyIndex = -1;
+
             activeMode = null;
             var stats = modeController.GetCurrentStats();
             uiManager.GetResults().DisplayStats(stats);
+
+            if (wasDailyRun)
+            {
+                RecordDailyCompletionAndSurface(dailyIndex);
+            }
+
             uiManager.ShowResults();
+        }
+
+        // Task 1B/1C — apply streak rules + persist + drive the ResultsScreen daily widgets.
+        private async void RecordDailyCompletionAndSurface(int puzzleIndex)
+        {
+            string todayIso = dailyClock.TodayIso;
+            if (cachedDailyProgress == null) cachedDailyProgress = new DailyProgress();
+            bool alreadyCountedToday = cachedDailyProgress.lastCompletedDateIso == todayIso;
+
+            DailyStreakRules.ApplyCompletion(cachedDailyProgress, todayIso, puzzleIndex);
+
+            if (dataManagerRef != null)
+            {
+                try { await dataManagerRef.SaveDailyProgressAsync(cachedDailyProgress); }
+                catch (System.Exception ex) { Debug.LogError($"[Daily] persist failed: {ex.Message}"); }
+            }
+
+            uiManager.GetResults().ShowDailyStreak(
+                cachedDailyProgress.currentStreak,
+                cachedDailyProgress.longestStreak,
+                alreadyCountedToday);
         }
 
         private void PlayAgain()
