@@ -94,6 +94,76 @@ namespace WordPuzzle.Puzzle
         }
 
         /// <summary>
+        /// Spec §2 — generate a random puzzle whose start/end words are exactly
+        /// <paramref name="wordLength"/> letters long, separated by approximately
+        /// <paramref name="targetDistance"/> edits in the word graph. When the caller
+        /// passes -1 (the default), targetDistance is auto-derived as max(2, wordLength-2)
+        /// so 3-letter puzzles get a 2-step ladder and 7-letter puzzles get a 5-step ladder.
+        /// </summary>
+        public PuzzleDefinition GenerateRandomPuzzleOfLength(int wordLength, int targetDistance = -1)
+        {
+            if (wordLength < 2) wordLength = 3;
+            if (targetDistance < 1) targetDistance = System.Math.Max(2, wordLength - 2);
+
+            for (int attempt = 0; attempt < MaxGenerationAttempts; attempt++)
+            {
+                string startWord = GetRandomWordOfLength(wordLength);
+                if (string.IsNullOrEmpty(startWord))
+                    continue;
+
+                var path = FindPathOfLength(startWord, targetDistance);
+                if (path.Count > 1)
+                    return BuildPuzzle(path);
+            }
+
+            // Relaxed retry — accept any path of length >= 2 starting at a word of the
+            // requested length. This handles tiny word graphs where the strict target
+            // distance cannot be satisfied.
+            for (int attempt = 0; attempt < MaxGenerationAttempts; attempt++)
+            {
+                string startWord = GetRandomWordOfLength(wordLength);
+                if (string.IsNullOrEmpty(startWord))
+                    continue;
+
+                var path = FindAnyShortPath(startWord, System.Math.Max(2, targetDistance));
+                if (path.Count > 1)
+                    return BuildPuzzle(path);
+            }
+
+            return CreateFallbackPuzzle();
+        }
+
+        // Helper for the relaxed retry: BFS that returns the longest reachable path
+        // (>= 2 nodes) starting from <paramref name="start"/>, capped at maxDepth edges.
+        private List<string> FindAnyShortPath(string start, int maxDepth)
+        {
+            var queue = new Queue<(string word, List<string> path)>();
+            var visited = new HashSet<string>();
+            queue.Enqueue((start, new List<string> { start }));
+            visited.Add(start);
+
+            List<string> best = null;
+            while (queue.Count > 0)
+            {
+                var (current, path) = queue.Dequeue();
+                if (path.Count - 1 >= 1 && (best == null || path.Count > best.Count))
+                    best = path;
+
+                if (path.Count - 1 >= maxDepth) continue;
+
+                foreach (string neighbor in GetNeighborsFromGraph(current))
+                {
+                    if (!visited.Contains(neighbor))
+                    {
+                        visited.Add(neighbor);
+                        queue.Enqueue((neighbor, new List<string>(path) { neighbor }));
+                    }
+                }
+            }
+            return best ?? new List<string>();
+        }
+
+        /// <summary>
         /// BFS validation: returns true when a word-ladder path exists between
         /// start and end (both must already be in the word graph).
         /// </summary>
@@ -262,6 +332,8 @@ namespace WordPuzzle.Puzzle
     {
         PuzzleDefinition GetTierPuzzle(int tierId, int puzzleIndex);
         PuzzleDefinition GenerateRandomPuzzle(Difficulty difficulty);
+        // Spec §2 — random puzzle of an exact word length (Classic mode).
+        PuzzleDefinition GenerateRandomPuzzleOfLength(int wordLength, int targetDistance = -1);
     }
 
     // Used by Initialize() and TierDataLoader — defined here to avoid duplication

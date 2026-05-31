@@ -22,6 +22,20 @@ namespace WordPuzzle.State
         private IDataManager dataManager;
         private List<Action<GameState>> subscribers;
 
+        /// <summary>
+        /// Fired by HandleUseAddTime when an AddTime power-up successfully grants bonus
+        /// seconds. Subscribers (e.g. TimeAttackMode) receive the grant amount in seconds.
+        /// </summary>
+        public event Action<float> OnTimeAdded;
+
+        /// <summary>
+        /// Spec §1 — fires for every SubmitWordAction with a SubmissionResult describing
+        /// whether the word was accepted, and if not, the user-facing reason. The
+        /// orchestrator (GameBootstrap) relays this to GameplayScreen.ShowFeedback /
+        /// ShakeCurrentInput. NEVER decrements lives on failure.
+        /// </summary>
+        public event Action<SubmissionResult> OnWordSubmissionResult;
+
         public GameStateManager(IWordValidator wordValidator, IDataManager dataManager)
         {
             this.wordValidator = wordValidator;
@@ -46,7 +60,9 @@ namespace WordPuzzle.State
                 workingState.revealsRemaining,
                 new HashSet<int>(workingState.revealedLetterIndices),
                 workingState.hintLetterIndex,
-                workingState.revealedNextWord
+                workingState.revealedNextWord,
+                workingState.addTimesRemaining,
+                workingState.addTimeGrantSeconds
             );
         }
 
@@ -57,7 +73,9 @@ namespace WordPuzzle.State
             {
                 wordChain = new List<string> { puzzle.startWord },
                 currentInput = "",
-                lives = 3,
+                // Spec §1 — sentinel. Lives are no longer decremented on bad submissions;
+                // we keep the field so legacy persistence/UI code that reads it doesn't break.
+                lives = 999,
                 isWon = false,
                 isLost = false,
                 score = 0,
@@ -72,7 +90,9 @@ namespace WordPuzzle.State
                 undoHistory = new Stack<GameSnapshot>(),
                 revealedLetterIndices = new HashSet<int>(),
                 hintLetterIndex = -1,
-                revealedNextWord = ""
+                revealedNextWord = "",
+                addTimesRemaining = 0,
+                addTimeGrantSeconds = 0f
             };
 
             wordValidator.Initialize(puzzle.startWord, puzzle.endWord, workingState.wordChain.ToArray());
@@ -102,6 +122,9 @@ namespace WordPuzzle.State
                     break;
                 case UseRevealAction:
                     HandleUseReveal();
+                    break;
+                case UseAddTimeAction:
+                    HandleUseAddTime();
                     break;
                 case UndoStepAction:
                     HandleUndo();
@@ -139,10 +162,36 @@ namespace WordPuzzle.State
 
         private void HandleSubmitWord(SubmitWordAction action)
         {
+            // Spec §1 — early-out if puzzle already terminal.
             if (workingState.isWon || workingState.isLost)
                 return;
 
-            string word = action.word.ToLower();
+            // Spec §1 — normalize input.
+            string word = (action.word ?? string.Empty).Trim().ToLowerInvariant();
+
+            // §1 — Empty input: clear input, fire result, do not touch lives.
+            if (word.Length == 0)
+            {
+                workingState.currentInput = "";
+                FireSubmissionResult(false, word, "Type a word", SubmissionRejectReason.Empty);
+                return;
+            }
+
+            // §1 — Length check (must match previous word). Done before validator so we
+            // can give a clean "must be N letters" message rather than the validator's
+            // generic "must change exactly one letter".
+            string previousWord = workingState.wordChain[workingState.wordChain.Count - 1];
+            if (word.Length != previousWord.Length)
+            {
+                workingState.invalidAttempts++;
+                workingState.currentInput = "";
+                workingState.currentStreak = 0;
+                FireSubmissionResult(false, word,
+                    $"Word must be {previousWord.Length} letters",
+                    SubmissionRejectReason.WrongLength);
+                return;
+            }
+
             var validation = wordValidator.ValidateWord(word);
 
             if (validation.isValid && validation.isNextStep)
@@ -175,21 +224,56 @@ namespace WordPuzzle.State
 
                 // Reset validator with current state
                 wordValidator.Initialize(word, currentPuzzle.endWord, workingState.wordChain.ToArray());
+
+                // §1 — fire success result.
+                FireSubmissionResult(true, word, "Nice!", SubmissionRejectReason.None);
             }
             else
             {
-                // Track invalid attempt
+                // Track invalid attempt — NO lives decrement, NO isLost flip per §1.
                 workingState.invalidAttempts++;
-
-                // Invalid word - lose a life and reset streak
-                workingState.lives--;
                 workingState.currentInput = "";
                 workingState.currentStreak = 0;
 
-                if (workingState.lives <= 0)
+                // Map the validator's message to a SubmissionRejectReason + user-friendly reason.
+                var (reason, userReason) = MapValidationMessage(validation?.message);
+                FireSubmissionResult(false, word, userReason, reason);
+            }
+        }
+
+        // §1 — translate WordValidator's raw message into a typed reject reason + UI text.
+        private static (SubmissionRejectReason reason, string userMessage) MapValidationMessage(string msg)
+        {
+            if (string.IsNullOrEmpty(msg))
+                return (SubmissionRejectReason.NotInDictionary, "Not a real word");
+
+            // WordValidator emits these literal strings; we translate them here.
+            if (msg.IndexOf("not in dictionary", StringComparison.OrdinalIgnoreCase) >= 0)
+                return (SubmissionRejectReason.NotInDictionary, "Not a real word");
+            if (msg.IndexOf("already used", StringComparison.OrdinalIgnoreCase) >= 0)
+                return (SubmissionRejectReason.AlreadyUsed, "Already used");
+            if (msg.IndexOf("exactly one letter", StringComparison.OrdinalIgnoreCase) >= 0)
+                return (SubmissionRejectReason.NotOneLetterDifferent, "Change exactly one letter");
+
+            // Default fallback — surface validator text verbatim.
+            return (SubmissionRejectReason.NotInDictionary, msg);
+        }
+
+        private void FireSubmissionResult(bool accepted, string word, string reason, SubmissionRejectReason rejectReason)
+        {
+            try
+            {
+                OnWordSubmissionResult?.Invoke(new SubmissionResult
                 {
-                    workingState.isLost = true;
-                }
+                    accepted = accepted,
+                    word = word,
+                    reason = reason,
+                    rejectReason = rejectReason
+                });
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"Error invoking OnWordSubmissionResult: {ex.Message}");
             }
         }
 
@@ -343,6 +427,44 @@ namespace WordPuzzle.State
             workingState.revealedNextWord = nextTarget;
             workingState.hintLetterIndex = changedIndex;
             workingState.revealsRemaining--;
+        }
+
+        /// <summary>
+        /// TimeAttack §4 — consumes one AddTime charge and notifies subscribers (the
+        /// active TimeAttackMode) of the seconds to grant. Refuses without spending the
+        /// counter when no charges remain or the grant amount is non-positive.
+        /// </summary>
+        private void HandleUseAddTime()
+        {
+            if (workingState == null) return;
+            if (workingState.isWon || workingState.isLost) return;
+            if (workingState.addTimesRemaining <= 0) return;
+            if (workingState.addTimeGrantSeconds <= 0f) return;
+
+            workingState.addTimesRemaining--;
+            var grant = workingState.addTimeGrantSeconds;
+
+            try
+            {
+                OnTimeAdded?.Invoke(grant);
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"Error invoking OnTimeAdded: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// TimeAttack §4 — seeds the AddTime power-up economy on the working state.
+        /// Called by TimeAttackMode after StartNewPuzzle to inject configured charges and
+        /// grant size derived from TimeAttackConfig. Charges &lt; 0 are clamped to 0.
+        /// </summary>
+        public void ConfigureAddTimePowerUp(int charges, float grantSeconds)
+        {
+            if (workingState == null) return;
+            workingState.addTimesRemaining = Mathf.Max(0, charges);
+            workingState.addTimeGrantSeconds = Mathf.Max(0f, grantSeconds);
+            NotifySubscribers();
         }
 
         private void HandleUndo()
@@ -613,6 +735,10 @@ namespace WordPuzzle.State
         // and the next solution word once the player spends a reveal ("" if none).
         public int hintLetterIndex = -1;
         public string revealedNextWord = "";
+
+        // TimeAttack §4 AddTime economy: per-run charges and grant size.
+        public int addTimesRemaining = 0;
+        public float addTimeGrantSeconds = 0f;
     }
 
     internal class Unsubscriber : IDisposable
@@ -643,6 +769,29 @@ namespace WordPuzzle.State
         public float accuracy;
         public int currentStreak;
         public int longestStreak;
+    }
+
+    /// <summary>
+    /// Spec §1 — result of a SubmitWordAction. Always raised on
+    /// <see cref="GameStateManager.OnWordSubmissionResult"/>; never decrements lives.
+    /// </summary>
+    public struct SubmissionResult
+    {
+        public bool accepted;
+        public string word;
+        public string reason;
+        public SubmissionRejectReason rejectReason;
+    }
+
+    /// <summary>Spec §1 — typed rejection categories for failed submissions.</summary>
+    public enum SubmissionRejectReason
+    {
+        None,
+        NotInDictionary,
+        NotOneLetterDifferent,
+        AlreadyUsed,
+        WrongLength,
+        Empty
     }
 
     public interface IGameStateManager

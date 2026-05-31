@@ -81,6 +81,10 @@ namespace WordPuzzle
 
                 stateManager = new GameStateManager(wordValidator, dataManager);
 
+                // Spec §1 — relay submission results (accepted / typed rejection) to the
+                // UI feedback layer. Subscribed once at boot, detached in OnDestroy.
+                stateManager.OnWordSubmissionResult += OnWordSubmissionResultHandler;
+
                 if (modeController == null)
                 {
                     modeController = new ModeController(stateManager);
@@ -195,13 +199,23 @@ namespace WordPuzzle
             // Wire main menu mode selection
             uiManager.GetMainMenu().OnClassicModeSelected += StartClassicMode;
             uiManager.GetMainMenu().OnPuzzleShowSelected += StartPuzzleShowMode;
-            uiManager.GetMainMenu().OnTimeAttackSelected += StartTimeAttackMode;
+            uiManager.GetMainMenu().OnTimeAttackSelected += ShowTimeAttackSetup;
             uiManager.GetMainMenu().OnLibrarySelected += ShowLibrary;
             uiManager.GetMainMenu().OnSettingsSelected += ShowSettings;
 
-            // Wire library back button
+            // Wire library back button + puzzle-tap → PuzzleShowMode (§5 library wiring)
             if (uiManager.GetLibrary() != null)
+            {
                 uiManager.GetLibrary().OnBackToMenu += ShowMainMenu;
+                uiManager.GetLibrary().OnPuzzleSelected += OnLibraryPuzzleSelected;
+            }
+
+            // §5.4 — TimeAttack setup screen
+            if (uiManager.GetTimeAttackSetup() != null)
+            {
+                uiManager.GetTimeAttackSetup().OnBackToMenu += ShowMainMenu;
+                uiManager.GetTimeAttackSetup().OnConfigConfirmed += StartTimeAttackModeWithConfig;
+            }
 
             // Wire settings screen
             if (uiManager.GetSettings() != null)
@@ -219,6 +233,7 @@ namespace WordPuzzle
             uiManager.GetGameplay().OnHintUsed += OnHintUsed;
             uiManager.GetGameplay().OnRevealUsed += OnRevealUsed;
             uiManager.GetGameplay().OnUndoStep += OnUndoStep;
+            uiManager.GetGameplay().OnAddTimeUsed += OnAddTimeUsed;
 
             // Wire results
             uiManager.GetResults().OnPlayAgain += PlayAgain;
@@ -234,18 +249,33 @@ namespace WordPuzzle
                 psm.OnTierAdvanced -= OnPuzzleShowTierAdvanced;
             }
 
+            // Spec §4 — detach TimeAttack bonus-seconds listener.
+            if (activeMode is TimeAttackMode tamCleanup)
+            {
+                tamCleanup.OnTimeAdded -= OnTimeAttackTimeAdded;
+            }
+
             if (uiManager == null)
                 return;
 
             // Unsubscribe from all events to prevent memory leaks
             uiManager.GetMainMenu().OnClassicModeSelected -= StartClassicMode;
             uiManager.GetMainMenu().OnPuzzleShowSelected -= StartPuzzleShowMode;
-            uiManager.GetMainMenu().OnTimeAttackSelected -= StartTimeAttackMode;
+            uiManager.GetMainMenu().OnTimeAttackSelected -= ShowTimeAttackSetup;
             uiManager.GetMainMenu().OnLibrarySelected -= ShowLibrary;
             uiManager.GetMainMenu().OnSettingsSelected -= ShowSettings;
 
             if (uiManager.GetLibrary() != null)
+            {
                 uiManager.GetLibrary().OnBackToMenu -= ShowMainMenu;
+                uiManager.GetLibrary().OnPuzzleSelected -= OnLibraryPuzzleSelected;
+            }
+
+            if (uiManager.GetTimeAttackSetup() != null)
+            {
+                uiManager.GetTimeAttackSetup().OnBackToMenu -= ShowMainMenu;
+                uiManager.GetTimeAttackSetup().OnConfigConfirmed -= StartTimeAttackModeWithConfig;
+            }
 
             if (uiManager.GetSettings() != null)
             {
@@ -260,6 +290,7 @@ namespace WordPuzzle
             uiManager.GetGameplay().OnHintUsed -= OnHintUsed;
             uiManager.GetGameplay().OnRevealUsed -= OnRevealUsed;
             uiManager.GetGameplay().OnUndoStep -= OnUndoStep;
+            uiManager.GetGameplay().OnAddTimeUsed -= OnAddTimeUsed;
 
             uiManager.GetResults().OnPlayAgain -= PlayAgain;
             uiManager.GetResults().OnMainMenu -= ShowMainMenu;
@@ -472,11 +503,125 @@ namespace WordPuzzle
             SettingsScreen.ApplyAudioListenerVolume(cachedSettings);
         }
 
-        private void StartTimeAttackMode()
+        // §5 — Show the Time Attack setup screen (replaces direct mode start).
+        private void ShowTimeAttackSetup()
         {
-            activeMode = new TimeAttackMode();
+            uiManager.ShowTimeAttackSetup();
+        }
+
+        // §5.4 — Build a TimeAttackMode from the config chosen on the setup screen.
+        private void StartTimeAttackModeWithConfig(TimeAttackConfig config)
+        {
+            var cfg = config ?? TimeAttackConfig.Default60();
+            var tam = new TimeAttackMode(cfg);
+            tam.OnTimeAdded += OnTimeAttackTimeAdded;
+            activeMode = tam;
             modeController.SetMode(activeMode);
             StartNewGame();
+        }
+
+        // §5 library wiring — start PuzzleShowMode at the tier owning the tapped puzzle
+        // and load that specific puzzle as the first puzzle of the run.
+        private void OnLibraryPuzzleSelected(int puzzleId)
+        {
+            int tierId = FindTierIdForPuzzle(puzzleId);
+            if (tierId <= 0)
+            {
+                Debug.LogError($"Library tap: puzzleId {puzzleId} not found in any tier");
+                return;
+            }
+
+            var psm = new PuzzleShowMode();
+            if (tierPuzzleIdLookup != null) psm.SetTierPuzzleLookup(tierPuzzleIdLookup);
+            if (cachedPuzzleProgress != null) psm.LoadProgress(cachedPuzzleProgress);
+            psm.OnPuzzleCompleted += OnPuzzleShowPuzzleCompleted;
+            psm.OnTierAdvanced += OnPuzzleShowTierAdvanced;
+
+            activeMode = psm;
+            modeController.SetMode(activeMode);
+            StartSpecificPuzzle(puzzleId, tierId);
+        }
+
+        // Helper — walk the authoritative tier cache to resolve a puzzleId to its tier.
+        private int FindTierIdForPuzzle(int puzzleId)
+        {
+            if (tierCacheRef == null) return -1;
+            foreach (var kvp in tierCacheRef)
+            {
+                if (kvp.Value?.puzzles == null) continue;
+                foreach (var p in kvp.Value.puzzles)
+                {
+                    if (p != null && p.puzzleId == puzzleId) return kvp.Key;
+                }
+            }
+            return -1;
+        }
+
+        // Helper — locate a PuzzleDefinition by id across all tiers.
+        private PuzzleDefinition FindPuzzleDefinitionById(int puzzleId)
+        {
+            if (tierCacheRef == null) return null;
+            foreach (var kvp in tierCacheRef)
+            {
+                if (kvp.Value?.puzzles == null) continue;
+                foreach (var p in kvp.Value.puzzles)
+                {
+                    if (p != null && p.puzzleId == puzzleId) return p;
+                }
+            }
+            return null;
+        }
+
+        // Library-tap variant of StartNewGame that bypasses random tier-puzzle selection
+        // and loads the explicit puzzle the player picked.
+        private void StartSpecificPuzzle(int puzzleId, int tierId)
+        {
+            var def = FindPuzzleDefinitionById(puzzleId);
+            if (def == null)
+            {
+                Debug.LogError($"StartSpecificPuzzle: definition for puzzleId {puzzleId} not found");
+                return;
+            }
+
+            Difficulty difficulty = tierId <= 2 ? Difficulty.Easy
+                                  : tierId <= 4 ? Difficulty.Medium
+                                  : Difficulty.Hard;
+
+            var puzzle = new WordPuzzleModel(
+                def.puzzleId,
+                def.startWord,
+                def.endWord,
+                def.optimalSteps,
+                def.solution,
+                def.seedValue,
+                difficulty
+            );
+
+            modeController.StartGame(puzzle);
+            uiManager.ShowGameplay();
+
+            var state = stateManager.GetCurrentState();
+            uiManager.GetGameplay().SetPuzzleDisplay(state.puzzle.startWord, state.puzzle.endWord);
+            uiManager.GetGameplay().SetScore(0);
+            uiManager.GetGameplay().ShowFeedback("", Color.white);
+            UpdateGameplayUI();
+        }
+
+        // §5 — Player tapped +Time on the gameplay screen. Dispatch via state manager
+        // so the action is journaled and the GameStateManager.OnTimeAdded event fires.
+        private void OnAddTimeUsed()
+        {
+            if (stateManager == null) return;
+            stateManager.Dispatch(new UseAddTimeAction());
+            UpdatePowerUpUI();
+        }
+
+        // Spec §4 — surface AddTime / Survival bonus seconds to the UI feedback layer.
+        private void OnTimeAttackTimeAdded(float seconds)
+        {
+            var gameplay = uiManager?.GetGameplay();
+            if (gameplay == null) return;
+            gameplay.ShowFeedback($"+{Mathf.RoundToInt(seconds)}s", Color.cyan);
         }
 
         private void StartNewGame()
@@ -545,6 +690,23 @@ namespace WordPuzzle
             }
         }
 
+        // Spec §1 — relay GameStateManager.OnWordSubmissionResult to the UI feedback layer.
+        // Minimal stub so the wiring in InitializeGameSystems compiles. mode-coder6 may
+        // refine this with typed reason rendering.
+        private void OnWordSubmissionResultHandler(WordPuzzle.State.SubmissionResult result)
+        {
+            var gameplay = uiManager?.GetGameplay();
+            if (gameplay == null) return;
+            if (result.accepted)
+            {
+                gameplay.ShowFeedback(string.IsNullOrEmpty(result.reason) ? "✓" : result.reason, Color.green);
+            }
+            else if (!string.IsNullOrEmpty(result.reason))
+            {
+                gameplay.ShowFeedback(result.reason, Color.red);
+            }
+        }
+
         // Phase 2: Power-up event handlers
         private void OnHintUsed()
         {
@@ -596,6 +758,11 @@ namespace WordPuzzle
             gameplay.SetScore(state.score);
             UpdatePowerUpUI();
 
+            // §5.5 — Timer + AddTime visibility per-mode.
+            bool isTimeAttack = activeMode is TimeAttackMode;
+            gameplay.SetTimerVisible(isTimeAttack);
+            gameplay.SetAddTimeVisible(isTimeAttack);
+
             if (activeMode is TimeAttackMode tam)
             {
                 gameplay.SetTimer(tam.GetTimeRemaining());
@@ -636,6 +803,8 @@ namespace WordPuzzle
             gameplay.SetRevealCount(state.revealsRemaining);
             gameplay.EnableUndoButton(state.wordChain.Count > 1);
             gameplay.SetRevealedIndices(state.revealedLetterIndices);
+            // §5.1 — AddTime charges (TimeAttack only; toggled separately via SetAddTimeVisible).
+            gameplay.SetAddTimeCount(state.addTimesRemaining);
         }
 
         private void CheckGameOver()

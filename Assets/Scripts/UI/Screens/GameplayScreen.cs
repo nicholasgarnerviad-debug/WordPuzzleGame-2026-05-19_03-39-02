@@ -32,6 +32,10 @@ namespace WordPuzzle.UI
         [SerializeField] private TextMeshProUGUI hintCountText;
         [SerializeField] private TextMeshProUGUI revealCountText;
 
+        // §5.1 — AddTime power-up (TimeAttack only).
+        [SerializeField] private Button addTimeButton;
+        [SerializeField] private TextMeshProUGUI addTimeCountText;
+
         // Phase 3: Tier indicator
         [SerializeField] private TextMeshProUGUI tierIndicatorText;
 
@@ -98,6 +102,7 @@ namespace WordPuzzle.UI
         public event Action OnHintUsed;
         public event Action OnRevealUsed;
         public event Action OnUndoStep;
+        public event Action OnAddTimeUsed;
 
         // ============================================================
         //  Lifecycle
@@ -123,6 +128,7 @@ namespace WordPuzzle.UI
             if (hintButton != null) hintButton.onClick.AddListener(() => OnHintUsed?.Invoke());
             if (revealButton != null) revealButton.onClick.AddListener(() => OnRevealUsed?.Invoke());
             if (undoButton != null) undoButton.onClick.AddListener(() => OnUndoStep?.Invoke());
+            if (addTimeButton != null) addTimeButton.onClick.AddListener(() => OnAddTimeUsed?.Invoke());
 
             if (keyboard != null)
             {
@@ -135,6 +141,7 @@ namespace WordPuzzle.UI
 
             ReparentBadge(hintCountText, hintButton, new Vector2(38f, 32f));
             ReparentBadge(revealCountText, revealButton, new Vector2(38f, 32f));
+            ReparentBadge(addTimeCountText, addTimeButton, new Vector2(38f, 32f));
 
             ConfigureChainScrollRect();
 
@@ -225,6 +232,7 @@ namespace WordPuzzle.UI
             if (hintButton != null) hintButton.onClick.RemoveAllListeners();
             if (revealButton != null) revealButton.onClick.RemoveAllListeners();
             if (undoButton != null) undoButton.onClick.RemoveAllListeners();
+            if (addTimeButton != null) addTimeButton.onClick.RemoveAllListeners();
 
             if (keyboard != null)
             {
@@ -425,6 +433,24 @@ namespace WordPuzzle.UI
         public void EnableUndoButton(bool enable)
         {
             if (undoButton != null) undoButton.interactable = enable;
+        }
+
+        // §5.1 — AddTime power-up surface (TimeAttack only).
+        public void SetAddTimeCount(int remaining)
+        {
+            if (addTimeCountText != null) addTimeCountText.text = $"+Time: {remaining}";
+            if (addTimeButton != null) addTimeButton.interactable = (remaining > 0);
+        }
+
+        public void SetAddTimeVisible(bool visible)
+        {
+            if (addTimeButton != null) addTimeButton.gameObject.SetActive(visible);
+            if (addTimeCountText != null) addTimeCountText.gameObject.SetActive(visible);
+        }
+
+        public void SetTimerVisible(bool visible)
+        {
+            if (timerText != null) timerText.gameObject.SetActive(visible);
         }
 
         public void SetTierIndicator(string text)

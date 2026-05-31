@@ -35,7 +35,6 @@ namespace WordPuzzle.Modes
 
         private GameStateManager stateManager;
         private WordPuzzle.Puzzle.WordPuzzle currentPuzzle;
-        private int solutionIndex = 0;
         private int currentTier = 1;
 
         // Spec §3.2: in-memory progress state (HashSet for O(1) Contains).
@@ -143,7 +142,6 @@ namespace WordPuzzle.Modes
 
             currentPuzzle = puzzle ?? throw new ArgumentNullException(nameof(puzzle));
             stateManager.StartNewPuzzle(puzzle);
-            solutionIndex = 0;
 
             // Spec §3.4: track in-progress (only if not already completed).
             if (!completedPuzzleIds.Contains(puzzle.puzzleId))
@@ -154,21 +152,18 @@ namespace WordPuzzle.Modes
         {
             if (stateManager == null || currentPuzzle == null) return;
 
-            // In show mode, we accept the solution words in order
-            if (solutionIndex < currentPuzzle.solution.Length)
-            {
-                string expectedWord = currentPuzzle.solution[solutionIndex];
-                if (word.ToLower() == expectedWord.ToLower())
-                {
-                    stateManager.SubmitWord(word.ToLower());
-                    solutionIndex++;
+            // Spec §3 — drop strict solutionIndex gate. Defer validation to the
+            // GameStateManager / WordValidator and let the player reach endWord by
+            // ANY valid one-letter-edit path (canonical solution is shown only as a hint).
+            var before = stateManager.GetCurrentState();
+            int countBefore = before.wordChain.Count;
+            stateManager.SubmitWord(word);
+            var after = stateManager.GetCurrentState();
 
-                    // Spec §3.3: detect completion at end of solution path.
-                    if (solutionIndex >= currentPuzzle.solution.Length)
-                    {
-                        OnPuzzleSolutionReached(currentPuzzle.puzzleId);
-                    }
-                }
+            bool wordAdded = after.wordChain.Count > countBefore;
+            if (wordAdded && after.IsPuzzleComplete)
+            {
+                OnPuzzleSolutionReached(currentPuzzle.puzzleId);
             }
         }
 
@@ -279,7 +274,6 @@ namespace WordPuzzle.Modes
 
         public void Reset()
         {
-            solutionIndex = 0;
             currentPuzzle = null;
             // NOTE: progress (completedPuzzleIds, currentTier, etc.) is intentionally
             // NOT cleared here — those persist across puzzles. Use LoadProgress(null)
@@ -288,8 +282,10 @@ namespace WordPuzzle.Modes
 
         public bool IsGameOver()
         {
-            if (currentPuzzle == null) return false;
-            return solutionIndex >= currentPuzzle.solution.Length;
+            // Spec §3 — gameplay terminates only when the player has actually built
+            // a chain ending in the puzzle's endWord (state.IsPuzzleComplete).
+            if (currentPuzzle == null || stateManager == null) return false;
+            return stateManager.GetCurrentState().IsPuzzleComplete;
         }
 
         public string[] GetFullSolution()

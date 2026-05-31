@@ -39,6 +39,13 @@ namespace WordPuzzle.State
 
     public class UseRevealAction : GameAction { }
 
+    /// <summary>
+    /// TimeAttack mode AddTime power-up: grants the player a configured number of bonus
+    /// seconds while a TimeAttack run is active. Handled by GameStateManager.HandleUseAddTime,
+    /// which decrements addTimesRemaining and raises OnTimeAdded with the granted amount.
+    /// </summary>
+    public class UseAddTimeAction : GameAction { }
+
     public class UndoStepAction : GameAction { }
 
     public class ResetGameAction : GameAction

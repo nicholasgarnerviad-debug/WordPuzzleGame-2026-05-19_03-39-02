@@ -15,6 +15,7 @@ namespace WordPuzzle.UI
         [SerializeField] private ResultsScreen resultsScreen;
         [SerializeField] private PuzzleLibraryScreen libraryScreen;
         [SerializeField] private SettingsScreen settingsScreen;
+        [SerializeField] private TimeAttackSetupScreen timeAttackSetupScreen;
 
         private void Awake()
         {
@@ -33,6 +34,7 @@ namespace WordPuzzle.UI
             resultsScreen.Hide();
             if (libraryScreen != null) libraryScreen.Hide();
             if (settingsScreen != null) settingsScreen.Hide();
+            if (timeAttackSetupScreen != null) timeAttackSetupScreen.Hide();
         }
 
         public void ShowGameplay()
@@ -42,6 +44,7 @@ namespace WordPuzzle.UI
             resultsScreen.Hide();
             if (libraryScreen != null) libraryScreen.Hide();
             if (settingsScreen != null) settingsScreen.Hide();
+            if (timeAttackSetupScreen != null) timeAttackSetupScreen.Hide();
         }
 
         public void ShowResults()
@@ -51,6 +54,7 @@ namespace WordPuzzle.UI
             resultsScreen.Show();
             if (libraryScreen != null) libraryScreen.Hide();
             if (settingsScreen != null) settingsScreen.Hide();
+            if (timeAttackSetupScreen != null) timeAttackSetupScreen.Hide();
         }
 
         public void ShowLibrary()
@@ -60,6 +64,7 @@ namespace WordPuzzle.UI
             resultsScreen.Hide();
             if (libraryScreen != null) libraryScreen.Show();
             if (settingsScreen != null) settingsScreen.Hide();
+            if (timeAttackSetupScreen != null) timeAttackSetupScreen.Hide();
         }
 
         public void ShowSettings()
@@ -69,6 +74,18 @@ namespace WordPuzzle.UI
             resultsScreen.Hide();
             if (libraryScreen != null) libraryScreen.Hide();
             if (settingsScreen != null) settingsScreen.Show();
+            if (timeAttackSetupScreen != null) timeAttackSetupScreen.Hide();
+        }
+
+        // §5.4 — Time Attack setup screen routing.
+        public void ShowTimeAttackSetup()
+        {
+            mainMenuScreen.Hide();
+            gameplayScreen.Hide();
+            resultsScreen.Hide();
+            if (libraryScreen != null) libraryScreen.Hide();
+            if (settingsScreen != null) settingsScreen.Hide();
+            if (timeAttackSetupScreen != null) timeAttackSetupScreen.Show();
         }
 
         // Screen accessors
@@ -77,6 +94,7 @@ namespace WordPuzzle.UI
         public ResultsScreen GetResults() => resultsScreen;
         public PuzzleLibraryScreen GetLibrary() => libraryScreen;
         public SettingsScreen GetSettings() => settingsScreen;
+        public TimeAttackSetupScreen GetTimeAttackSetup() => timeAttackSetupScreen;
 
     }
 }

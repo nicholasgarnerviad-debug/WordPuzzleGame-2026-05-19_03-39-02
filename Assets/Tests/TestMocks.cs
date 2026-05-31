@@ -187,6 +187,11 @@ public class MockPuzzleGenerator : IPuzzleGenerator
         return CreateDefaultPuzzle();
     }
 
+    public WordPuzzle.Puzzle.PuzzleDefinition GenerateRandomPuzzleOfLength(int wordLength, int targetDistance = -1)
+    {
+        return CreateDefaultPuzzle();
+    }
+
     private WordPuzzle.Puzzle.PuzzleDefinition CreateDefaultPuzzle()
     {
         return new WordPuzzle.Puzzle.PuzzleDefinition

@@ -322,4 +322,92 @@ public class GameStateManagerTests
         var state = manager.GetCurrentState();
         Assert.AreEqual(1, state.wordChain.Count);
     }
+
+    // ── TimeAttack §4 AddTime power-up ────────────────────────────────────
+
+    [Test]
+    public void StartNewPuzzle_InitializesAddTimeFieldsToZero()
+    {
+        var puzzle = new PuzzleType(1, "cat", "dog", 3,
+            new[] { "cat", "bat", "bag", "dog" }, 0, Diff.Easy);
+        manager.StartNewPuzzle(puzzle);
+
+        var state = manager.GetCurrentState();
+        Assert.AreEqual(0, state.addTimesRemaining);
+        Assert.AreEqual(0f, state.addTimeGrantSeconds);
+    }
+
+    [Test]
+    public void ConfigureAddTimePowerUp_SeedsChargesAndGrant()
+    {
+        var puzzle = new PuzzleType(1, "cat", "dog", 3,
+            new[] { "cat", "bat", "bag", "dog" }, 0, Diff.Easy);
+        manager.StartNewPuzzle(puzzle);
+
+        manager.ConfigureAddTimePowerUp(2, 10f);
+
+        var state = manager.GetCurrentState();
+        Assert.AreEqual(2, state.addTimesRemaining);
+        Assert.AreEqual(10f, state.addTimeGrantSeconds);
+    }
+
+    [Test]
+    public void Dispatch_UseAddTime_DecrementsChargeAndRaisesOnTimeAdded()
+    {
+        var puzzle = new PuzzleType(1, "cat", "dog", 3,
+            new[] { "cat", "bat", "bag", "dog" }, 0, Diff.Easy);
+        manager.StartNewPuzzle(puzzle);
+        manager.ConfigureAddTimePowerUp(1, 15f);
+
+        float granted = 0f;
+        int callCount = 0;
+        manager.OnTimeAdded += s => { granted = s; callCount++; };
+
+        manager.Dispatch(new UseAddTimeAction());
+
+        var state = manager.GetCurrentState();
+        Assert.AreEqual(0, state.addTimesRemaining);
+        Assert.AreEqual(15f, granted);
+        Assert.AreEqual(1, callCount);
+    }
+
+    [Test]
+    public void Dispatch_UseAddTime_WhenExhausted_DoesNotRaiseEventOrGoNegative()
+    {
+        var puzzle = new PuzzleType(1, "cat", "dog", 3,
+            new[] { "cat", "bat", "bag", "dog" }, 0, Diff.Easy);
+        manager.StartNewPuzzle(puzzle);
+        manager.ConfigureAddTimePowerUp(1, 10f);
+
+        int callCount = 0;
+        manager.OnTimeAdded += _ => callCount++;
+
+        manager.Dispatch(new UseAddTimeAction()); // consumes the one charge
+        manager.Dispatch(new UseAddTimeAction()); // no-op
+        manager.Dispatch(new UseAddTimeAction()); // no-op
+
+        var state = manager.GetCurrentState();
+        Assert.AreEqual(0, state.addTimesRemaining);
+        Assert.AreEqual(1, callCount,
+            "OnTimeAdded must only fire while charges remain.");
+    }
+
+    [Test]
+    public void Dispatch_UseAddTime_WithZeroGrant_NoOps()
+    {
+        var puzzle = new PuzzleType(1, "cat", "dog", 3,
+            new[] { "cat", "bat", "bag", "dog" }, 0, Diff.Easy);
+        manager.StartNewPuzzle(puzzle);
+        manager.ConfigureAddTimePowerUp(3, 0f);
+
+        int callCount = 0;
+        manager.OnTimeAdded += _ => callCount++;
+
+        manager.Dispatch(new UseAddTimeAction());
+
+        var state = manager.GetCurrentState();
+        Assert.AreEqual(3, state.addTimesRemaining,
+            "AddTime must not consume a charge when grant size is zero.");
+        Assert.AreEqual(0, callCount);
+    }
 }

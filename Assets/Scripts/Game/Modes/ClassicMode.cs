@@ -4,15 +4,18 @@ using WordPuzzle.Puzzle;
 namespace WordPuzzle.Modes
 {
     /// <summary>
-    /// Classic puzzle word chain game. Complete the word chain by finding
-    /// valid one-letter transitions from start to end word.
+    /// Classic puzzle word-chain game. Spec §2:
+    ///  - Puzzle is a random 3-7 letter ladder generated at run start by
+    ///    PuzzleGenerator.GenerateRandomPuzzleOfLength (driven by GameBootstrap).
+    ///  - NO timer, NO life/failure cap. The player keeps trying (the validator
+    ///    rejects bad words but only fires OnWordSubmissionResult — see §1).
+    ///  - IsGameOver fires only on puzzle completion. CheckGameOver auto-advances
+    ///    to the next puzzle (handled by GameBootstrap §2).
     /// </summary>
     public class ClassicMode : IGameMode
     {
         private GameStateManager stateManager;
         private WordPuzzle.Puzzle.WordPuzzle currentPuzzle;
-        private const int MAX_FAILURES = 5;
-        private int failureCount = 0;
 
         public void Initialize(GameStateManager stateManager)
         {
@@ -26,24 +29,15 @@ namespace WordPuzzle.Modes
 
             currentPuzzle = puzzle ?? throw new System.ArgumentNullException(nameof(puzzle));
             stateManager.StartNewPuzzle(puzzle);
-            failureCount = 0;
         }
 
         public void HandleWordSubmission(string word)
         {
             if (stateManager == null || currentPuzzle == null) return;
-
-            var stateBefore = stateManager.GetCurrentState();
             stateManager.SubmitWord(word);
-            var stateAfter = stateManager.GetCurrentState();
-
-            // If word wasn't added, count as failure
-            if (stateAfter.wordChain.Count == stateBefore.wordChain.Count)
-            {
-                failureCount++;
-            }
         }
 
+        // Spec §2 — no timer logic; just track elapsed time for stats display.
         public void Tick(float deltaTime)
         {
             stateManager?.IncrementElapsedTime(deltaTime);
@@ -60,8 +54,9 @@ namespace WordPuzzle.Modes
                 wordsFound = state.wordsFound,
                 totalTime = state.elapsedTime,
                 score = state.score,
-                accuracy = state.wordsFound > 0 ?
-                    (1f - (failureCount / (float)(state.wordsFound + failureCount))) : 0f
+                // Accuracy is no longer derived from a failure counter (lives sentinel),
+                // so just report 100% when the player completed the puzzle.
+                accuracy = state.IsPuzzleComplete ? 100f : 0f
             };
         }
 
@@ -69,7 +64,6 @@ namespace WordPuzzle.Modes
         {
             stateManager = null;
             currentPuzzle = null;
-            failureCount = 0;
         }
 
         public bool IsGameOver()
@@ -79,4 +73,3 @@ namespace WordPuzzle.Modes
         }
     }
 }
-

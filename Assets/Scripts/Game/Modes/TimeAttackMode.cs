@@ -1,44 +1,149 @@
 using System;
 using WordPuzzle.State;
 using WordPuzzle.Puzzle;
+using UnityEngine;
 
 namespace WordPuzzle.Modes
 {
     /// <summary>
-    /// Time Attack mode: Complete as many words as possible in 60 seconds.
-    /// Any valid one-letter transition counts (not limited to solution path).
+    /// Sub-mode selector for Time Attack runs (§4).
+    /// <para>
+    /// • Timed: classic countdown — game ends when the timer reaches 0.<br/>
+    /// • Survival: timer counts down but each completed puzzle grants a configurable
+    ///   reward in seconds; the run only ends when the player runs out of time.
+    /// </para>
+    /// </summary>
+    public enum TimeAttackSubMode
+    {
+        Timed,
+        Survival
+    }
+
+    /// <summary>
+    /// Run-time configuration for Time Attack mode (§4 + §6 routing).
+    /// </summary>
+    public sealed class TimeAttackConfig
+    {
+        /// <summary>Base time (60 or 120 seconds per spec).</summary>
+        public float baseTimeSeconds = 60f;
+
+        /// <summary>Timed vs Survival sub-mode.</summary>
+        public TimeAttackSubMode subMode = TimeAttackSubMode.Timed;
+
+        /// <summary>Number of AddTime power-up charges seeded per run.</summary>
+        public int addTimeCharges = 1;
+
+        /// <summary>Seconds granted by each AddTime charge.</summary>
+        public float addTimeGrantSeconds = 10f;
+
+        /// <summary>
+        /// Survival-only: seconds awarded when the player completes a puzzle. Ignored in Timed.
+        /// </summary>
+        public float survivalRewardSeconds = 15f;
+
+        /// <summary>Convenience factory for the canonical 60s Timed config.</summary>
+        public static TimeAttackConfig Default60() => new TimeAttackConfig
+        {
+            baseTimeSeconds = 60f,
+            subMode = TimeAttackSubMode.Timed,
+            addTimeCharges = 1,
+            addTimeGrantSeconds = 10f,
+            survivalRewardSeconds = 0f
+        };
+
+        /// <summary>Convenience factory for the 120s Timed config.</summary>
+        public static TimeAttackConfig Default120() => new TimeAttackConfig
+        {
+            baseTimeSeconds = 120f,
+            subMode = TimeAttackSubMode.Timed,
+            addTimeCharges = 2,
+            addTimeGrantSeconds = 10f,
+            survivalRewardSeconds = 0f
+        };
+
+        /// <summary>Convenience factory for Survival (60s base + 15s per completion).</summary>
+        public static TimeAttackConfig DefaultSurvival() => new TimeAttackConfig
+        {
+            baseTimeSeconds = 60f,
+            subMode = TimeAttackSubMode.Survival,
+            addTimeCharges = 2,
+            addTimeGrantSeconds = 10f,
+            survivalRewardSeconds = 15f
+        };
+    }
+
+    /// <summary>
+    /// Time Attack mode: Complete as many words as possible before time runs out.
+    /// Supports two sub-modes (Timed / Survival) and the AddTime power-up.
     /// </summary>
     public class TimeAttackMode : IGameMode
     {
         private GameStateManager stateManager;
         private WordPuzzle.Puzzle.WordPuzzle currentPuzzle;
         private float timeRemaining;
-        private const float TOTAL_TIME = 60f;
+        private readonly TimeAttackConfig config;
+        private int puzzlesCompleted;
+        private bool addTimeWired;
+        private bool lastPuzzleWasComplete;
+
+        /// <summary>Fired whenever the countdown ticks. Argument is seconds remaining.</summary>
+        public event Action<float> TimeChanged;
 
         /// <summary>
-        /// Event fired when time remaining changes.
-        /// Subscribers receive the updated time remaining in seconds.
+        /// Fired whenever bonus seconds are credited (AddTime power-up or Survival reward).
+        /// Argument is the seconds added.
         /// </summary>
-        public event Action<float> TimeChanged;
+        public event Action<float> OnTimeAdded;
+
+        public TimeAttackConfig Config => config;
+        public TimeAttackSubMode SubMode => config.subMode;
+        public float BaseTimeSeconds => config.baseTimeSeconds;
+        public int PuzzlesCompleted => puzzlesCompleted;
+
+        /// <summary>Default constructor — uses the canonical 60s Timed config.</summary>
+        public TimeAttackMode() : this(TimeAttackConfig.Default60()) { }
+
+        /// <summary>Configured constructor — caller supplies a TimeAttackConfig.</summary>
+        public TimeAttackMode(TimeAttackConfig config)
+        {
+            this.config = config ?? TimeAttackConfig.Default60();
+        }
 
         public void Initialize(GameStateManager stateManager)
         {
-            this.stateManager = stateManager ?? throw new System.ArgumentNullException(nameof(stateManager));
+            this.stateManager = stateManager ?? throw new ArgumentNullException(nameof(stateManager));
+
+            // Wire OnTimeAdded once: the state manager raises it when HandleUseAddTime
+            // consumes an AddTime charge; we add the grant to the local countdown and
+            // re-broadcast for the UI layer.
+            if (!addTimeWired)
+            {
+                this.stateManager.OnTimeAdded += HandleStateAddTime;
+                addTimeWired = true;
+            }
         }
 
         public void StartGame(WordPuzzle.Puzzle.WordPuzzle puzzle)
         {
             if (stateManager == null)
-                throw new System.InvalidOperationException("Must call Initialize first");
+                throw new InvalidOperationException("Must call Initialize first");
 
-            currentPuzzle = puzzle ?? throw new System.ArgumentNullException(nameof(puzzle));
+            currentPuzzle = puzzle ?? throw new ArgumentNullException(nameof(puzzle));
             stateManager.StartNewPuzzle(puzzle);
-            timeRemaining = TOTAL_TIME;
+
+            // First puzzle of the run — seed the timer and the AddTime power-up economy.
+            if (puzzlesCompleted == 0)
+            {
+                timeRemaining = config.baseTimeSeconds;
+                stateManager.ConfigureAddTimePowerUp(config.addTimeCharges, config.addTimeGrantSeconds);
+            }
+
+            lastPuzzleWasComplete = false;
         }
 
         public void HandleWordSubmission(string word)
         {
-            if (stateManager == null || currentPuzzle == null || timeRemaining <= 0) return;
+            if (stateManager == null || currentPuzzle == null || timeRemaining <= 0f) return;
             stateManager.SubmitWord(word);
         }
 
@@ -47,48 +152,76 @@ namespace WordPuzzle.Modes
             if (stateManager == null) return;
 
             timeRemaining -= deltaTime;
-            if (timeRemaining < 0) timeRemaining = 0;
+            if (timeRemaining < 0f) timeRemaining = 0f;
 
             stateManager.IncrementElapsedTime(deltaTime);
 
-            // Notify subscribers of time change
+            // Survival reward: when the active puzzle just completed, grant the configured
+            // bonus seconds and notify subscribers. Latched via lastPuzzleWasComplete so a
+            // single completion only awards once per puzzle.
+            if (config.subMode == TimeAttackSubMode.Survival && !lastPuzzleWasComplete)
+            {
+                var state = SafeGetState();
+                if (state != null && state.IsPuzzleComplete)
+                {
+                    lastPuzzleWasComplete = true;
+                    puzzlesCompleted++;
+                    if (config.survivalRewardSeconds > 0f)
+                    {
+                        timeRemaining += config.survivalRewardSeconds;
+                        try { OnTimeAdded?.Invoke(config.survivalRewardSeconds); }
+                        catch (Exception ex) { Debug.LogError($"OnTimeAdded subscriber threw: {ex.Message}"); }
+                    }
+                }
+            }
+
             TimeChanged?.Invoke(timeRemaining);
         }
 
         public GameModeStats GetStats()
         {
-            var state = stateManager?.GetCurrentState();
-            var timeUsed = TOTAL_TIME - timeRemaining;
+            var state = SafeGetState();
+            var timeUsed = Mathf.Max(0f, config.baseTimeSeconds - timeRemaining);
 
             return new GameModeStats
             {
-                modeName = "Time Attack",
+                modeName = config.subMode == TimeAttackSubMode.Survival
+                    ? "Time Attack (Survival)"
+                    : "Time Attack",
                 wordsFound = state?.wordsFound ?? 0,
                 totalTime = timeUsed,
                 score = state?.score ?? 0,
-                accuracy = 100f // All submissions must be valid
+                accuracy = 100f // All accepted submissions are valid by definition.
             };
         }
 
         public void Reset()
         {
-            timeRemaining = TOTAL_TIME;
+            timeRemaining = config.baseTimeSeconds;
             currentPuzzle = null;
+            puzzlesCompleted = 0;
+            lastPuzzleWasComplete = false;
         }
 
-        public bool IsGameOver()
+        public bool IsGameOver() => timeRemaining <= 0f;
+
+        public bool IsTimeUp() => timeRemaining <= 0f;
+
+        public float GetTimeRemaining() => timeRemaining;
+
+        /// <summary>Forwarder used by GameStateManager.OnTimeAdded — credits seconds locally.</summary>
+        private void HandleStateAddTime(float seconds)
         {
-            return timeRemaining <= 0;
+            if (seconds <= 0f) return;
+            timeRemaining += seconds;
+            try { OnTimeAdded?.Invoke(seconds); }
+            catch (Exception ex) { Debug.LogError($"OnTimeAdded subscriber threw: {ex.Message}"); }
         }
 
-        public bool IsTimeUp()
+        private GameState SafeGetState()
         {
-            return timeRemaining <= 0;
-        }
-
-        public float GetTimeRemaining()
-        {
-            return timeRemaining;
+            try { return stateManager?.GetCurrentState(); }
+            catch { return null; }
         }
     }
 }
