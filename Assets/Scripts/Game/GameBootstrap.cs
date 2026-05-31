@@ -56,6 +56,11 @@ namespace WordPuzzle
         private IShareService shareService = new ClipboardShareService();
         private ShareCardBuilder.ShareInput lastShareInput;
 
+        // Task 6A/6B — Economy + Ad services.
+        private IEconomyManager economyManager;
+        private IAdService adService;
+        private AdPolicyService adPolicy;
+
         private void Start()
         {
             // Try to get UIManager from same GameObject if not assigned
@@ -114,11 +119,65 @@ namespace WordPuzzle
                 }
 
                 puzzleGenerator = new PuzzleGenerator(wordGraph, tierCache);
+                LoadCommonWords(wordGraph, puzzleGenerator);
+
+                // Task 6A — Economy manager (persisted via IDataManager).
+                economyManager = new EconomyManager(dataManager);
+                _ = economyManager.InitializeAsync();
+
+                // Task 6B — Ad service + policy. AdService is a MonoBehaviour on this
+                // GameObject (added in the Inspector or at runtime). Fall back to a no-op
+                // so the game runs in Editor without an ad SDK.
+                adService = GetComponent<IAdService>() ?? (IAdService)new NullAdService();
+                adPolicy  = new AdPolicyService(adService);
             }
             catch (System.Exception ex)
             {
                 Debug.LogError($"Failed to initialize game systems: {ex.Message}\n{ex.StackTrace}");
                 enabled = false;
+            }
+        }
+
+        /// <summary>
+        /// Task 5C — load Assets/Resources/Data/common_words.json (schema: {"words":[...]}).
+        /// Words are added to the wordGraph (so they participate in adjacency) and the
+        /// common-word filter is injected into the puzzle generator.
+        /// Missing file is non-fatal: generation falls back to the full graph.
+        /// </summary>
+        private void LoadCommonWords(WordGraph wordGraph, PuzzleGenerator generator)
+        {
+            TextAsset asset = Resources.Load<TextAsset>("Data/common_words");
+            if (asset == null)
+            {
+                Debug.LogWarning("[CommonWords] common_words.json not found in Resources/Data/ — generation uses full graph.");
+                return;
+            }
+
+            try
+            {
+                var wrapper = JsonUtility.FromJson<WordLibraryWrapper>(asset.text);
+                if (wrapper?.words == null || wrapper.words.Length == 0)
+                {
+                    Debug.LogWarning("[CommonWords] common_words.json parsed but 'words' array is empty — skipping filter.");
+                    return;
+                }
+
+                var set = new System.Collections.Generic.HashSet<string>();
+                foreach (var word in wrapper.words)
+                {
+                    if (string.IsNullOrWhiteSpace(word)) continue;
+                    string normalized = word.Trim().ToLowerInvariant();
+                    if (!System.Text.RegularExpressions.Regex.IsMatch(normalized, "^[a-z]+$")) continue;
+                    wordGraph.AddWord(normalized);
+                    set.Add(normalized);
+                }
+
+                generator.SetCommonWords(set);
+                Debug.Log($"[CommonWords] loaded {set.Count} common words; generation filter active.");
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogError($"[CommonWords] Failed to parse common_words.json: {ex.Message}");
             }
         }
 
@@ -1069,7 +1128,69 @@ namespace WordPuzzle
                 RecordDailyCompletionAndSurface(dailyIndex);
             }
 
+            // Task 6A — Award puzzle-completion coins. Daily run stacks an extra bonus.
+            GrantPuzzleReward(wasDailyRun);
+
+            // Task 6B — Tick ad policy; may show an interstitial between sessions.
+            // Always between-session (activeMode is already null), never mid-puzzle.
+            adPolicy?.RecordPuzzleCompleted();
+            adPolicy?.TryShowInterstitial();
+
             uiManager.ShowResults();
+        }
+
+        /// <summary>Task 6A — add completion coins (and daily bonus) via the economy manager.</summary>
+        private async void GrantPuzzleReward(bool isDaily)
+        {
+            if (economyManager == null) return;
+            try
+            {
+                await economyManager.AddCoinsAsync(BalanceConfig.PuzzleCompletionReward, "puzzle_completion");
+                if (isDaily)
+                    await economyManager.AddCoinsAsync(BalanceConfig.DailyBonusReward, "daily_bonus");
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogWarning($"[Economy] GrantPuzzleReward failed: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Task 6B — Opt-in rewarded ad: show the "Watch ad for +1 Hint" prompt.
+        /// Called from gameplay UI (e.g. when hints run out). Never auto-invoked.
+        /// </summary>
+        public void RequestRewardedHintAd()
+        {
+            if (adService == null || !adService.IsRewardedReady) return;
+            adService.ShowRewarded(
+                onRewarded: async () =>
+                {
+                    if (economyManager == null) return;
+                    try { await economyManager.AddHintsAsync(BalanceConfig.RewardedAdHintGrant, "rewarded_ad"); }
+                    catch (System.Exception ex) { Debug.LogWarning($"[Economy] rewarded hint grant failed: {ex.Message}"); }
+                },
+                onClosed: () => { /* UI can re-enable the hint button here */ }
+            );
+        }
+
+        /// <summary>
+        /// Task 6B — Opt-in rewarded "Continue" in Time Attack.
+        /// Grants SurvivalRewardSeconds to the active TimeAttackMode's clock.
+        /// Must only be called after time expires; never mid-puzzle.
+        /// </summary>
+        public void RequestRewardedContinue()
+        {
+            if (adService == null || !adService.IsRewardedReady) return;
+            if (!(activeMode is TimeAttackMode tam)) return;
+
+            adService.ShowRewarded(
+                onRewarded: () =>
+                {
+                    stateManager?.ConfigureAddTimePowerUp(0, 0); // charges already consumed
+                    tam.GrantContinueSeconds(BalanceConfig.SurvivalRewardSeconds);
+                },
+                onClosed: () => { }
+            );
         }
 
         // Task 2A — assemble the ShareInput from the just-finished run.

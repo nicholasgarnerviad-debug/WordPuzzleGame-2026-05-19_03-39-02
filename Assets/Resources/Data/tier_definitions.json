@@ -609,9 +609,9 @@
           "optimalSteps": 4,
           "solution": [
             "love",
-            "lave",
-            "cave",
-            "cake",
+            "lore",
+            "lone",
+            "lane",
             "lake"
           ],
           "seedValue": 47430
@@ -759,14 +759,14 @@
         {
           "puzzleId": 58,
           "startWord": "sand",
-          "endWord": "fire",
+          "endWord": "mine",
           "optimalSteps": 4,
           "solution": [
             "sand",
-            "sane",
-            "sine",
-            "fine",
-            "fire"
+            "band",
+            "bind",
+            "mind",
+            "mine"
           ],
           "seedValue": 58529
         },
@@ -821,10 +821,11 @@
           "puzzleId": 62,
           "startWord": "light",
           "endWord": "night",
-          "optimalSteps": 2,
+          "optimalSteps": 3,
           "solution": [
             "light",
-            "sight",
+            "tight",
+            "fight",
             "night"
           ],
           "seedValue": 62565
@@ -857,9 +858,10 @@
           "puzzleId": 65,
           "startWord": "stone",
           "endWord": "stare",
-          "optimalSteps": 2,
+          "optimalSteps": 3,
           "solution": [
             "stone",
+            "stove",
             "store",
             "stare"
           ],
@@ -941,10 +943,11 @@
           "puzzleId": 72,
           "startWord": "beast",
           "endWord": "coast",
-          "optimalSteps": 2,
+          "optimalSteps": 3,
           "solution": [
             "beast",
             "boast",
+            "roast",
             "coast"
           ],
           "seedValue": 72655
@@ -965,9 +968,10 @@
           "puzzleId": 74,
           "startWord": "brain",
           "endWord": "drawn",
-          "optimalSteps": 2,
+          "optimalSteps": 3,
           "solution": [
             "brain",
+            "train",
             "drain",
             "drawn"
           ],
@@ -977,10 +981,11 @@
           "puzzleId": 75,
           "startWord": "sweet",
           "endWord": "steep",
-          "optimalSteps": 2,
+          "optimalSteps": 3,
           "solution": [
             "sweet",
-            "sweep",
+            "sleet",
+            "sleep",
             "steep"
           ],
           "seedValue": 75682

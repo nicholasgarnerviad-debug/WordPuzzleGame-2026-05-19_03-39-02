@@ -134,8 +134,9 @@ public class GameStateManagerTests
         manager.StartNewPuzzle(puzzle);
 
         var state = manager.GetCurrentState();
-        Assert.AreEqual(2, state.hintsRemaining);
-        Assert.AreEqual(1, state.revealsRemaining);
+        // 5A/5B — budgets now seed from the centralized BalanceConfig, not literals.
+        Assert.AreEqual(BalanceConfig.DefaultHintsPerPuzzle, state.hintsRemaining);
+        Assert.AreEqual(BalanceConfig.DefaultRevealsPerPuzzle, state.revealsRemaining);
         Assert.AreEqual(-1, state.hintLetterIndex);
         Assert.AreEqual(string.Empty, state.revealedNextWord);
     }
@@ -152,7 +153,7 @@ public class GameStateManagerTests
         manager.Dispatch(new UseHintAction(0));
 
         var state = manager.GetCurrentState();
-        Assert.AreEqual(1, state.hintsRemaining);
+        Assert.AreEqual(BalanceConfig.DefaultHintsPerPuzzle - 1, state.hintsRemaining);
         Assert.AreEqual(0, state.hintLetterIndex);
         Assert.AreEqual(string.Empty, state.revealedNextWord);
     }
@@ -164,9 +165,9 @@ public class GameStateManagerTests
             new[] { "cat", "bat", "bag", "dog" }, 0, Diff.Easy);
         manager.StartNewPuzzle(puzzle);
 
-        manager.Dispatch(new UseHintAction(0));
-        manager.Dispatch(new UseHintAction(0));
-        manager.Dispatch(new UseHintAction(0)); // third call should be no-op
+        // Drain the full budget plus extra calls; the surplus must be no-ops.
+        for (int i = 0; i < BalanceConfig.DefaultHintsPerPuzzle + 2; i++)
+            manager.Dispatch(new UseHintAction(0));
 
         var state = manager.GetCurrentState();
         Assert.AreEqual(0, state.hintsRemaining);
@@ -250,7 +251,7 @@ public class GameStateManagerTests
         manager.Dispatch(new UseHintAction(0));
 
         var state = manager.GetCurrentState();
-        Assert.AreEqual(2, state.hintsRemaining,
+        Assert.AreEqual(BalanceConfig.DefaultHintsPerPuzzle, state.hintsRemaining,
             "Hint must not consume the counter when no solution path exists.");
         Assert.AreEqual(-1, state.hintLetterIndex);
     }
@@ -267,7 +268,7 @@ public class GameStateManagerTests
         manager.Dispatch(new UseHintAction(0));
 
         var state = manager.GetCurrentState();
-        Assert.AreEqual(2, state.hintsRemaining,
+        Assert.AreEqual(BalanceConfig.DefaultHintsPerPuzzle, state.hintsRemaining,
             "Hint must not consume the counter when no further solution word exists.");
         Assert.AreEqual(-1, state.hintLetterIndex);
     }
@@ -289,7 +290,7 @@ public class GameStateManagerTests
 
         var state = manager.GetCurrentState();
         Assert.AreEqual(0, state.hintLetterIndex);
-        Assert.AreEqual(1, state.hintsRemaining);
+        Assert.AreEqual(BalanceConfig.DefaultHintsPerPuzzle - 1, state.hintsRemaining);
     }
 
     [Test]

@@ -85,8 +85,8 @@ namespace WordPuzzle.State
                 foundWords = new List<string>(),
                 longestStreak = 0,
                 elapsedTime = 0f,
-                hintsRemaining = 2,
-                revealsRemaining = 1,
+                hintsRemaining = BalanceConfig.DefaultHintsPerPuzzle,
+                revealsRemaining = BalanceConfig.DefaultRevealsPerPuzzle,
                 undoHistory = new Stack<GameSnapshot>(),
                 revealedLetterIndices = new HashSet<int>(),
                 hintLetterIndex = -1,
@@ -723,9 +723,9 @@ namespace WordPuzzle.State
         public float elapsedTime;
         public int invalidAttempts = 0;
 
-        // Economy tracking for Phase 2
-        public int hintsRemaining = 2;
-        public int revealsRemaining = 1;
+        // Economy tracking for Phase 2 — defaults mirror BalanceConfig (StartNewPuzzle always overwrites).
+        public int hintsRemaining = BalanceConfig.DefaultHintsPerPuzzle;
+        public int revealsRemaining = BalanceConfig.DefaultRevealsPerPuzzle;
         public Stack<GameSnapshot> undoHistory = new Stack<GameSnapshot>();
         // DEPRECATED — replaced by hintLetterIndex + revealedNextWord. Retained for back-compat
         // with consumers that still read the index set; new hint/reveal paths do not write to it.

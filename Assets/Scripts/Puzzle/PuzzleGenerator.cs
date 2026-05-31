@@ -10,14 +10,24 @@ namespace WordPuzzle.Puzzle
         private Dictionary<int, TierData> tierCache;
         private System.Random random;
 
-        private const int MaxBfsDepth = 10;
-        private const int MaxGenerationAttempts = 20;
+        // Task 5C — filter set; null means "use full graph".
+        private HashSet<string> commonWords;
 
         public PuzzleGenerator(WordGraph wordGraph, Dictionary<int, TierData> tierCache = null)
         {
             this.wordGraph = wordGraph ?? throw new System.ArgumentNullException(nameof(wordGraph));
             this.tierCache = tierCache ?? new Dictionary<int, TierData>();
             this.random = new System.Random();
+        }
+
+        /// <summary>
+        /// Task 5C — supply the common-words filter. When non-null and non-empty,
+        /// GetRandomWordOfLength and GetNeighborsFromGraph only return words in this set,
+        /// ensuring generated ladders use familiar words. Pass null to clear.
+        /// </summary>
+        public void SetCommonWords(HashSet<string> set)
+        {
+            commonWords = (set != null && set.Count > 0) ? set : null;
         }
 
         /// <summary>
@@ -45,6 +55,8 @@ namespace WordPuzzle.Puzzle
             }
         }
 
+        // ── Tier puzzle access (curated — exempt from common-word filter) ────────
+
         public PuzzleDefinition GetTierPuzzle(int tierId, int puzzleIndex)
         {
             if (!tierCache.ContainsKey(tierId))
@@ -58,7 +70,8 @@ namespace WordPuzzle.Puzzle
         }
 
         /// <summary>
-        /// Return a random puzzle from the specified tier (1-based). Falls back to
+        /// Return a random puzzle from the specified tier (1-based). Tier/daily puzzles
+        /// are curated and exempt from the common-word filter. Falls back to
         /// GenerateRandomPuzzle when the tier is not cached.
         /// </summary>
         public PuzzleDefinition GetRandomTierPuzzle(int tierId)
@@ -74,22 +87,52 @@ namespace WordPuzzle.Puzzle
             return tier.puzzles[index];
         }
 
+        // ── Random generation with common-word fallback chain ────────────────────
+
         public PuzzleDefinition GenerateRandomPuzzle(Difficulty difficulty)
         {
-            int wordLength = GetWordLengthForDifficulty(difficulty);
+            int wordLength    = GetWordLengthForDifficulty(difficulty);
             int targetDistance = GetTargetDistance(difficulty);
 
-            for (int attempt = 0; attempt < MaxGenerationAttempts; attempt++)
+            // (1) Strict common: both start/end and all intermediates must be common.
+            if (commonWords != null)
             {
-                string startWord = GetRandomWordOfLength(wordLength);
-                if (string.IsNullOrEmpty(startWord))
-                    continue;
+                for (int attempt = 0; attempt < BalanceConfig.MaxGenerationAttempts; attempt++)
+                {
+                    string startWord = GetRandomWordOfLength(wordLength);
+                    if (string.IsNullOrEmpty(startWord)) continue;
 
-                var path = FindPathOfLength(startWord, targetDistance);
-                if (path.Count > 1)
-                    return BuildPuzzle(path);
+                    var path = FindPathOfLength(startWord, targetDistance, strictCommon: true);
+                    if (path.Count > 1)
+                        return BuildPuzzle(path);
+                }
+
+                // (2) Relaxed: start/end must be common; intermediates may be any graph word.
+                for (int attempt = 0; attempt < BalanceConfig.MaxGenerationAttempts; attempt++)
+                {
+                    string startWord = GetRandomWordOfLength(wordLength);
+                    if (string.IsNullOrEmpty(startWord)) continue;
+
+                    var path = FindPathOfLengthRelaxed(startWord, targetDistance);
+                    if (path.Count > 1 && IsCommonWord(path[path.Count - 1]))
+                        return BuildPuzzle(path);
+                }
+            }
+            else
+            {
+                // No filter — normal generation.
+                for (int attempt = 0; attempt < BalanceConfig.MaxGenerationAttempts; attempt++)
+                {
+                    string startWord = GetRandomWordOfLength(wordLength);
+                    if (string.IsNullOrEmpty(startWord)) continue;
+
+                    var path = FindPathOfLength(startWord, targetDistance, strictCommon: false);
+                    if (path.Count > 1)
+                        return BuildPuzzle(path);
+                }
             }
 
+            // (3) Fallback.
             return CreateFallbackPuzzle();
         }
 
@@ -105,36 +148,69 @@ namespace WordPuzzle.Puzzle
             if (wordLength < 2) wordLength = 3;
             if (targetDistance < 1) targetDistance = System.Math.Max(2, wordLength - 2);
 
-            for (int attempt = 0; attempt < MaxGenerationAttempts; attempt++)
+            // (1) Strict common.
+            if (commonWords != null)
             {
-                string startWord = GetRandomWordOfLength(wordLength);
-                if (string.IsNullOrEmpty(startWord))
-                    continue;
+                for (int attempt = 0; attempt < BalanceConfig.MaxGenerationAttempts; attempt++)
+                {
+                    string startWord = GetRandomWordOfLength(wordLength);
+                    if (string.IsNullOrEmpty(startWord)) continue;
 
-                var path = FindPathOfLength(startWord, targetDistance);
-                if (path.Count > 1)
-                    return BuildPuzzle(path);
+                    var path = FindPathOfLength(startWord, targetDistance, strictCommon: true);
+                    if (path.Count > 1)
+                        return BuildPuzzle(path);
+                }
+
+                // (2) Relaxed retry.
+                for (int attempt = 0; attempt < BalanceConfig.MaxGenerationAttempts; attempt++)
+                {
+                    string startWord = GetRandomWordOfLength(wordLength);
+                    if (string.IsNullOrEmpty(startWord)) continue;
+
+                    var path = FindPathOfLengthRelaxed(startWord, targetDistance);
+                    if (path.Count > 1 && IsCommonWord(path[path.Count - 1]))
+                        return BuildPuzzle(path);
+                }
+
+                // Relaxed: any path of length >= 2.
+                for (int attempt = 0; attempt < BalanceConfig.MaxGenerationAttempts; attempt++)
+                {
+                    string startWord = GetRandomWordOfLength(wordLength);
+                    if (string.IsNullOrEmpty(startWord)) continue;
+
+                    var path = FindAnyShortPath(startWord, System.Math.Max(2, targetDistance));
+                    if (path.Count > 1)
+                        return BuildPuzzle(path);
+                }
             }
-
-            // Relaxed retry — accept any path of length >= 2 starting at a word of the
-            // requested length. This handles tiny word graphs where the strict target
-            // distance cannot be satisfied.
-            for (int attempt = 0; attempt < MaxGenerationAttempts; attempt++)
+            else
             {
-                string startWord = GetRandomWordOfLength(wordLength);
-                if (string.IsNullOrEmpty(startWord))
-                    continue;
+                for (int attempt = 0; attempt < BalanceConfig.MaxGenerationAttempts; attempt++)
+                {
+                    string startWord = GetRandomWordOfLength(wordLength);
+                    if (string.IsNullOrEmpty(startWord)) continue;
 
-                var path = FindAnyShortPath(startWord, System.Math.Max(2, targetDistance));
-                if (path.Count > 1)
-                    return BuildPuzzle(path);
+                    var path = FindPathOfLength(startWord, targetDistance, strictCommon: false);
+                    if (path.Count > 1)
+                        return BuildPuzzle(path);
+                }
+
+                for (int attempt = 0; attempt < BalanceConfig.MaxGenerationAttempts; attempt++)
+                {
+                    string startWord = GetRandomWordOfLength(wordLength);
+                    if (string.IsNullOrEmpty(startWord)) continue;
+
+                    var path = FindAnyShortPath(startWord, System.Math.Max(2, targetDistance));
+                    if (path.Count > 1)
+                        return BuildPuzzle(path);
+                }
             }
 
             return CreateFallbackPuzzle();
         }
 
         // Helper for the relaxed retry: BFS that returns the longest reachable path
-        // (>= 2 nodes) starting from <paramref name="start"/>, capped at maxDepth edges.
+        // (>= 2 nodes) starting from start, capped at maxDepth edges.
         private List<string> FindAnyShortPath(string start, int maxDepth)
         {
             var queue = new Queue<(string word, List<string> path)>();
@@ -151,7 +227,7 @@ namespace WordPuzzle.Puzzle
 
                 if (path.Count - 1 >= maxDepth) continue;
 
-                foreach (string neighbor in GetNeighborsFromGraph(current))
+                foreach (string neighbor in GetNeighborsFromGraph(current, strictCommon: false))
                 {
                     if (!visited.Contains(neighbor))
                     {
@@ -175,12 +251,12 @@ namespace WordPuzzle.Puzzle
                 return true;
 
             start = start.ToLower();
-            end = end.ToLower();
+            end   = end.ToLower();
 
             if (!wordGraph.IsValidWord(start) || !wordGraph.IsValidWord(end))
                 return false;
 
-            var queue = new Queue<string>();
+            var queue   = new Queue<string>();
             var visited = new HashSet<string>();
 
             queue.Enqueue(start);
@@ -189,7 +265,7 @@ namespace WordPuzzle.Puzzle
             while (queue.Count > 0)
             {
                 string current = queue.Dequeue();
-                foreach (string neighbor in GetNeighborsFromGraph(current))
+                foreach (string neighbor in GetNeighborsFromGraph(current, strictCommon: false))
                 {
                     if (neighbor == end)
                         return true;
@@ -204,18 +280,18 @@ namespace WordPuzzle.Puzzle
             return false;
         }
 
-        // ── private helpers ────────────────────────────────────────────────
+        // ── private helpers ──────────────────────────────────────────────────────
 
         private PuzzleDefinition BuildPuzzle(List<string> path)
         {
             return new PuzzleDefinition
             {
-                puzzleId = random.Next(10000, 99999),
-                startWord = path[0],
-                endWord = path[path.Count - 1],
+                puzzleId    = random.Next(10000, 99999),
+                startWord   = path[0],
+                endWord     = path[path.Count - 1],
                 optimalSteps = path.Count - 1,
-                solution = path.ToArray(),
-                seedValue = random.Next()
+                solution    = path.ToArray(),
+                seedValue   = random.Next()
             };
         }
 
@@ -223,10 +299,10 @@ namespace WordPuzzle.Puzzle
         {
             return difficulty switch
             {
-                Difficulty.Easy => 3,
-                Difficulty.Medium => 4,
-                Difficulty.Hard => 5,
-                _ => 3
+                Difficulty.Easy   => BalanceConfig.EasyWordLength,
+                Difficulty.Medium => BalanceConfig.MediumWordLength,
+                Difficulty.Hard   => BalanceConfig.HardWordLength,
+                _                 => BalanceConfig.EasyWordLength
             };
         }
 
@@ -234,10 +310,10 @@ namespace WordPuzzle.Puzzle
         {
             return difficulty switch
             {
-                Difficulty.Easy => 2,
-                Difficulty.Medium => 4,
-                Difficulty.Hard => 6,
-                _ => 3
+                Difficulty.Easy   => BalanceConfig.EasyTargetDistance,
+                Difficulty.Medium => BalanceConfig.MediumTargetDistance,
+                Difficulty.Hard   => BalanceConfig.HardTargetDistance,
+                _                 => BalanceConfig.EasyTargetDistance
             };
         }
 
@@ -248,17 +324,36 @@ namespace WordPuzzle.Puzzle
             return Difficulty.Hard;
         }
 
+        /// <summary>
+        /// Return a random word of the given length. When commonWords is set,
+        /// only returns words that appear in both the graph and the common set.
+        /// </summary>
         private string GetRandomWordOfLength(int length)
         {
-            var words = wordGraph.GetWordsOfLength(length);
-            if (words.Count == 0)
+            var graphWords = wordGraph.GetWordsOfLength(length);
+            if (graphWords.Count == 0)
                 return null;
-            return words[random.Next(words.Count)];
+
+            if (commonWords != null)
+            {
+                var filtered = graphWords.Where(w => commonWords.Contains(w)).ToList();
+                if (filtered.Count > 0)
+                    return filtered[random.Next(filtered.Count)];
+                // Common set has no words of this length — fall through to full graph.
+            }
+
+            return graphWords[random.Next(graphWords.Count)];
         }
 
-        private List<string> FindPathOfLength(string start, int targetLength)
+        private bool IsCommonWord(string word)
         {
-            var queue = new Queue<(string word, List<string> path)>();
+            return commonWords == null || commonWords.Contains(word);
+        }
+
+        /// <summary>BFS toward targetLength edges. strictCommon controls neighbor filtering.</summary>
+        private List<string> FindPathOfLength(string start, int targetLength, bool strictCommon)
+        {
+            var queue   = new Queue<(string word, List<string> path)>();
             var visited = new HashSet<string>();
 
             queue.Enqueue((start, new List<string> { start }));
@@ -271,16 +366,15 @@ namespace WordPuzzle.Puzzle
                 if (path.Count - 1 == targetLength)
                     return path;
 
-                if (path.Count - 1 >= MaxBfsDepth || path.Count - 1 > targetLength)
+                if (path.Count - 1 >= BalanceConfig.MaxBfsDepth || path.Count - 1 > targetLength)
                     continue;
 
-                foreach (string neighbor in GetNeighborsFromGraph(current))
+                foreach (string neighbor in GetNeighborsFromGraph(current, strictCommon))
                 {
                     if (!visited.Contains(neighbor))
                     {
                         visited.Add(neighbor);
-                        var newPath = new List<string>(path) { neighbor };
-                        queue.Enqueue((neighbor, newPath));
+                        queue.Enqueue((neighbor, new List<string>(path) { neighbor }));
                     }
                 }
             }
@@ -288,14 +382,29 @@ namespace WordPuzzle.Puzzle
             return new List<string>();
         }
 
-        private List<string> GetNeighborsFromGraph(string word)
+        /// <summary>
+        /// Relaxed BFS: uses the full graph for neighbors so intermediates need not be
+        /// common, but the caller checks that the final word is common.
+        /// </summary>
+        private List<string> FindPathOfLengthRelaxed(string start, int targetLength)
         {
-            var neighbors = new List<string>();
+            return FindPathOfLength(start, targetLength, strictCommon: false);
+        }
+
+        /// <summary>
+        /// Returns one-letter-edit neighbors of word. When strictCommon is true
+        /// and commonWords is set, only neighbors present in commonWords are returned.
+        /// </summary>
+        private List<string> GetNeighborsFromGraph(string word, bool strictCommon)
+        {
+            var neighbors  = new List<string>();
             var candidates = wordGraph.GetWordsOfLength(word.Length);
             foreach (string candidate in candidates)
             {
-                if (candidate != word && HaveOneLetterDifference(word, candidate))
-                    neighbors.Add(candidate);
+                if (candidate == word) continue;
+                if (!HaveOneLetterDifference(word, candidate)) continue;
+                if (strictCommon && commonWords != null && !commonWords.Contains(candidate)) continue;
+                neighbors.Add(candidate);
             }
             return neighbors;
         }
@@ -314,16 +423,21 @@ namespace WordPuzzle.Puzzle
             return diff == 1;
         }
 
+        /// <summary>
+        /// Verified fallback ladder: cat→cot→cog→dog.
+        /// Each step changes exactly one letter (a→o, t→g, c→d). All words are common.
+        /// optimalSteps = 3.
+        /// </summary>
         private static PuzzleDefinition CreateFallbackPuzzle()
         {
             return new PuzzleDefinition
             {
-                puzzleId = 1,
-                startWord = "cat",
-                endWord = "dog",
+                puzzleId     = 1,
+                startWord    = "cat",
+                endWord      = "dog",
                 optimalSteps = 3,
-                solution = new[] { "cat", "bat", "bag", "dog" },
-                seedValue = 0
+                solution     = new[] { "cat", "cot", "cog", "dog" },
+                seedValue    = 0
             };
         }
     }

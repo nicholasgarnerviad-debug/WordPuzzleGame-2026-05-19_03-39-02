@@ -1,0 +1,110 @@
+/// <summary>
+/// Single authoritative source for all balance-tuning constants.
+/// All other systems MUST read from here; never hardcode these values elsewhere.
+/// Placed in the Game.Puzzle assembly (no dependencies) so every assembly can reference it.
+/// </summary>
+public static class BalanceConfig
+{
+    // ─── Power-ups (Task 5B) ──────────────────────────────────────────────────
+
+    /// <summary>Hint charges granted at the start of every new puzzle. Generous by design.</summary>
+    public const int DefaultHintsPerPuzzle = 3;
+
+    /// <summary>
+    /// Reveal charges granted per puzzle. Scarce — Reveal is far stronger than Hint
+    /// (it shows the entire next word, not just one letter).
+    /// </summary>
+    public const int DefaultRevealsPerPuzzle = 1;
+
+    /// <summary>Coin cost to use one Hint charge. Free — encourages use over frustration.</summary>
+    public const int HintCost = 0;
+
+    /// <summary>
+    /// Coin cost to use one Reveal charge. Premium power-up.
+    /// INVARIANT: RevealCost MUST stay > HintCost.
+    /// </summary>
+    public const int RevealCost = 25;
+
+    /// <summary>Coin cost to undo one ladder step.</summary>
+    public const int UndoCost = 0;
+
+    // ─── Time Attack (Task 5D) ────────────────────────────────────────────────
+
+    /// <summary>Base countdown for the short (60 s) Time Attack variant.</summary>
+    public const float TimeAttackBaseSecondsShort = 60f;
+
+    /// <summary>Base countdown for the long (120 s) Time Attack variant.</summary>
+    public const float TimeAttackBaseSecondsLong = 120f;
+
+    /// <summary>AddTime charges seeded for the short variant.</summary>
+    public const int AddTimeChargesShort = 1;
+
+    /// <summary>AddTime charges seeded for the long variant.</summary>
+    public const int AddTimeChargesLong = 2;
+
+    /// <summary>Seconds credited by each AddTime power-up activation.</summary>
+    public const float AddTimeGrantSeconds = 10f;
+
+    /// <summary>
+    /// PACING: 60 s base + 10 s/solve => skilled players approach endless;
+    /// +15 s Survival reward; average players cannot trivially sustain.
+    /// Survival-only: seconds added to the clock on each completed puzzle.
+    /// </summary>
+    public const float SurvivalRewardSeconds = 15f;
+
+    // ─── Generation (Task 5C) ─────────────────────────────────────────────────
+
+    /// <summary>Maximum BFS edge depth when searching for a ladder path.</summary>
+    public const int MaxBfsDepth = 10;
+
+    /// <summary>Maximum random-generation attempts before falling back.</summary>
+    public const int MaxGenerationAttempts = 20;
+
+    /// <summary>Target word length for Easy difficulty puzzles.</summary>
+    public const int EasyWordLength = 3;
+
+    /// <summary>Target word length for Medium difficulty puzzles.</summary>
+    public const int MediumWordLength = 4;
+
+    /// <summary>Target word length for Hard difficulty puzzles.</summary>
+    public const int HardWordLength = 5;
+
+    /// <summary>Target ladder distance (steps) for Easy puzzles.</summary>
+    public const int EasyTargetDistance = 2;
+
+    /// <summary>Target ladder distance for Medium puzzles.</summary>
+    public const int MediumTargetDistance = 4;
+
+    /// <summary>Target ladder distance for Hard puzzles.</summary>
+    public const int HardTargetDistance = 6;
+
+    // ─── Tier pacing (Task 5A) ────────────────────────────────────────────────
+
+    /// <summary>Total number of tiers in the game (Puzzle Show mode).</summary>
+    public const int MaxTier = 6;
+
+    /// <summary>Puzzles a player must complete in a tier before advancing.</summary>
+    public const int PuzzlesRequiredToAdvanceTier = 10;
+
+    // ─── Economy faucets (Task 6A) ────────────────────────────────────────────
+
+    /// <summary>
+    /// Coins awarded on any puzzle completion (Classic, PuzzleShow, TimeAttack).
+    /// Anti-deadlock: 3 completions fund one Reveal (RevealCost=25). No gates behind coins.
+    /// </summary>
+    public const int PuzzleCompletionReward = 10;
+
+    /// <summary>Bonus coins for completing today's daily puzzle (stacks with PuzzleCompletionReward).</summary>
+    public const int DailyBonusReward = 25;
+
+    /// <summary>Hint charges granted by one fully-watched rewarded video.</summary>
+    public const int RewardedAdHintGrant = 1;
+
+    // ─── Ad policy (Task 6B) ─────────────────────────────────────────────────
+
+    /// <summary>Minimum real-time seconds that must elapse between interstitial impressions.</summary>
+    public const int InterstitialCooldownSeconds = 300;   // 5 minutes
+
+    /// <summary>Minimum completed puzzles between interstitial impressions.</summary>
+    public const int InterstitialPuzzleCap = 5;
+}

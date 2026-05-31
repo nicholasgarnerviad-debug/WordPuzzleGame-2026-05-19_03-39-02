@@ -28,10 +28,13 @@ namespace WordPuzzle.Modes
     /// </summary>
     public class PuzzleShowMode : IGameMode
     {
-        public const int MaxTier = 6;
+        // Forwarded from BalanceConfig — static readonly so they read across assemblies
+        // without a compile-time const embedding. Value: 6.
+        public static readonly int MaxTier = BalanceConfig.MaxTier;
 
         /// <summary>Spec §3.1 — fixed gate of 10 completed puzzles per tier.</summary>
-        public const int PuzzlesRequiredToAdvanceTier = 10;
+        // Value: 10.
+        public static readonly int PuzzlesRequiredToAdvanceTier = BalanceConfig.PuzzlesRequiredToAdvanceTier;
 
         private GameStateManager stateManager;
         private WordPuzzle.Puzzle.WordPuzzle currentPuzzle;

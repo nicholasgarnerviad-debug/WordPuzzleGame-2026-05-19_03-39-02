@@ -37,6 +37,26 @@ namespace WordPuzzle.State
         await dataManager.UpdatePlayerProgressAsync(currentProgress);
     }
 
+    public async Task<bool> SpendCoinsAsync(int amount, string sink)
+    {
+        if (amount < 0)
+        {
+            Debug.LogWarning($"SpendCoinsAsync: negative amount {amount} rejected (sink:{sink})");
+            return false;
+        }
+
+        if (currentProgress.totalCoins < amount)
+        {
+            LogEconomyEvent("SpendFailed", $"sink:{sink},need:{amount},have:{currentProgress.totalCoins}");
+            return false;
+        }
+
+        currentProgress.totalCoins -= amount;
+        LogEconomyEvent("CoinsSpent", $"amount:{amount},sink:{sink},newBalance:{currentProgress.totalCoins}");
+        await dataManager.UpdatePlayerProgressAsync(currentProgress);
+        return true;
+    }
+
     public Task<int> GetHintsAsync()
     {
         return Task.FromResult(currentProgress.totalHintsEarned);

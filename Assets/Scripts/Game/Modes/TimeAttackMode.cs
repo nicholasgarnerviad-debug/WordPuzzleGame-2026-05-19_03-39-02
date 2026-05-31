@@ -44,31 +44,31 @@ namespace WordPuzzle.Modes
         /// <summary>Convenience factory for the canonical 60s Timed config.</summary>
         public static TimeAttackConfig Default60() => new TimeAttackConfig
         {
-            baseTimeSeconds = 60f,
-            subMode = TimeAttackSubMode.Timed,
-            addTimeCharges = 1,
-            addTimeGrantSeconds = 10f,
+            baseTimeSeconds    = BalanceConfig.TimeAttackBaseSecondsShort,
+            subMode            = TimeAttackSubMode.Timed,
+            addTimeCharges     = BalanceConfig.AddTimeChargesShort,
+            addTimeGrantSeconds = BalanceConfig.AddTimeGrantSeconds,
             survivalRewardSeconds = 0f
         };
 
         /// <summary>Convenience factory for the 120s Timed config.</summary>
         public static TimeAttackConfig Default120() => new TimeAttackConfig
         {
-            baseTimeSeconds = 120f,
-            subMode = TimeAttackSubMode.Timed,
-            addTimeCharges = 2,
-            addTimeGrantSeconds = 10f,
+            baseTimeSeconds    = BalanceConfig.TimeAttackBaseSecondsLong,
+            subMode            = TimeAttackSubMode.Timed,
+            addTimeCharges     = BalanceConfig.AddTimeChargesLong,
+            addTimeGrantSeconds = BalanceConfig.AddTimeGrantSeconds,
             survivalRewardSeconds = 0f
         };
 
         /// <summary>Convenience factory for Survival (60s base + 15s per completion).</summary>
         public static TimeAttackConfig DefaultSurvival() => new TimeAttackConfig
         {
-            baseTimeSeconds = 60f,
-            subMode = TimeAttackSubMode.Survival,
-            addTimeCharges = 2,
-            addTimeGrantSeconds = 10f,
-            survivalRewardSeconds = 15f
+            baseTimeSeconds    = BalanceConfig.TimeAttackBaseSecondsShort,
+            subMode            = TimeAttackSubMode.Survival,
+            addTimeCharges     = BalanceConfig.AddTimeChargesLong,
+            addTimeGrantSeconds = BalanceConfig.AddTimeGrantSeconds,
+            survivalRewardSeconds = BalanceConfig.SurvivalRewardSeconds
         };
     }
 
@@ -208,6 +208,18 @@ namespace WordPuzzle.Modes
         public bool IsTimeUp() => timeRemaining <= 0f;
 
         public float GetTimeRemaining() => timeRemaining;
+
+        /// <summary>
+        /// Task 6B — Rewarded "Continue": inject seconds after time expires so the run
+        /// can resume. Only meaningful when IsGameOver(); safe to call at any time.
+        /// </summary>
+        public void GrantContinueSeconds(float seconds)
+        {
+            if (seconds <= 0f) return;
+            timeRemaining += seconds;
+            try { OnTimeAdded?.Invoke(seconds); }
+            catch (Exception ex) { Debug.LogError($"GrantContinueSeconds subscriber threw: {ex.Message}"); }
+        }
 
         /// <summary>Forwarder used by GameStateManager.OnTimeAdded — credits seconds locally.</summary>
         private void HandleStateAddTime(float seconds)

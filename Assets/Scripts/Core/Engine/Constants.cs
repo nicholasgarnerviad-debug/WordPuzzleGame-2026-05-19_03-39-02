@@ -6,15 +6,15 @@ public static class Constants
     public const int TIME_ATTACK_BASE_REWARD = 30;
     public const int TIME_ATTACK_BONUS_PER_SECOND = 1;
 
-    // Power-up costs
-    public const int HINT_COST = 0;
-    public const int REVEAL_COST = 0;
-    public const int UNDO_COST = 0;
+    // Power-up costs — forwarded to BalanceConfig (authoritative source).
+    public const int HINT_COST   = BalanceConfig.HintCost;
+    public const int REVEAL_COST = BalanceConfig.RevealCost;
+    public const int UNDO_COST   = BalanceConfig.UndoCost;
 
     // Starting values
     public const int STARTING_COINS = 0;
-    public const int STARTING_HINTS = 0;
-    public const int STARTING_REVEALS = 0;
+    public const int STARTING_HINTS   = BalanceConfig.DefaultHintsPerPuzzle;
+    public const int STARTING_REVEALS = BalanceConfig.DefaultRevealsPerPuzzle;
     public const int STARTING_UNDOS = 0;
 
     // Game mechanics
@@ -28,7 +28,7 @@ public static class Constants
     public const float TIME_ATTACK_MIN = 30f;
     public const float TIME_ATTACK_DECREMENT = 5f;
 
-    // Puzzle Show
-    public const int MAX_TIERS = 10;
-    public const int PUZZLES_PER_TIER = 5;
+    // Puzzle Show — forwarded to BalanceConfig (authoritative source). // LEGACY names preserved
+    public const int MAX_TIERS = BalanceConfig.MaxTier;
+    public const int PUZZLES_PER_TIER = BalanceConfig.PuzzlesRequiredToAdvanceTier;
 }

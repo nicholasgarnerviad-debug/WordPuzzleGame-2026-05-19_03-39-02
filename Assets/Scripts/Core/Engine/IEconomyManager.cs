@@ -11,6 +11,11 @@ namespace WordPuzzle.State
         // Coin management
         Task<int> GetCoinsAsync();
         Task AddCoinsAsync(int amount, string source);
+        /// <summary>
+        /// Attempt to deduct <paramref name="amount"/> coins. Returns true when the balance
+        /// was sufficient and the deduction was applied; false (no mutation) otherwise.
+        /// </summary>
+        Task<bool> SpendCoinsAsync(int amount, string sink);
 
         // Hint management
         Task<int> GetHintsAsync();

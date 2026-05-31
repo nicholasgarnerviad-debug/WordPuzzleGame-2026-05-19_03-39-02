@@ -346,27 +346,42 @@ public class MockDataManager : IDataManager
 public class MockEconomyManager : IEconomyManager
 {
     public int coinsAdded = 0;
+    public int coinsSpent = 0;
+    private int balance = 0;
+    public int hintsAdded = 0;
 
     public Task InitializeAsync()
         => Task.CompletedTask;
 
     public Task<int> GetCoinsAsync()
-        => Task.FromResult(0);
+        => Task.FromResult(balance);
 
     public Task AddCoinsAsync(int amount, string source)
     {
         coinsAdded += amount;
+        balance += amount;
         return Task.CompletedTask;
     }
 
+    public Task<bool> SpendCoinsAsync(int amount, string sink)
+    {
+        if (balance < amount) return Task.FromResult(false);
+        coinsSpent += amount;
+        balance -= amount;
+        return Task.FromResult(true);
+    }
+
     public Task<int> GetHintsAsync()
-        => Task.FromResult(0);
+        => Task.FromResult(hintsAdded);
 
     public Task UseHintAsync()
         => Task.CompletedTask;
 
     public Task AddHintsAsync(int amount, string source)
-        => Task.CompletedTask;
+    {
+        hintsAdded += amount;
+        return Task.CompletedTask;
+    }
 
     public Task<int> GetRevealsAsync()
         => Task.FromResult(0);
@@ -390,4 +405,34 @@ public class MockEconomyManager : IEconomyManager
         => new PlayerProgress();
 
     public void LogEconomyEvent(string eventName, string data) { }
+}
+
+// Task 6B — controllable IAdService mock for EditMode tests.
+public class MockAdService : IAdService
+{
+    public bool IsRewardedReady     { get; set; } = true;
+    public bool IsInterstitialReady { get; set; } = true;
+
+    // Call counters
+    public int RewardedShowCount     = 0;
+    public int InterstitialShowCount = 0;
+
+    // Control flags
+    public bool ShouldGrantReward = true;   // set false to simulate dismiss/failure
+
+    public void LoadRewarded()     { }
+    public void LoadInterstitial() { }
+
+    public void ShowRewarded(Action onRewarded, Action onClosed)
+    {
+        RewardedShowCount++;
+        if (ShouldGrantReward) onRewarded?.Invoke();
+        onClosed?.Invoke();
+    }
+
+    public void ShowInterstitial(Action onClosed)
+    {
+        InterstitialShowCount++;
+        onClosed?.Invoke();
+    }
 }
