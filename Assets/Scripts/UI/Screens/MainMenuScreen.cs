@@ -10,11 +10,13 @@ namespace WordPuzzle.UI
         [SerializeField] private Button puzzleShowButton;
         [SerializeField] private Button timeAttackButton;
         [SerializeField] private Button libraryButton;
+        [SerializeField] private Button settingsButton;
 
         public event Action OnClassicModeSelected;
         public event Action OnPuzzleShowSelected;
         public event Action OnTimeAttackSelected;
         public event Action OnLibrarySelected;
+        public event Action OnSettingsSelected;
 
         private void OnEnable()
         {
@@ -26,6 +28,8 @@ namespace WordPuzzle.UI
                 timeAttackButton.onClick.AddListener(() => OnTimeAttackSelected?.Invoke());
             if (libraryButton != null)
                 libraryButton.onClick.AddListener(() => OnLibrarySelected?.Invoke());
+            if (settingsButton != null)
+                settingsButton.onClick.AddListener(() => OnSettingsSelected?.Invoke());
         }
 
         private void OnDisable()
@@ -38,6 +42,8 @@ namespace WordPuzzle.UI
                 timeAttackButton.onClick.RemoveAllListeners();
             if (libraryButton != null)
                 libraryButton.onClick.RemoveAllListeners();
+            if (settingsButton != null)
+                settingsButton.onClick.RemoveAllListeners();
         }
 
         public void Show() => gameObject.SetActive(true);
@@ -46,5 +52,6 @@ namespace WordPuzzle.UI
         public void SelectClassicMode() => OnClassicModeSelected?.Invoke();
         public void SelectPuzzleShowMode() => OnPuzzleShowSelected?.Invoke();
         public void SelectTimeAttackMode() => OnTimeAttackSelected?.Invoke();
+        public void SelectSettings() => OnSettingsSelected?.Invoke();
     }
 }

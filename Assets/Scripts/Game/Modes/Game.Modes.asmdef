@@ -3,7 +3,8 @@
     "rootNamespace": "WordPuzzle.Modes",
     "references": [
         "Game.State",
-        "Game.Puzzle"
+        "Game.Puzzle",
+        "Game.Persistence"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

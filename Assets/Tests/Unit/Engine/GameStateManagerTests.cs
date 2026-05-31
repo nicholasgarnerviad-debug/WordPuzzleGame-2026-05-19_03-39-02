@@ -136,12 +136,15 @@ public class GameStateManagerTests
         var state = manager.GetCurrentState();
         Assert.AreEqual(2, state.hintsRemaining);
         Assert.AreEqual(1, state.revealsRemaining);
-        Assert.AreEqual(0, state.revealedLetterIndices.Count);
+        Assert.AreEqual(-1, state.hintLetterIndex);
+        Assert.AreEqual(string.Empty, state.revealedNextWord);
     }
 
     [Test]
-    public void Dispatch_UseHint_DecrementsHintsAndRevealsLetter()
+    public void Dispatch_UseHint_DecrementsHintsAndSetsHintLetterIndex()
     {
+        // Solution: cat → bat → bag → dog. From "cat" the next target is "bat";
+        // they differ at index 0 (c vs b).
         var puzzle = new PuzzleType(1, "cat", "dog", 3,
             new[] { "cat", "bat", "bag", "dog" }, 0, Diff.Easy);
         manager.StartNewPuzzle(puzzle);
@@ -150,12 +153,12 @@ public class GameStateManagerTests
 
         var state = manager.GetCurrentState();
         Assert.AreEqual(1, state.hintsRemaining);
-        Assert.AreEqual(1, state.revealedLetterIndices.Count);
-        Assert.IsTrue(state.revealedLetterIndices.Contains(0));
+        Assert.AreEqual(0, state.hintLetterIndex);
+        Assert.AreEqual(string.Empty, state.revealedNextWord);
     }
 
     [Test]
-    public void Dispatch_UseHint_RevealsDifferentLetterEachTime()
+    public void Dispatch_UseHint_WhenExhausted_DoesNotGoNegative()
     {
         var puzzle = new PuzzleType(1, "cat", "dog", 3,
             new[] { "cat", "bat", "bag", "dog" }, 0, Diff.Easy);
@@ -163,15 +166,16 @@ public class GameStateManagerTests
 
         manager.Dispatch(new UseHintAction(0));
         manager.Dispatch(new UseHintAction(0));
+        manager.Dispatch(new UseHintAction(0)); // third call should be no-op
 
         var state = manager.GetCurrentState();
         Assert.AreEqual(0, state.hintsRemaining);
-        Assert.AreEqual(2, state.revealedLetterIndices.Count);
     }
 
     [Test]
-    public void Dispatch_UseReveal_RevealsAllLetters()
+    public void Dispatch_UseReveal_SetsRevealedNextWordAndHintIndex()
     {
+        // From start word "cat" the next solution word is "bat"; differing index is 0.
         var puzzle = new PuzzleType(1, "cat", "dog", 3,
             new[] { "cat", "bat", "bag", "dog" }, 0, Diff.Easy);
         manager.StartNewPuzzle(puzzle);
@@ -180,7 +184,8 @@ public class GameStateManagerTests
 
         var state = manager.GetCurrentState();
         Assert.AreEqual(0, state.revealsRemaining);
-        Assert.AreEqual(puzzle.endWord.Length, state.revealedLetterIndices.Count);
+        Assert.AreEqual("bat", state.revealedNextWord);
+        Assert.AreEqual(0, state.hintLetterIndex);
     }
 
     [Test]
@@ -195,6 +200,96 @@ public class GameStateManagerTests
 
         var state = manager.GetCurrentState();
         Assert.AreEqual(0, state.revealsRemaining);
+    }
+
+    [Test]
+    public void Dispatch_UseHint_ClearedAfterValidSubmit()
+    {
+        var puzzle = new PuzzleType(1, "cat", "dog", 3,
+            new[] { "cat", "bat", "bag", "dog" }, 0, Diff.Easy);
+        manager.StartNewPuzzle(puzzle);
+        manager.Dispatch(new UseHintAction(0));
+        Assert.AreEqual(0, manager.GetCurrentState().hintLetterIndex);
+
+        mockValidator.SetValidResult(true, true);
+        manager.Dispatch(new SubmitWordAction("bat"));
+
+        var state = manager.GetCurrentState();
+        Assert.AreEqual(-1, state.hintLetterIndex,
+            "Submitting a valid word should clear the stale hint preview.");
+        Assert.AreEqual(string.Empty, state.revealedNextWord);
+    }
+
+    [Test]
+    public void Dispatch_UseReveal_ClearedAfterUndo()
+    {
+        var puzzle = new PuzzleType(1, "cat", "dog", 3,
+            new[] { "cat", "bat", "bag", "dog" }, 0, Diff.Easy);
+        manager.StartNewPuzzle(puzzle);
+        mockValidator.SetValidResult(true, true);
+        manager.Dispatch(new SubmitWordAction("bat"));
+        manager.Dispatch(new UseRevealAction());
+        Assert.AreEqual("bag", manager.GetCurrentState().revealedNextWord);
+
+        manager.Dispatch(new UndoStepAction());
+
+        var state = manager.GetCurrentState();
+        Assert.AreEqual(-1, state.hintLetterIndex,
+            "Undo should clear the hint preview since the chain just rewound.");
+        Assert.AreEqual(string.Empty, state.revealedNextWord);
+    }
+
+    [Test]
+    public void Dispatch_UseHint_WithNoSolution_NoOps()
+    {
+        // Empty solution array → hint should refuse without consuming the counter.
+        var puzzle = new PuzzleType(1, "cat", "dog", 3,
+            new string[0], 0, Diff.Easy);
+        manager.StartNewPuzzle(puzzle);
+
+        manager.Dispatch(new UseHintAction(0));
+
+        var state = manager.GetCurrentState();
+        Assert.AreEqual(2, state.hintsRemaining,
+            "Hint must not consume the counter when no solution path exists.");
+        Assert.AreEqual(-1, state.hintLetterIndex);
+    }
+
+    [Test]
+    public void Dispatch_UseHint_AtEndOfSolution_NoOps()
+    {
+        // Solution has only one entry — there is no "next" word for any hint to point at.
+        // Spec §1.1 guards on solution.Length < 2 by warning and returning without spend.
+        var puzzle = new PuzzleType(1, "cat", "dog", 3,
+            new[] { "cat" }, 0, Diff.Easy);
+        manager.StartNewPuzzle(puzzle);
+
+        manager.Dispatch(new UseHintAction(0));
+
+        var state = manager.GetCurrentState();
+        Assert.AreEqual(2, state.hintsRemaining,
+            "Hint must not consume the counter when no further solution word exists.");
+        Assert.AreEqual(-1, state.hintLetterIndex);
+    }
+
+    [Test]
+    public void Dispatch_UseHint_OffPath_PicksMinHammingTarget()
+    {
+        // Solution: bat → bag → bog. Chain ends at "cat" (off-path, no exact match,
+        // and "cat" != solution[0] so the start-word special case does not apply).
+        // Fallback iterates i=1..Length-1; Hamming("cat", "bag")=2, Hamming("cat", "bog")=3.
+        // Best non-zero is "bag" → cat vs bag differ at index 0 ('c' vs 'b').
+        var puzzle = new PuzzleType(1, "bat", "bog", 2,
+            new[] { "bat", "bag", "bog" }, 0, Diff.Easy);
+        manager.StartNewPuzzle(puzzle); // chain starts ["bat"]
+        mockValidator.SetValidResult(true, true);
+        manager.Dispatch(new SubmitWordAction("cat")); // chain: [bat, cat]
+
+        manager.Dispatch(new UseHintAction(0));
+
+        var state = manager.GetCurrentState();
+        Assert.AreEqual(0, state.hintLetterIndex);
+        Assert.AreEqual(1, state.hintsRemaining);
     }
 
     [Test]

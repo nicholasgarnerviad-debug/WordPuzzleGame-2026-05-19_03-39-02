@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using WordPuzzle.Puzzle;
 
@@ -18,6 +20,17 @@ namespace WordPuzzle.Persistence
         // Tier data for Puzzle Show mode
         Task<TierData> GetTierDataAsync(int tierId);
         Task LoadAllTierDataAsync();
+
+        // Puzzle Show tier-completion progress (Spec §3.2)
+        Task SavePuzzleProgressAsync(PuzzleProgressData progress);
+        Task<PuzzleProgressData> LoadPuzzleProgressAsync();
+
+        // User settings (Spec §3 Settings)
+        Task SaveSettingsAsync(SettingsData settings);
+        Task<SettingsData> LoadSettingsAsync();
+
+        // Destructive: wipe all puzzle/player progress; keep settings (Spec §3.2)
+        Task ResetAllAsync();
     }
 
     public class GameStateSnapshot
@@ -34,5 +47,21 @@ namespace WordPuzzle.Persistence
         public string sessionId;
 
         public GameStateSnapshot() { }
+    }
+
+    /// <summary>
+    /// Persistent record of PuzzleShowMode tier-completion progress (Spec §3.2).
+    /// Uses List&lt;int&gt; for JsonUtility compatibility; PuzzleShowMode rebuilds
+    /// HashSet&lt;int&gt; in-memory for O(1) Contains() lookups.
+    /// </summary>
+    [Serializable]
+    public class PuzzleProgressData
+    {
+        public int currentTier = 1;
+        public List<int> completedPuzzleIds = new List<int>();   // global, dedup'd
+        public List<int> inProgressPuzzleIds = new List<int>();  // started but not finished
+        public long lastUpdated;
+
+        public PuzzleProgressData() { }
     }
 }

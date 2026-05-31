@@ -10,9 +10,13 @@ namespace WordPuzzle.Persistence
 {
     private const string SAVE_FILE_KEY = "wordpuzzle_save";
     private const string PROGRESS_FILE_KEY = "wordpuzzle_progress";
+    private const string PUZZLE_PROGRESS_KEY = "puzzle_progress_v1";  // Spec §3.2
+    private const string SETTINGS_KEY = "settings_v1";                 // Spec §3 Settings
 
     private GameStateSnapshot currentGameState;
     private PlayerProgress playerProgress;
+    private PuzzleProgressData puzzleProgress;
+    private SettingsData settings;
     private Dictionary<int, TierData> tierCache;
     private TierDataLoader tierLoader;
 
@@ -128,6 +132,122 @@ namespace WordPuzzle.Persistence
         {
             await GetTierDataAsync(i);
         }
+    }
+
+    // Spec §3.2: Puzzle Show tier-completion progress persistence
+    public async Task SavePuzzleProgressAsync(PuzzleProgressData progress)
+    {
+        if (progress == null) progress = new PuzzleProgressData();
+        progress.lastUpdated = System.DateTime.UtcNow.Ticks;
+        puzzleProgress = progress;
+
+        string json = JsonUtility.ToJson(progress);
+        PlayerPrefs.SetString(PUZZLE_PROGRESS_KEY, json);
+        PlayerPrefs.Save();
+
+        await Task.Delay(0);
+    }
+
+    public async Task<PuzzleProgressData> LoadPuzzleProgressAsync()
+    {
+        if (puzzleProgress != null)
+            return puzzleProgress;
+
+        if (!PlayerPrefs.HasKey(PUZZLE_PROGRESS_KEY))
+        {
+            puzzleProgress = new PuzzleProgressData();
+            await Task.Delay(0);
+            return puzzleProgress;
+        }
+
+        string json = PlayerPrefs.GetString(PUZZLE_PROGRESS_KEY);
+        PuzzleProgressData data = JsonUtility.FromJson<PuzzleProgressData>(json);
+
+        // Defensive: JsonUtility leaves null lists if JSON was malformed
+        if (data == null) data = new PuzzleProgressData();
+        if (data.completedPuzzleIds == null) data.completedPuzzleIds = new System.Collections.Generic.List<int>();
+        if (data.inProgressPuzzleIds == null) data.inProgressPuzzleIds = new System.Collections.Generic.List<int>();
+        if (data.currentTier < 1) data.currentTier = 1;
+
+        puzzleProgress = data;
+        await Task.Delay(0);
+        return puzzleProgress;
+    }
+
+    // Spec §3.2 Settings: persist user settings via PlayerPrefs key "settings_v1"
+    public async Task SaveSettingsAsync(SettingsData settingsToSave)
+    {
+        if (settingsToSave == null) settingsToSave = new SettingsData();
+
+        // Defensive clamps before serialization.
+        settingsToSave.masterVolume = Mathf.Clamp01(settingsToSave.masterVolume);
+        settingsToSave.sfxVolume = Mathf.Clamp01(settingsToSave.sfxVolume);
+        settingsToSave.musicVolume = Mathf.Clamp01(settingsToSave.musicVolume);
+
+        settings = settingsToSave.Clone();
+
+        string json = JsonUtility.ToJson(settingsToSave);
+        PlayerPrefs.SetString(SETTINGS_KEY, json);
+        PlayerPrefs.Save();
+
+        await Task.Delay(0);
+    }
+
+    public async Task<SettingsData> LoadSettingsAsync()
+    {
+        if (settings != null)
+            return settings.Clone();
+
+        if (!PlayerPrefs.HasKey(SETTINGS_KEY))
+        {
+            settings = new SettingsData();
+            await Task.Delay(0);
+            return settings.Clone();
+        }
+
+        string json = PlayerPrefs.GetString(SETTINGS_KEY);
+        SettingsData data = null;
+        try
+        {
+            data = JsonUtility.FromJson<SettingsData>(json);
+        }
+        catch
+        {
+            data = null;
+        }
+
+        if (data == null) data = new SettingsData();
+
+        // Defensive: clamp ranges
+        data.masterVolume = Mathf.Clamp01(data.masterVolume);
+        data.musicVolume = Mathf.Clamp01(data.musicVolume);
+        data.sfxVolume = Mathf.Clamp01(data.sfxVolume);
+
+        settings = data;
+        await Task.Delay(0);
+        return settings.Clone();
+    }
+
+    // Spec §3.2: destructive reset — wipes puzzle progress + player progress,
+    // keeps settings_v1 intact.
+    public async Task ResetAllAsync()
+    {
+        // Clear in-memory caches.
+        currentGameState = null;
+        playerProgress = null;
+        puzzleProgress = null;
+
+        // Wipe persisted keys (keep SETTINGS_KEY).
+        if (PlayerPrefs.HasKey(PUZZLE_PROGRESS_KEY))
+            PlayerPrefs.DeleteKey(PUZZLE_PROGRESS_KEY);
+        if (PlayerPrefs.HasKey(PROGRESS_FILE_KEY))
+            PlayerPrefs.DeleteKey(PROGRESS_FILE_KEY);
+        if (PlayerPrefs.HasKey(SAVE_FILE_KEY))
+            PlayerPrefs.DeleteKey(SAVE_FILE_KEY);
+
+        PlayerPrefs.Save();
+
+        await Task.Delay(0);
     }
 
     private GameStateSnapshot CreateEmptySnapshot()

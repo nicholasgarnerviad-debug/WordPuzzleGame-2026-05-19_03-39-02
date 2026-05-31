@@ -14,6 +14,7 @@ namespace WordPuzzle.UI
         [SerializeField] private GameplayScreen gameplayScreen;
         [SerializeField] private ResultsScreen resultsScreen;
         [SerializeField] private PuzzleLibraryScreen libraryScreen;
+        [SerializeField] private SettingsScreen settingsScreen;
 
         private void Awake()
         {
@@ -31,6 +32,7 @@ namespace WordPuzzle.UI
             gameplayScreen.Hide();
             resultsScreen.Hide();
             if (libraryScreen != null) libraryScreen.Hide();
+            if (settingsScreen != null) settingsScreen.Hide();
         }
 
         public void ShowGameplay()
@@ -39,6 +41,7 @@ namespace WordPuzzle.UI
             gameplayScreen.Show();
             resultsScreen.Hide();
             if (libraryScreen != null) libraryScreen.Hide();
+            if (settingsScreen != null) settingsScreen.Hide();
         }
 
         public void ShowResults()
@@ -47,6 +50,7 @@ namespace WordPuzzle.UI
             gameplayScreen.Hide();
             resultsScreen.Show();
             if (libraryScreen != null) libraryScreen.Hide();
+            if (settingsScreen != null) settingsScreen.Hide();
         }
 
         public void ShowLibrary()
@@ -55,6 +59,16 @@ namespace WordPuzzle.UI
             gameplayScreen.Hide();
             resultsScreen.Hide();
             if (libraryScreen != null) libraryScreen.Show();
+            if (settingsScreen != null) settingsScreen.Hide();
+        }
+
+        public void ShowSettings()
+        {
+            mainMenuScreen.Hide();
+            gameplayScreen.Hide();
+            resultsScreen.Hide();
+            if (libraryScreen != null) libraryScreen.Hide();
+            if (settingsScreen != null) settingsScreen.Show();
         }
 
         // Screen accessors
@@ -62,6 +76,7 @@ namespace WordPuzzle.UI
         public GameplayScreen GetGameplay() => gameplayScreen;
         public ResultsScreen GetResults() => resultsScreen;
         public PuzzleLibraryScreen GetLibrary() => libraryScreen;
+        public SettingsScreen GetSettings() => settingsScreen;
 
     }
 }

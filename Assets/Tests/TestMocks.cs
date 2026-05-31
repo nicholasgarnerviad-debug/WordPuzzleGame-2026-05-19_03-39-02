@@ -244,6 +244,65 @@ public class MockDataManager : IDataManager
 
     public Task LoadAllTierDataAsync()
         => Task.CompletedTask;
+
+    // Spec §3.2: puzzle-progress round-trip support
+    private PuzzleProgressData lastPuzzleProgress;
+
+    public Task SavePuzzleProgressAsync(PuzzleProgressData progress)
+    {
+        // Deep copy so callers can mutate after save without affecting stored state.
+        lastPuzzleProgress = progress == null ? new PuzzleProgressData() : new PuzzleProgressData
+        {
+            currentTier = progress.currentTier,
+            completedPuzzleIds = new List<int>(progress.completedPuzzleIds ?? new List<int>()),
+            inProgressPuzzleIds = new List<int>(progress.inProgressPuzzleIds ?? new List<int>()),
+            lastUpdated = progress.lastUpdated
+        };
+        persistedData["puzzleProgress"] = lastPuzzleProgress;
+        return Task.CompletedTask;
+    }
+
+    public Task<PuzzleProgressData> LoadPuzzleProgressAsync()
+    {
+        if (lastPuzzleProgress == null) lastPuzzleProgress = new PuzzleProgressData();
+        // Return a defensive copy.
+        var copy = new PuzzleProgressData
+        {
+            currentTier = lastPuzzleProgress.currentTier,
+            completedPuzzleIds = new List<int>(lastPuzzleProgress.completedPuzzleIds),
+            inProgressPuzzleIds = new List<int>(lastPuzzleProgress.inProgressPuzzleIds),
+            lastUpdated = lastPuzzleProgress.lastUpdated
+        };
+        return Task.FromResult(copy);
+    }
+
+    // Spec §3.2: round-trip support for user settings
+    private SettingsData lastSettings;
+
+    public Task SaveSettingsAsync(SettingsData settings)
+    {
+        lastSettings = settings == null ? new SettingsData() : settings.Clone();
+        persistedData["settings"] = lastSettings;
+        return Task.CompletedTask;
+    }
+
+    public Task<SettingsData> LoadSettingsAsync()
+    {
+        if (lastSettings == null) lastSettings = new SettingsData();
+        return Task.FromResult(lastSettings.Clone());
+    }
+
+    // Spec §3.2: destructive reset wipes puzzle/player progress, retains settings.
+    public Task ResetAllAsync()
+    {
+        lastPuzzleProgress = null;
+        lastPlayerProgress = null;
+        lastGameState = null;
+        persistedData.Remove("puzzleProgress");
+        persistedData.Remove("playerProgress");
+        persistedData.Remove("gameState");
+        return Task.CompletedTask;
+    }
 }
 
 public class MockEconomyManager : IEconomyManager

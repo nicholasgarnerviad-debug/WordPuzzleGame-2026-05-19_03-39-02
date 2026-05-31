@@ -1,43 +1,153 @@
+using System;
 using System.Collections.Generic;
 using WordPuzzle.State;
 using WordPuzzle.Puzzle;
+using WordPuzzle.Persistence;
 
 namespace WordPuzzle.Modes
 {
     /// <summary>
+    /// Per-puzzle UI/lifecycle state (Spec §3.6).
+    /// </summary>
+    public enum PuzzleState
+    {
+        Locked,
+        UnlockedUnplayed,
+        InProgress,
+        Completed
+    }
+
+    /// <summary>
     /// Puzzle Show mode: The solution path is fully revealed. Player must follow
     /// the exact solution path shown to complete the puzzle.
+    ///
+    /// Spec §3: Tier-completion gate. Player must complete N puzzles in current
+    /// tier before advancing. PuzzleShowMode is persistence-agnostic: it accepts
+    /// PuzzleProgressData via LoadProgress and emits via ExportProgress; the
+    /// orchestrator (GameBootstrap) handles save/load via IDataManager.
     /// </summary>
     public class PuzzleShowMode : IGameMode
     {
         public const int MaxTier = 6;
+
+        /// <summary>Spec §3.1 — fixed gate of 10 completed puzzles per tier.</summary>
+        public const int PuzzlesRequiredToAdvanceTier = 10;
 
         private GameStateManager stateManager;
         private WordPuzzle.Puzzle.WordPuzzle currentPuzzle;
         private int solutionIndex = 0;
         private int currentTier = 1;
 
+        // Spec §3.2: in-memory progress state (HashSet for O(1) Contains).
+        private readonly HashSet<int> completedPuzzleIds = new HashSet<int>();
+        private readonly HashSet<int> inProgressPuzzleIds = new HashSet<int>();
+
+        // Lookup of tier -> set of puzzleIds belonging to that tier. Populated by
+        // SetTierPuzzleLookup (called by orchestrator after tier_definitions load).
+        // Used to recompute PuzzlesCompletedInCurrentTier on tier advance / load.
+        private Dictionary<int, HashSet<int>> tierPuzzleIdLookup;
+
+        // -------- Public API (Spec §3.2) --------
+
         public int CurrentTier => currentTier;
         public bool AllTiersComplete => currentTier > MaxTier;
 
-        public void AdvanceTier()
+        public int PuzzlesCompletedInCurrentTier { get; private set; }
+        public int PuzzlesRequiredThisTier => PuzzlesRequiredToAdvanceTier;
+        public bool IsTierComplete() => PuzzlesCompletedInCurrentTier >= PuzzlesRequiredToAdvanceTier;
+
+        public IReadOnlyCollection<int> CompletedPuzzleIds => completedPuzzleIds;
+        public IReadOnlyCollection<int> InProgressPuzzleIds => inProgressPuzzleIds;
+
+        public bool IsPuzzleCompleted(int puzzleId) => completedPuzzleIds.Contains(puzzleId);
+
+        /// <summary>Spec §3.6 puzzle-state resolution.</summary>
+        public PuzzleState GetPuzzleState(int puzzleId, bool tierUnlocked)
         {
-            if (currentTier <= MaxTier) currentTier++;
+            if (!tierUnlocked) return PuzzleState.Locked;
+            if (completedPuzzleIds.Contains(puzzleId)) return PuzzleState.Completed;
+            if (inProgressPuzzleIds.Contains(puzzleId)) return PuzzleState.InProgress;
+            return PuzzleState.UnlockedUnplayed;
         }
+
+        // -------- Events (Spec §3.2) --------
+
+        /// <summary>Fires when a puzzle is newly completed. Arg: puzzleId.</summary>
+        public event Action<int> OnPuzzleCompleted;
+
+        /// <summary>Fires when the tier gate is met. Args: (oldTier, newTier).</summary>
+        public event Action<int, int> OnTierAdvanced;
+
+        /// <summary>Fires when player completes the final tier (currentTier > MaxTier).</summary>
+        public event Action OnAllTiersComplete;
+
+        // -------- Tier-lookup wiring (orchestrator-supplied) --------
+
+        /// <summary>
+        /// Supply the tier→puzzleIds mapping (authoritative source: tier_definitions.json).
+        /// Spec §3.3: "DO NOT hardcode the math … use authoritative lookup from tier_definitions."
+        /// </summary>
+        public void SetTierPuzzleLookup(Dictionary<int, HashSet<int>> lookup)
+        {
+            tierPuzzleIdLookup = lookup;
+            RecomputeCompletedInCurrentTier();
+        }
+
+        // -------- Progress I/O (Spec §3.2) --------
+
+        public void LoadProgress(PuzzleProgressData data)
+        {
+            completedPuzzleIds.Clear();
+            inProgressPuzzleIds.Clear();
+
+            if (data == null)
+            {
+                currentTier = 1;
+                PuzzlesCompletedInCurrentTier = 0;
+                return;
+            }
+
+            currentTier = data.currentTier < 1 ? 1 : data.currentTier;
+
+            if (data.completedPuzzleIds != null)
+                foreach (var id in data.completedPuzzleIds) completedPuzzleIds.Add(id);
+
+            if (data.inProgressPuzzleIds != null)
+                foreach (var id in data.inProgressPuzzleIds) inProgressPuzzleIds.Add(id);
+
+            RecomputeCompletedInCurrentTier();
+        }
+
+        public PuzzleProgressData ExportProgress()
+        {
+            return new PuzzleProgressData
+            {
+                currentTier = currentTier,
+                completedPuzzleIds = new List<int>(completedPuzzleIds),
+                inProgressPuzzleIds = new List<int>(inProgressPuzzleIds),
+                lastUpdated = DateTime.UtcNow.Ticks
+            };
+        }
+
+        // -------- IGameMode --------
 
         public void Initialize(GameStateManager stateManager)
         {
-            this.stateManager = stateManager ?? throw new System.ArgumentNullException(nameof(stateManager));
+            this.stateManager = stateManager ?? throw new ArgumentNullException(nameof(stateManager));
         }
 
         public void StartGame(WordPuzzle.Puzzle.WordPuzzle puzzle)
         {
             if (stateManager == null)
-                throw new System.InvalidOperationException("Must call Initialize first");
+                throw new InvalidOperationException("Must call Initialize first");
 
-            currentPuzzle = puzzle ?? throw new System.ArgumentNullException(nameof(puzzle));
+            currentPuzzle = puzzle ?? throw new ArgumentNullException(nameof(puzzle));
             stateManager.StartNewPuzzle(puzzle);
             solutionIndex = 0;
+
+            // Spec §3.4: track in-progress (only if not already completed).
+            if (!completedPuzzleIds.Contains(puzzle.puzzleId))
+                inProgressPuzzleIds.Add(puzzle.puzzleId);
         }
 
         public void HandleWordSubmission(string word)
@@ -52,7 +162,100 @@ namespace WordPuzzle.Modes
                 {
                     stateManager.SubmitWord(word.ToLower());
                     solutionIndex++;
+
+                    // Spec §3.3: detect completion at end of solution path.
+                    if (solutionIndex >= currentPuzzle.solution.Length)
+                    {
+                        OnPuzzleSolutionReached(currentPuzzle.puzzleId);
+                    }
                 }
+            }
+        }
+
+        /// <summary>Spec §3.3 completion handling.</summary>
+        private void OnPuzzleSolutionReached(int puzzleId)
+        {
+            // §3.3.2 — dedup; §3.5 — replays don't increment.
+            bool isNewCompletion = !completedPuzzleIds.Contains(puzzleId);
+            if (isNewCompletion)
+            {
+                completedPuzzleIds.Add(puzzleId);
+
+                // §3.3.2b — increment only if this puzzle is in the *current* tier.
+                if (PuzzleBelongsToTier(puzzleId, currentTier))
+                {
+                    PuzzlesCompletedInCurrentTier++;
+                }
+            }
+
+            // §3.3.3 — clear in-progress marker.
+            inProgressPuzzleIds.Remove(puzzleId);
+
+            // §3.3.4 — fire completion event (even on replay, so orchestrator persists).
+            OnPuzzleCompleted?.Invoke(puzzleId);
+
+            // §3.3.5 — tier-advance check (only on a real new completion).
+            if (isNewCompletion && IsTierComplete())
+            {
+                if (currentTier < MaxTier)
+                {
+                    int oldTier = currentTier;
+                    currentTier++;
+                    // §3.3.5 — recompute for the new tier from already-completed set.
+                    RecomputeCompletedInCurrentTier();
+                    OnTierAdvanced?.Invoke(oldTier, currentTier);
+                }
+                else if (currentTier == MaxTier)
+                {
+                    // Final tier just got its gate met.
+                    int oldTier = currentTier;
+                    currentTier++;  // -> MaxTier+1, AllTiersComplete now true.
+                    OnTierAdvanced?.Invoke(oldTier, currentTier);
+                    OnAllTiersComplete?.Invoke();
+                }
+                // currentTier > MaxTier: silently no-op (already complete).
+            }
+        }
+
+        private bool PuzzleBelongsToTier(int puzzleId, int tier)
+        {
+            // If orchestrator never supplied a lookup, assume "yes" so the gate still
+            // functions for tests/dev without tier_definitions. (Safest: do count it.)
+            if (tierPuzzleIdLookup == null) return true;
+            return tierPuzzleIdLookup.TryGetValue(tier, out var ids) && ids.Contains(puzzleId);
+        }
+
+        private void RecomputeCompletedInCurrentTier()
+        {
+            if (tierPuzzleIdLookup == null || !tierPuzzleIdLookup.TryGetValue(currentTier, out var tierIds))
+            {
+                // No authoritative tier mapping yet — preserve current counter rather than
+                // zeroing (caller will recompute once SetTierPuzzleLookup is invoked).
+                return;
+            }
+
+            int count = 0;
+            foreach (var id in completedPuzzleIds)
+            {
+                if (tierIds.Contains(id)) count++;
+            }
+            PuzzlesCompletedInCurrentTier = count;
+        }
+
+        /// <summary>
+        /// Legacy/external tier advance. Kept for backward compatibility with
+        /// GameBootstrap.CheckGameOver; the auto-advance path inside HandleWordSubmission
+        /// is the primary flow now.
+        /// </summary>
+        public void AdvanceTier()
+        {
+            if (currentTier <= MaxTier)
+            {
+                int oldTier = currentTier;
+                currentTier++;
+                RecomputeCompletedInCurrentTier();
+                OnTierAdvanced?.Invoke(oldTier, currentTier);
+                if (currentTier > MaxTier) OnAllTiersComplete?.Invoke();
             }
         }
 
@@ -78,6 +281,9 @@ namespace WordPuzzle.Modes
         {
             solutionIndex = 0;
             currentPuzzle = null;
+            // NOTE: progress (completedPuzzleIds, currentTier, etc.) is intentionally
+            // NOT cleared here — those persist across puzzles. Use LoadProgress(null)
+            // for a hard reset.
         }
 
         public bool IsGameOver()

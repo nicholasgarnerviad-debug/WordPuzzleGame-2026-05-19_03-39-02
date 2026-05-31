@@ -25,6 +25,17 @@ namespace WordPuzzle
         private PuzzleGenerator puzzleGenerator;
         private IGameMode activeMode;
 
+        // Spec §3.6: tier-definition cache + IDataManager handle for puzzle-progress.
+        private System.Collections.Generic.Dictionary<int, WordPuzzle.Puzzle.TierData> tierCacheRef;
+        private IDataManager dataManagerRef;
+        // Authoritative tier -> puzzleIds lookup for PuzzleShowMode.
+        private System.Collections.Generic.Dictionary<int, System.Collections.Generic.HashSet<int>> tierPuzzleIdLookup;
+        // Cached progress loaded at boot; injected into PuzzleShowMode on StartPuzzleShowMode.
+        private PuzzleProgressData cachedPuzzleProgress;
+
+        // Spec §3 Settings — loaded once at boot, applied to AudioListener.
+        private SettingsData cachedSettings;
+
         private void Start()
         {
             // Try to get UIManager from same GameObject if not assigned
@@ -59,6 +70,14 @@ namespace WordPuzzle
 
                 var wordValidator = new WordValidator(wordGraph);
                 var dataManager = new DataManager();
+                dataManagerRef = dataManager;
+                tierCacheRef = tierCache;
+
+                // Spec §3.3 + §3.7: build authoritative tier->puzzleIds lookup and unlock
+                // tiers based on persisted PuzzleProgressData.currentTier.
+                BuildTierPuzzleLookup(tierCache);
+                LoadPuzzleProgressBlocking(dataManager, tierCache);
+                LoadSettingsBlocking(dataManager);
 
                 stateManager = new GameStateManager(wordValidator, dataManager);
 
@@ -178,10 +197,19 @@ namespace WordPuzzle
             uiManager.GetMainMenu().OnPuzzleShowSelected += StartPuzzleShowMode;
             uiManager.GetMainMenu().OnTimeAttackSelected += StartTimeAttackMode;
             uiManager.GetMainMenu().OnLibrarySelected += ShowLibrary;
+            uiManager.GetMainMenu().OnSettingsSelected += ShowSettings;
 
             // Wire library back button
             if (uiManager.GetLibrary() != null)
                 uiManager.GetLibrary().OnBackToMenu += ShowMainMenu;
+
+            // Wire settings screen
+            if (uiManager.GetSettings() != null)
+            {
+                uiManager.GetSettings().OnBackToMenu += ShowMainMenu;
+                uiManager.GetSettings().OnSettingsSaved += OnSettingsSaved;
+                uiManager.GetSettings().OnResetProgressConfirmed += OnResetProgressConfirmed;
+            }
 
             // Wire gameplay
             uiManager.GetGameplay().OnWordSubmitted += OnWordSubmitted;
@@ -199,6 +227,13 @@ namespace WordPuzzle
 
         private void OnDestroy()
         {
+            // Spec §3.3.6 — detach mode events to prevent leaks.
+            if (activeMode is PuzzleShowMode psm)
+            {
+                psm.OnPuzzleCompleted -= OnPuzzleShowPuzzleCompleted;
+                psm.OnTierAdvanced -= OnPuzzleShowTierAdvanced;
+            }
+
             if (uiManager == null)
                 return;
 
@@ -207,9 +242,17 @@ namespace WordPuzzle
             uiManager.GetMainMenu().OnPuzzleShowSelected -= StartPuzzleShowMode;
             uiManager.GetMainMenu().OnTimeAttackSelected -= StartTimeAttackMode;
             uiManager.GetMainMenu().OnLibrarySelected -= ShowLibrary;
+            uiManager.GetMainMenu().OnSettingsSelected -= ShowSettings;
 
             if (uiManager.GetLibrary() != null)
                 uiManager.GetLibrary().OnBackToMenu -= ShowMainMenu;
+
+            if (uiManager.GetSettings() != null)
+            {
+                uiManager.GetSettings().OnBackToMenu -= ShowMainMenu;
+                uiManager.GetSettings().OnSettingsSaved -= OnSettingsSaved;
+                uiManager.GetSettings().OnResetProgressConfirmed -= OnResetProgressConfirmed;
+            }
             uiManager.GetGameplay().OnWordSubmitted -= OnWordSubmitted;
             uiManager.GetGameplay().OnBackToMenu -= ShowMainMenu;
 
@@ -243,6 +286,68 @@ namespace WordPuzzle
             uiManager.ShowLibrary();
         }
 
+        // Spec §3.1 — open the settings screen, seeded with the cached SettingsData.
+        private void ShowSettings()
+        {
+            var settingsScreen = uiManager.GetSettings();
+            if (settingsScreen != null)
+            {
+                if (cachedSettings == null) cachedSettings = new SettingsData();
+                settingsScreen.Populate(cachedSettings);
+            }
+            uiManager.ShowSettings();
+        }
+
+        // Spec §3.2 — persist user-edited settings (debounced from SettingsScreen).
+        private async void OnSettingsSaved(SettingsData updated)
+        {
+            if (updated == null) return;
+            cachedSettings = updated.Clone();
+
+            // Apply audio immediately so background music/SFX use the new value.
+            SettingsScreen.ApplyAudioListenerVolume(cachedSettings);
+
+            if (dataManagerRef == null) return;
+            try
+            {
+                await dataManagerRef.SaveSettingsAsync(cachedSettings);
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogError($"Failed to persist settings: {ex.Message}");
+            }
+        }
+
+        // Spec §3.1 — destructive reset; wipes puzzle/player progress, keeps settings.
+        private async void OnResetProgressConfirmed()
+        {
+            if (dataManagerRef == null) return;
+            try
+            {
+                await dataManagerRef.ResetAllAsync();
+
+                // Clear in-memory caches so subsequent runs start fresh.
+                cachedPuzzleProgress = new PuzzleProgressData();
+
+                // Re-lock tiers above 1 in the in-memory tier cache.
+                if (tierCacheRef != null)
+                {
+                    foreach (var kvp in tierCacheRef)
+                    {
+                        if (kvp.Value == null) continue;
+                        kvp.Value.isUnlocked = (kvp.Key <= 1);
+                        if (kvp.Key > 1) kvp.Value.unlockedTimestamp = 0;
+                    }
+                }
+
+                Debug.Log("Progress reset. Returning to main menu.");
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogError($"Failed to reset progress: {ex.Message}");
+            }
+        }
+
         private void StartClassicMode()
         {
             activeMode = new ClassicMode();
@@ -252,9 +357,119 @@ namespace WordPuzzle
 
         private void StartPuzzleShowMode()
         {
-            activeMode = new PuzzleShowMode();
+            var psm = new PuzzleShowMode();
+
+            // Spec §3.3 — supply authoritative tier→puzzleIds mapping so the gate
+            // counts only puzzles belonging to the current tier.
+            if (tierPuzzleIdLookup != null)
+                psm.SetTierPuzzleLookup(tierPuzzleIdLookup);
+
+            // Spec §3.2 — restore prior progress (created in InitializeGameSystems).
+            if (cachedPuzzleProgress != null)
+                psm.LoadProgress(cachedPuzzleProgress);
+
+            // Spec §3.3.6 — orchestrator owns persistence.
+            psm.OnPuzzleCompleted += OnPuzzleShowPuzzleCompleted;
+            // Spec §3.7 — flip TierData.isUnlocked on the in-memory cache.
+            psm.OnTierAdvanced += OnPuzzleShowTierAdvanced;
+
+            activeMode = psm;
             modeController.SetMode(activeMode);
             StartNewGame();
+        }
+
+        // Spec §3.3.6 — persist after every newly-completed puzzle.
+        private async void OnPuzzleShowPuzzleCompleted(int puzzleId)
+        {
+            if (dataManagerRef == null || !(activeMode is PuzzleShowMode psm)) return;
+            cachedPuzzleProgress = psm.ExportProgress();
+            try
+            {
+                await dataManagerRef.SavePuzzleProgressAsync(cachedPuzzleProgress);
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogError($"Failed to persist puzzle progress: {ex.Message}");
+            }
+        }
+
+        // Spec §3.7 — unlock new tier in the in-memory tier cache (do NOT touch JSON).
+        private void OnPuzzleShowTierAdvanced(int oldTier, int newTier)
+        {
+            if (tierCacheRef == null) return;
+            if (tierCacheRef.TryGetValue(newTier, out var tierData) && tierData != null)
+            {
+                tierData.isUnlocked = true;
+                if (tierData.unlockedTimestamp == 0)
+                    tierData.unlockedTimestamp = System.DateTime.UtcNow.Ticks;
+            }
+        }
+
+        // Spec §3.3 — pre-compute tier->puzzleIds map from authoritative tier_definitions.
+        private void BuildTierPuzzleLookup(System.Collections.Generic.Dictionary<int, WordPuzzle.Puzzle.TierData> tierCache)
+        {
+            tierPuzzleIdLookup = new System.Collections.Generic.Dictionary<int, System.Collections.Generic.HashSet<int>>();
+            if (tierCache == null) return;
+            foreach (var kvp in tierCache)
+            {
+                var ids = new System.Collections.Generic.HashSet<int>();
+                if (kvp.Value?.puzzles != null)
+                {
+                    foreach (var p in kvp.Value.puzzles)
+                    {
+                        if (p != null) ids.Add(p.puzzleId);
+                    }
+                }
+                tierPuzzleIdLookup[kvp.Key] = ids;
+            }
+        }
+
+        // Spec §3.7 — load PuzzleProgressData and apply tier-unlock cascade
+        // (any tier with tierId <= currentTier is unlocked).
+        private void LoadPuzzleProgressBlocking(IDataManager dataManager,
+            System.Collections.Generic.Dictionary<int, WordPuzzle.Puzzle.TierData> tierCache)
+        {
+            try
+            {
+                var task = dataManager.LoadPuzzleProgressAsync();
+                cachedPuzzleProgress = task.IsCompleted ? task.Result : task.GetAwaiter().GetResult();
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogWarning($"PuzzleProgress load failed; using defaults: {ex.Message}");
+                cachedPuzzleProgress = new PuzzleProgressData();
+            }
+
+            if (cachedPuzzleProgress == null) cachedPuzzleProgress = new PuzzleProgressData();
+
+            // §3.7 cascade unlock.
+            int unlockedThrough = cachedPuzzleProgress.currentTier;
+            foreach (var kvp in tierCache)
+            {
+                if (kvp.Key <= unlockedThrough && kvp.Value != null)
+                {
+                    kvp.Value.isUnlocked = true;
+                }
+            }
+        }
+
+        // Spec §3.3 — load SettingsData on boot and apply master/mute to AudioListener.
+        private void LoadSettingsBlocking(IDataManager dataManager)
+        {
+            try
+            {
+                var task = dataManager.LoadSettingsAsync();
+                cachedSettings = task.IsCompleted ? task.Result : task.GetAwaiter().GetResult();
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogWarning($"Settings load failed; using defaults: {ex.Message}");
+                cachedSettings = new SettingsData();
+            }
+
+            if (cachedSettings == null) cachedSettings = new SettingsData();
+
+            SettingsScreen.ApplyAudioListenerVolume(cachedSettings);
         }
 
         private void StartTimeAttackMode()
@@ -352,23 +567,65 @@ namespace WordPuzzle
         private void UpdateGameplayUI()
         {
             var state = stateManager.GetCurrentState();
-            uiManager.GetGameplay().SetWordChain(state.wordChain.ToArray());
-            uiManager.GetGameplay().SetScore(state.score);
+            var gameplay = uiManager.GetGameplay();
+
+            // Architect5 spec §6 — state-subscription tick order.
+            // 1. Persistent FROM/TO labels + tiles (idempotent).
+            gameplay.SetStartAndEndWords(state.puzzle.startWord, state.puzzle.endWord);
+
+            // 2. Chain history with §3.5 diff highlighting.
+            gameplay.SetChain(state.wordChain);
+
+            // 3. Live current-input row.
+            gameplay.SetCurrentInput(state.currentInput);
+
+            // 4. Hint highlight on current-input row (NEW GameState field).
+            gameplay.SetHintLetterIndex(state.hintLetterIndex);
+
+            // 5. Reveal preview row (NEW GameState field). Compute changed-index
+            //    from chain tail vs. revealed next word.
+            string chainTail = state.wordChain != null && state.wordChain.Count > 0
+                ? state.wordChain[state.wordChain.Count - 1]
+                : string.Empty;
+            int revealChangedIdx = ComputeChangedIndex(chainTail, state.revealedNextWord);
+            gameplay.SetRevealedNextWord(state.revealedNextWord, revealChangedIdx);
+
+            // 6. Auto-scroll is triggered internally by SetChain / SetRevealedNextWord per §3.4.
+
+            // Preserved peripheral UI.
+            gameplay.SetScore(state.score);
             UpdatePowerUpUI();
 
             if (activeMode is TimeAttackMode tam)
             {
-                uiManager.GetGameplay().SetTimer(tam.GetTimeRemaining());
-                uiManager.GetGameplay().SetTierIndicator("");
+                gameplay.SetTimer(tam.GetTimeRemaining());
+                gameplay.SetTierIndicator("");
             }
             else if (activeMode is PuzzleShowMode psm)
             {
-                uiManager.GetGameplay().SetTierIndicator($"Tier {psm.CurrentTier} / {PuzzleShowMode.MaxTier}");
+                gameplay.SetTierIndicator($"Tier {psm.CurrentTier} / {PuzzleShowMode.MaxTier}");
             }
             else
             {
-                uiManager.GetGameplay().SetTierIndicator("");
+                gameplay.SetTierIndicator("");
             }
+        }
+
+        // §6 helper — first index where lastChainWord and revealedNextWord differ.
+        // Returns -1 when revealed is empty/null. If revealed and last share their full
+        // common prefix but lengths differ, returns the trailing index. -1 when identical.
+        private static int ComputeChangedIndex(string last, string revealed)
+        {
+            if (string.IsNullOrEmpty(revealed)) return -1;
+            if (string.IsNullOrEmpty(last)) return 0;
+            int shared = System.Math.Min(last.Length, revealed.Length);
+            for (int k = 0; k < shared; k++)
+            {
+                if (char.ToLowerInvariant(last[k]) != char.ToLowerInvariant(revealed[k]))
+                    return k;
+            }
+            if (last.Length != revealed.Length) return shared;
+            return -1;
         }
 
         private void UpdatePowerUpUI()
@@ -385,10 +642,11 @@ namespace WordPuzzle
         {
             if (activeMode == null || !activeMode.IsGameOver()) return;
 
-            // PuzzleShowMode: advance to next tier and continue, or end if all tiers done
+            // PuzzleShowMode (Spec §3.3): tier advancement is now driven internally
+            // by the mode when the gate (N completions) is met. Bootstrap just decides
+            // whether to load the next puzzle or end the run.
             if (activeMode is PuzzleShowMode psm)
             {
-                psm.AdvanceTier();
                 if (psm.AllTiersComplete)
                 {
                     EndGame();

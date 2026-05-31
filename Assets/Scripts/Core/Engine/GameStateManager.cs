@@ -44,7 +44,9 @@ namespace WordPuzzle.State
                 workingState.currentInput,
                 workingState.hintsRemaining,
                 workingState.revealsRemaining,
-                new HashSet<int>(workingState.revealedLetterIndices)
+                new HashSet<int>(workingState.revealedLetterIndices),
+                workingState.hintLetterIndex,
+                workingState.revealedNextWord
             );
         }
 
@@ -68,7 +70,9 @@ namespace WordPuzzle.State
                 hintsRemaining = 2,
                 revealsRemaining = 1,
                 undoHistory = new Stack<GameSnapshot>(),
-                revealedLetterIndices = new HashSet<int>()
+                revealedLetterIndices = new HashSet<int>(),
+                hintLetterIndex = -1,
+                revealedNextWord = ""
             };
 
             wordValidator.Initialize(puzzle.startWord, puzzle.endWord, workingState.wordChain.ToArray());
@@ -147,6 +151,10 @@ namespace WordPuzzle.State
                 workingState.wordChain.Add(word);
                 workingState.currentInput = "";
 
+                // §1.5 — chain advanced, so the current hint/reveal preview is stale.
+                workingState.hintLetterIndex = -1;
+                workingState.revealedNextWord = string.Empty;
+
                 // Track valid word
                 if (!workingState.foundWords.Contains(word))
                 {
@@ -185,28 +193,131 @@ namespace WordPuzzle.State
             }
         }
 
+        /// <summary>
+        /// Picks a "best-effort" next solution word when the chain has wandered off the
+        /// canonical solution path. Chooses the solution entry with the smallest non-zero
+        /// Hamming distance to lastWord (equal-length comparisons only); ties broken by
+        /// preferring later indices. Falls back to the final solution word.
+        /// </summary>
+        private static string FindBestNextTarget(string lastWord, string[] solution)
+        {
+            if (solution == null || solution.Length == 0)
+                return null;
+            if (string.IsNullOrEmpty(lastWord))
+                return solution[solution.Length - 1];
+
+            // Special case: chain is still on the start word.
+            if (solution.Length > 1 && string.Equals(solution[0], lastWord, StringComparison.OrdinalIgnoreCase))
+                return solution[1];
+
+            int bestDistance = int.MaxValue;
+            int bestIndex = -1;
+            for (int i = 1; i < solution.Length; i++)
+            {
+                string candidate = solution[i];
+                if (string.IsNullOrEmpty(candidate) || candidate.Length != lastWord.Length)
+                    continue;
+
+                int distance = 0;
+                for (int k = 0; k < candidate.Length; k++)
+                {
+                    if (char.ToLowerInvariant(candidate[k]) != char.ToLowerInvariant(lastWord[k]))
+                        distance++;
+                }
+
+                if (distance == 0)
+                    continue;
+
+                // Prefer smaller distance; tie-break by preferring later index (>=).
+                if (distance < bestDistance || (distance == bestDistance && i > bestIndex))
+                {
+                    bestDistance = distance;
+                    bestIndex = i;
+                }
+            }
+
+            if (bestIndex >= 0)
+                return solution[bestIndex];
+
+            return solution[solution.Length - 1];
+        }
+
+        /// <summary>
+        /// Locates the next solution word after the current chain tail and the index in
+        /// that word which differs from the tail. Returns (null, -1) when no actionable
+        /// hint is possible (e.g. chain already at last solution word).
+        /// </summary>
+        private (string nextTarget, int changedIndex) ResolveHintTarget()
+        {
+            if (currentPuzzle == null)
+                return (null, -1);
+            var solution = currentPuzzle.solution;
+            if (solution == null || solution.Length < 2)
+                return (null, -1);
+            if (workingState == null || workingState.wordChain == null || workingState.wordChain.Count == 0)
+                return (null, -1);
+
+            string lastChainWord = workingState.wordChain[workingState.wordChain.Count - 1];
+            string nextTarget = null;
+
+            // 1) Exact match in solution → take the following entry.
+            for (int i = 0; i < solution.Length - 1; i++)
+            {
+                if (string.Equals(solution[i], lastChainWord, StringComparison.OrdinalIgnoreCase))
+                {
+                    nextTarget = solution[i + 1];
+                    break;
+                }
+            }
+
+            // 2) Off-path fallback.
+            if (string.IsNullOrEmpty(nextTarget))
+                nextTarget = FindBestNextTarget(lastChainWord, solution);
+
+            if (string.IsNullOrEmpty(nextTarget))
+                return (null, -1);
+
+            // 3) Compute first differing index between lastChainWord and nextTarget.
+            int diffIndex = -1;
+            int sharedLen = Math.Min(lastChainWord.Length, nextTarget.Length);
+            for (int k = 0; k < sharedLen; k++)
+            {
+                if (char.ToLowerInvariant(lastChainWord[k]) != char.ToLowerInvariant(nextTarget[k]))
+                {
+                    diffIndex = k;
+                    break;
+                }
+            }
+            if (diffIndex < 0)
+            {
+                if (lastChainWord.Length == nextTarget.Length)
+                    return (null, -1); // identical — nothing to hint
+                diffIndex = sharedLen; // one is a prefix of the other
+            }
+
+            return (nextTarget, diffIndex);
+        }
+
         private void HandleUseHint(UseHintAction action)
         {
             if (workingState.isWon || workingState.isLost)
                 return;
 
-            // Check if hints are available
             if (workingState.hintsRemaining <= 0)
                 return;
 
-            // Find next unrevealed letter in the target word
-            string targetWord = currentPuzzle.endWord;
-            for (int i = 0; i < targetWord.Length; i++)
+            // §4 solution guard — do not consume the counter when no solution exists.
+            if (currentPuzzle == null || currentPuzzle.solution == null || currentPuzzle.solution.Length < 2)
             {
-                if (!workingState.revealedLetterIndices.Contains(i))
-                {
-                    workingState.revealedLetterIndices.Add(i);
-                    workingState.hintsRemaining--;
-                    return; // Reveal one letter per hint
-                }
+                Debug.LogWarning("[GameStateManager] No solution path available — hint/reveal disabled for this puzzle.");
+                return;
             }
 
-            // All letters already revealed, decrement anyway but don't reveal more
+            var (nextTarget, changedIndex) = ResolveHintTarget();
+            if (string.IsNullOrEmpty(nextTarget) || changedIndex < 0)
+                return; // no actionable hint, do not consume counter
+
+            workingState.hintLetterIndex = changedIndex;
             workingState.hintsRemaining--;
         }
 
@@ -215,17 +326,22 @@ namespace WordPuzzle.State
             if (workingState.isWon || workingState.isLost)
                 return;
 
-            // Check if reveals are available
             if (workingState.revealsRemaining <= 0)
                 return;
 
-            // Reveal entire target word by marking all letters as revealed
-            string targetWord = currentPuzzle.endWord;
-            for (int i = 0; i < targetWord.Length; i++)
+            // §4 solution guard — do not consume the counter when no solution exists.
+            if (currentPuzzle == null || currentPuzzle.solution == null || currentPuzzle.solution.Length < 2)
             {
-                workingState.revealedLetterIndices.Add(i);
+                Debug.LogWarning("[GameStateManager] No solution path available — hint/reveal disabled for this puzzle.");
+                return;
             }
 
+            var (nextTarget, changedIndex) = ResolveHintTarget();
+            if (string.IsNullOrEmpty(nextTarget))
+                return; // no actionable reveal, do not consume counter
+
+            workingState.revealedNextWord = nextTarget;
+            workingState.hintLetterIndex = changedIndex;
             workingState.revealsRemaining--;
         }
 
@@ -250,6 +366,10 @@ namespace WordPuzzle.State
 
                 // Reset streak since we undid a valid step
                 workingState.currentStreak = Mathf.Max(0, workingState.currentStreak - 1);
+
+                // §1.3 — chain rewound, so any active hint/reveal preview is stale.
+                workingState.hintLetterIndex = -1;
+                workingState.revealedNextWord = string.Empty;
                 return;
             }
 
@@ -264,6 +384,10 @@ namespace WordPuzzle.State
             workingState.hintsRemaining = snapshot.hintsRemaining;
             workingState.revealsRemaining = snapshot.revealsRemaining;
             workingState.currentInput = "";
+
+            // §1.3 — chain rewound; clear hint/reveal preview rather than restoring stale state.
+            workingState.hintLetterIndex = -1;
+            workingState.revealedNextWord = string.Empty;
         }
 
         private void NotifySubscribers()
@@ -453,6 +577,8 @@ namespace WordPuzzle.State
         public int invalidAttempts;
         public int hintsRemaining;
         public int revealsRemaining;
+        public int hintLetterIndex;
+        public string revealedNextWord;
     }
 
     /// <summary>
@@ -479,7 +605,14 @@ namespace WordPuzzle.State
         public int hintsRemaining = 2;
         public int revealsRemaining = 1;
         public Stack<GameSnapshot> undoHistory = new Stack<GameSnapshot>();
-        public HashSet<int> revealedLetterIndices = new HashSet<int>(); // Track which letters have been revealed by hint
+        // DEPRECATED — replaced by hintLetterIndex + revealedNextWord. Retained for back-compat
+        // with consumers that still read the index set; new hint/reveal paths do not write to it.
+        public HashSet<int> revealedLetterIndices = new HashSet<int>();
+
+        // Hint/reveal surface: index that the most recent hint exposed (-1 if none),
+        // and the next solution word once the player spends a reveal ("" if none).
+        public int hintLetterIndex = -1;
+        public string revealedNextWord = "";
     }
 
     internal class Unsubscriber : IDisposable

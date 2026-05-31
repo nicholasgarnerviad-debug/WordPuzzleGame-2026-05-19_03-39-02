@@ -5,6 +5,9 @@
         "Game.UI",
         "Game.Modes",
         "Game.Bootstrap",
+        "Game.Persistence",
+        "Game.Puzzle",
+        "Game.State",
         "Unity.TextMeshPro"
     ],
     "includePlatforms": [

@@ -19,7 +19,14 @@ namespace WordPuzzle.State
         public readonly string currentInput;
         public readonly int hintsRemaining;
         public readonly int revealsRemaining;
+        // DEPRECATED — replaced by hintLetterIndex + revealedNextWord.
         public readonly HashSet<int> revealedLetterIndices;
+
+        // Phase 2 power-up surface: position in the next solution word that differs from
+        // the last chain word (-1 when no hint is active), and the full text of the next
+        // solution word once the player spends a reveal (empty when not revealed).
+        public readonly int hintLetterIndex;
+        public readonly string revealedNextWord;
 
         public GameState(
             WordPuzzleModel puzzle,
@@ -30,7 +37,9 @@ namespace WordPuzzle.State
             string currentInput = "",
             int hintsRemaining = 0,
             int revealsRemaining = 0,
-            HashSet<int> revealedLetterIndices = null
+            HashSet<int> revealedLetterIndices = null,
+            int hintLetterIndex = -1,
+            string revealedNextWord = ""
         )
         {
             this.puzzle = puzzle ?? throw new ArgumentNullException(nameof(puzzle));
@@ -42,13 +51,15 @@ namespace WordPuzzle.State
             this.hintsRemaining = hintsRemaining;
             this.revealsRemaining = revealsRemaining;
             this.revealedLetterIndices = revealedLetterIndices ?? new HashSet<int>();
+            this.hintLetterIndex = hintLetterIndex;
+            this.revealedNextWord = revealedNextWord ?? "";
         }
 
         public GameState WithScore(int newScore) =>
-            new GameState(puzzle, wordChain, newScore, wordsFound, elapsedTime, currentInput, hintsRemaining, revealsRemaining, revealedLetterIndices);
+            new GameState(puzzle, wordChain, newScore, wordsFound, elapsedTime, currentInput, hintsRemaining, revealsRemaining, revealedLetterIndices, hintLetterIndex, revealedNextWord);
 
         public GameState WithWordsFound(int newCount) =>
-            new GameState(puzzle, wordChain, score, newCount, elapsedTime, currentInput, hintsRemaining, revealsRemaining, revealedLetterIndices);
+            new GameState(puzzle, wordChain, score, newCount, elapsedTime, currentInput, hintsRemaining, revealsRemaining, revealedLetterIndices, hintLetterIndex, revealedNextWord);
 
         public bool IsPuzzleComplete => wordChain.Count > 0 && wordChain[wordChain.Count - 1] == puzzle.endWord;
 
