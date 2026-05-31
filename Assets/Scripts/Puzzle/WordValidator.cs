@@ -9,6 +9,14 @@ namespace WordPuzzle.Puzzle
         private string targetWord;
         private List<string> currentChain;
 
+        // Cached distance map from every reachable word to the puzzle target.
+        // Recomputed only when the target changes (puzzle-stable).
+        private Dictionary<string, int> distanceToTarget;
+        private string cachedTargetWord;
+        // Distance from previousWord to target (looked up from the cached map).
+        // int.MaxValue means previousWord is unreachable from target.
+        private int prevDistToTarget;
+
         public WordValidator(WordGraph wordGraph)
         {
             this.wordGraph = wordGraph;
@@ -21,17 +29,27 @@ namespace WordPuzzle.Puzzle
                 : startWord;
             targetWord = endWord;
             currentChain = new List<string>(currentWordChain);
+
+            // Distance map is keyed by target word; reuse across submissions in the
+            // same puzzle. A BFS only runs on the first call or when the target changes.
+            if (distanceToTarget == null || cachedTargetWord != targetWord)
+            {
+                distanceToTarget = wordGraph.ComputeDistancesFrom(targetWord);
+                cachedTargetWord = targetWord;
+            }
+            prevDistToTarget = distanceToTarget != null
+                && distanceToTarget.TryGetValue(previousWord, out var pd)
+                ? pd
+                : int.MaxValue;
         }
 
         public ValidationResult ValidateWord(string word)
         {
-            var sw = System.Diagnostics.Stopwatch.StartNew();
             word = word.ToLower();
 
             // Check if word exists
             if (!wordGraph.IsValidWord(word))
             {
-                sw.Stop();
                 return new ValidationResult(
                     valid: false,
                     msg: "Word not in dictionary",
@@ -45,7 +63,6 @@ namespace WordPuzzle.Puzzle
             // Check if already in chain
             if (currentChain.Contains(word))
             {
-                sw.Stop();
                 return new ValidationResult(
                     valid: false,
                     msg: "Word already used",
@@ -57,9 +74,8 @@ namespace WordPuzzle.Puzzle
             }
 
             // Check one letter difference from previous word
-            if (!HaveOneLetterDifference(previousWord, word))
+            if (!WordOps.HaveOneLetterDifference(previousWord, word))
             {
-                sw.Stop();
                 return new ValidationResult(
                     valid: false,
                     msg: "Must change exactly one letter",
@@ -70,11 +86,16 @@ namespace WordPuzzle.Puzzle
                 );
             }
 
-            int distStart = wordGraph.GetDistance(word, previousWord);
-            int distEnd = wordGraph.GetDistance(word, targetWord);
-            bool isProgress = distEnd < wordGraph.GetDistance(previousWord, targetWord);
-
-            sw.Stop();
+            // We just established Hamming-1 + dictionary membership, so the graph
+            // distance from `word` to `previousWord` is exactly 1.
+            int distStart = 1;
+            int distEnd = distanceToTarget != null
+                && distanceToTarget.TryGetValue(word, out var d)
+                ? d
+                : -1;
+            // Progress means: this word is strictly closer to the target than the
+            // previous word was. Unreachable end (-1) is never "closer".
+            bool isProgress = distEnd >= 0 && distEnd < prevDistToTarget;
 
             return new ValidationResult(
                 valid: true,
@@ -88,24 +109,7 @@ namespace WordPuzzle.Puzzle
 
         public bool IsValidNextWord(string word, string previousWord)
         {
-            return HaveOneLetterDifference(previousWord, word.ToLower());
-        }
-
-        private bool HaveOneLetterDifference(string word1, string word2)
-        {
-            if (word1.Length != word2.Length)
-                return false;
-
-            int differences = 0;
-            for (int i = 0; i < word1.Length; i++)
-            {
-                if (word1[i] != word2[i])
-                    differences++;
-                if (differences > 1)
-                    return false;
-            }
-
-            return differences == 1;
+            return WordOps.HaveOneLetterDifference(previousWord, word.ToLower());
         }
     }
 

@@ -77,11 +77,11 @@ A submitted word is accepted onto the chain only if all of these hold:
 
 When a word is rejected, the screen surfaces a specific reason via `OnWordSubmissionResult`:
 
-- "Not a real word" — fails dictionary check
-- "Change exactly one letter" — fails Hamming-1
-- "Word must be N letters" — wrong length
-- "Already used"
-- "Type a word" — empty
+- "Word not in dictionary" — fails dictionary check
+- "Must change exactly one letter" — fails Hamming-1
+- "Word must be N letters" — wrong length (from `GameStateManager` wrapper)
+- "Word already used"
+- "Type a word" — empty (from `GameStateManager` wrapper)
 
 Rejected submissions never end the puzzle. There are no "lives" — players keep typing until they reach the end word or quit.
 

@@ -29,10 +29,8 @@ public class WordValidatorTests
     [Test]
     public void ValidateWord_ValidNextStep_ReturnsValid()
     {
-        // Act
         var result = validator.ValidateWord("bat");
 
-        // Assert
         Assert.IsTrue(result.isValid);
         Assert.IsTrue(result.isNextStep);
     }
@@ -40,10 +38,8 @@ public class WordValidatorTests
     [Test]
     public void ValidateWord_NotInDictionary_ReturnsInvalid()
     {
-        // Act
         var result = validator.ValidateWord("xyz");
 
-        // Assert
         Assert.IsFalse(result.isValid);
         Assert.AreEqual("Word not in dictionary", result.message);
     }
@@ -51,10 +47,8 @@ public class WordValidatorTests
     [Test]
     public void ValidateWord_TwoLetterDifference_ReturnsInvalid()
     {
-        // Act
         var result = validator.ValidateWord("map");
 
-        // Assert
         Assert.IsFalse(result.isValid);
         Assert.AreEqual("Must change exactly one letter", result.message);
     }
@@ -62,11 +56,47 @@ public class WordValidatorTests
     [Test]
     public void ValidateWord_AlreadyUsed_ReturnsInvalid()
     {
-        // Act
         var result = validator.ValidateWord("cat");
 
-        // Assert
         Assert.IsFalse(result.isValid);
         Assert.AreEqual("Word already used", result.message);
+    }
+
+    // ----------------------------------------------------------------------
+    // TASK 2 — ValidateWord must perform ZERO graph traversals after
+    //   Initialize has cached the distance map.
+    // ----------------------------------------------------------------------
+    [Test]
+    public void ValidateWord_AfterInitialize_PerformsNoBfsTraversals()
+    {
+        int baseline = wordGraph.BfsTraversalCount;
+
+        var accepted = validator.ValidateWord("bat");
+        var rejectedDict = validator.ValidateWord("xyz");
+        var rejectedReuse = validator.ValidateWord("cat");
+
+        Assert.IsTrue(accepted.isValid);
+        Assert.IsFalse(rejectedDict.isValid);
+        Assert.IsFalse(rejectedReuse.isValid);
+
+        Assert.AreEqual(baseline, wordGraph.BfsTraversalCount,
+            "ValidateWord should never trigger a BFS; the distance map is precomputed in Initialize.");
+    }
+
+    // ----------------------------------------------------------------------
+    // TASK 2 — distStart / distEnd / progress must match the old behavior.
+    // ----------------------------------------------------------------------
+    [Test]
+    public void ValidateWord_DistanceAndProgress_MatchExpectedSemantics()
+    {
+        // From "cat" with target "map": valid step "bat" should report
+        // distStart == 1, distEnd == 2 (bat→mat→map), and progress true
+        // (cat→map distance is 3; bat→map distance is 2).
+        var result = validator.ValidateWord("bat");
+
+        Assert.IsTrue(result.isValid);
+        Assert.AreEqual(1, result.distanceToStart);
+        Assert.AreEqual(2, result.distanceToEnd);
+        Assert.IsTrue(result.isProgress);
     }
 }

@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Text;
 
 namespace WordPuzzle.Puzzle
 {
@@ -7,6 +8,13 @@ namespace WordPuzzle.Puzzle
         // Word -> Adjacent words (one letter difference)
         private Dictionary<string, HashSet<string>> adjacencyList;
         private HashSet<string> allWords;
+
+        /// <summary>
+        /// Test seam: incremented every time a BFS traversal is performed
+        /// (GetShortestPath / ComputeDistancesFrom). Tests can snapshot and assert no
+        /// BFS occurs during steady-state validation calls.
+        /// </summary>
+        public int BfsTraversalCount { get; private set; }
 
         public WordGraph()
         {
@@ -25,19 +33,52 @@ namespace WordPuzzle.Puzzle
             }
         }
 
+        /// <summary>
+        /// Build one-letter-difference adjacency using wildcard pattern bucketing
+        /// (O(n·L) instead of the previous O(n²)). For each word, generate L pattern
+        /// keys by replacing position p with '_'. Words sharing a pattern key differ
+        /// at exactly that position; mark them mutual neighbors.
+        /// </summary>
         public void BuildAdjacencies()
         {
-            // Build one-letter-difference connections
-            var wordList = new List<string>(allWords);
+            // pattern -> list of words sharing that pattern
+            var buckets = new Dictionary<string, List<string>>(allWords.Count * 4);
+            var sb = new StringBuilder();
 
-            for (int i = 0; i < wordList.Count; i++)
+            foreach (var word in allWords)
             {
-                for (int j = i + 1; j < wordList.Count; j++)
+                int len = word.Length;
+                for (int p = 0; p < len; p++)
                 {
-                    if (HaveOneLetterDifference(wordList[i], wordList[j]))
+                    sb.Length = 0;
+                    sb.Append(word);
+                    sb[p] = '_';
+                    string key = sb.ToString();
+
+                    if (!buckets.TryGetValue(key, out var list))
                     {
-                        adjacencyList[wordList[i]].Add(wordList[j]);
-                        adjacencyList[wordList[j]].Add(wordList[i]);
+                        list = new List<string>(2);
+                        buckets[key] = list;
+                    }
+                    list.Add(word);
+                }
+            }
+
+            foreach (var kvp in buckets)
+            {
+                var list = kvp.Value;
+                int count = list.Count;
+                if (count < 2) continue;
+
+                for (int i = 0; i < count; i++)
+                {
+                    var wi = list[i];
+                    var setI = adjacencyList[wi];
+                    for (int j = i + 1; j < count; j++)
+                    {
+                        var wj = list[j];
+                        setI.Add(wj);
+                        adjacencyList[wj].Add(wi);
                     }
                 }
             }
@@ -50,6 +91,8 @@ namespace WordPuzzle.Puzzle
 
             if (start == end)
                 return new List<string> { start };
+
+            BfsTraversalCount++;
 
             // BFS for shortest path
             var queue = new Queue<string>();
@@ -94,6 +137,43 @@ namespace WordPuzzle.Puzzle
             return new List<string>();  // No path
         }
 
+        /// <summary>
+        /// Single-source BFS that returns the shortest-path distance from
+        /// <paramref name="source"/> to every reachable word. Words not in the graph
+        /// or unreachable from <paramref name="source"/> are absent from the result.
+        /// Used by validators to avoid running a BFS per submission.
+        /// </summary>
+        public Dictionary<string, int> ComputeDistancesFrom(string source)
+        {
+            var result = new Dictionary<string, int>();
+            if (source == null || !allWords.Contains(source))
+                return result;
+
+            BfsTraversalCount++;
+
+            result[source] = 0;
+            var queue = new Queue<string>();
+            queue.Enqueue(source);
+
+            while (queue.Count > 0)
+            {
+                string current = queue.Dequeue();
+                int nextDist = result[current] + 1;
+
+                if (!adjacencyList.TryGetValue(current, out var neighbors)) continue;
+                foreach (var n in neighbors)
+                {
+                    if (!result.ContainsKey(n))
+                    {
+                        result[n] = nextDist;
+                        queue.Enqueue(n);
+                    }
+                }
+            }
+
+            return result;
+        }
+
         public bool CanSolve(string start, string end)
         {
             return GetShortestPath(start, end).Count > 0;
@@ -102,23 +182,6 @@ namespace WordPuzzle.Puzzle
         public bool IsValidWord(string word)
         {
             return allWords.Contains(word.ToLower());
-        }
-
-        private bool HaveOneLetterDifference(string word1, string word2)
-        {
-            if (word1.Length != word2.Length)
-                return false;
-
-            int differences = 0;
-            for (int i = 0; i < word1.Length; i++)
-            {
-                if (word1[i] != word2[i])
-                    differences++;
-                if (differences > 1)
-                    return false;
-            }
-
-            return differences == 1;
         }
 
         public int GetDistance(string word1, string word2)
