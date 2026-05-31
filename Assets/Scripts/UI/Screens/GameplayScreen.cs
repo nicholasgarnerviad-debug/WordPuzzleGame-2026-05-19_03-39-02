@@ -160,6 +160,20 @@ namespace WordPuzzle.UI
 
             EnsureRevealPreviewRow();
             HideRevealPreviewRow();
+
+            // §3.6 — runtime styling for tier indicator (Bold, gold #C9B458, centered, 28pt).
+            // Enforced at runtime so scene-side regressions cannot silently break presentation.
+            if (tierIndicatorText != null)
+            {
+                tierIndicatorText.fontStyle = FontStyles.Bold;
+                tierIndicatorText.color = new Color32(0xC9, 0xB4, 0x58, 0xFF);
+                tierIndicatorText.fontSize = 28;
+                tierIndicatorText.alignment = TextAlignmentOptions.Center;
+                var rt = tierIndicatorText.rectTransform;
+                rt.anchoredPosition = new Vector2(0f, 795f);
+                rt.sizeDelta = new Vector2(700f, 60f);
+                tierIndicatorText.gameObject.SetActive(true);
+            }
         }
 
         private void HideLegacyText()
