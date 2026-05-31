@@ -33,6 +33,10 @@ namespace WordPuzzle.Persistence
         Task SaveDailyProgressAsync(DailyProgress progress);
         Task<DailyProgress> LoadDailyProgressAsync();
 
+        // Tutorial onboarding (Task 3A)
+        Task SaveOnboardingAsync(OnboardingData onboarding);
+        Task<OnboardingData> LoadOnboardingAsync();
+
         // Destructive: wipe all puzzle/player progress; keep settings (Spec §3.2)
         Task ResetAllAsync();
     }

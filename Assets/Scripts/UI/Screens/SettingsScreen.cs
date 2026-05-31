@@ -34,6 +34,7 @@ namespace WordPuzzle.UI
         // --- Buttons ---
         [SerializeField] private Button homeButton;
         [SerializeField] private Button resetProgressButton;
+        [SerializeField] private Button replayTutorialButton;
 
         // --- Confirm modal ---
         [SerializeField] private GameObject resetConfirmOverlay;
@@ -51,6 +52,8 @@ namespace WordPuzzle.UI
         public event Action<SettingsData> OnSettingsSaved;
         /// <summary>Fired when user confirms the destructive Reset Progress action.</summary>
         public event Action OnResetProgressConfirmed;
+        /// <summary>Fired when user requests to replay the tutorial.</summary>
+        public event Action OnReplayTutorialRequested;
 
         private SettingsData currentSettings = new SettingsData();
         private bool suppressEvents;
@@ -122,6 +125,8 @@ namespace WordPuzzle.UI
             }
             if (resetProgressButton != null)
                 resetProgressButton.onClick.AddListener(OnResetClicked);
+            if (replayTutorialButton != null)
+                replayTutorialButton.onClick.AddListener(OnReplayTutorialClicked);
             if (resetConfirmCancelButton != null)
                 resetConfirmCancelButton.onClick.AddListener(OnResetConfirmCancel);
             if (resetConfirmResetButton != null)
@@ -144,6 +149,8 @@ namespace WordPuzzle.UI
                 homeButton.onClick.RemoveListener(OnHomeClicked);
             if (resetProgressButton != null)
                 resetProgressButton.onClick.RemoveListener(OnResetClicked);
+            if (replayTutorialButton != null)
+                replayTutorialButton.onClick.RemoveListener(OnReplayTutorialClicked);
             if (resetConfirmCancelButton != null)
                 resetConfirmCancelButton.onClick.RemoveListener(OnResetConfirmCancel);
             if (resetConfirmResetButton != null)
@@ -253,6 +260,12 @@ namespace WordPuzzle.UI
             if (resetConfirmOverlay != null) resetConfirmOverlay.SetActive(false);
             OnResetProgressConfirmed?.Invoke();
             ShowToast("Progress reset");
+        }
+
+        private void OnReplayTutorialClicked()
+        {
+            OnReplayTutorialRequested?.Invoke();
+            ShowToast("Tutorial will replay");
         }
 
         // --- Helpers ---

@@ -13,12 +13,14 @@ namespace WordPuzzle.Persistence
     private const string PUZZLE_PROGRESS_KEY = "puzzle_progress_v1";  // Spec §3.2
     private const string SETTINGS_KEY = "settings_v1";                 // Spec §3 Settings
     private const string DAILY_KEY = "daily_v1";                       // Task 1B
+    private const string ONBOARDING_KEY = "onboarding_v1";             // Task 3A
 
     private GameStateSnapshot currentGameState;
     private PlayerProgress playerProgress;
     private PuzzleProgressData puzzleProgress;
     private SettingsData settings;
     private DailyProgress dailyProgress;
+    private OnboardingData onboarding;
     private Dictionary<int, TierData> tierCache;
     private TierDataLoader tierLoader;
 
@@ -262,6 +264,40 @@ namespace WordPuzzle.Persistence
         dailyProgress = data;
         await Task.Delay(0);
         return dailyProgress;
+    }
+
+    // Task 3A — Tutorial onboarding persistence. Intentionally NOT cleared by ResetAllAsync
+    // (onboarding survives a progress reset; only the Replay Tutorial item clears it).
+    public async Task SaveOnboardingAsync(OnboardingData onboardingData)
+    {
+        if (onboardingData == null) onboardingData = new OnboardingData();
+        onboarding = onboardingData;
+        string json = JsonUtility.ToJson(onboardingData);
+        PlayerPrefs.SetString(ONBOARDING_KEY, json);
+        PlayerPrefs.Save();
+        await Task.Delay(0);
+    }
+
+    public async Task<OnboardingData> LoadOnboardingAsync()
+    {
+        if (onboarding != null)
+        {
+            await Task.Delay(0);
+            return onboarding;
+        }
+        if (!PlayerPrefs.HasKey(ONBOARDING_KEY))
+        {
+            onboarding = new OnboardingData();
+            await Task.Delay(0);
+            return onboarding;
+        }
+        string json = PlayerPrefs.GetString(ONBOARDING_KEY);
+        OnboardingData data = null;
+        try { data = JsonUtility.FromJson<OnboardingData>(json); } catch { data = null; }
+        if (data == null) data = new OnboardingData();
+        onboarding = data;
+        await Task.Delay(0);
+        return onboarding;
     }
 
     // Spec §3.2: destructive reset — wipes puzzle progress + player progress + daily streak,

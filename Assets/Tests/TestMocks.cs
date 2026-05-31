@@ -312,6 +312,22 @@ public class MockDataManager : IDataManager
         return Task.FromResult(lastDailyProgress);
     }
 
+    // Task 3A: onboarding persistence (intentionally NOT cleared by ResetAllAsync).
+    private OnboardingData lastOnboarding;
+
+    public Task SaveOnboardingAsync(OnboardingData onboarding)
+    {
+        lastOnboarding = onboarding ?? new OnboardingData();
+        persistedData["onboarding"] = lastOnboarding;
+        return Task.CompletedTask;
+    }
+
+    public Task<OnboardingData> LoadOnboardingAsync()
+    {
+        if (lastOnboarding == null) lastOnboarding = new OnboardingData();
+        return Task.FromResult(lastOnboarding);
+    }
+
     // Spec §3.2: destructive reset wipes puzzle/player/daily progress, retains settings.
     public Task ResetAllAsync()
     {

@@ -45,6 +45,13 @@ namespace WordPuzzle
         private PuzzleDefinition pendingDailyPuzzle;
         private int pendingDailyIndex = -1;
 
+        // Task 3A — Tutorial onboarding.
+        private OnboardingData cachedOnboarding;
+        private bool isTutorialRun;
+        private PuzzleDefinition pendingTutorialPuzzle;
+        private bool tutorialOverlaySubscribed;
+        [SerializeField] private WordPuzzle.UI.TutorialOverlay tutorialOverlay;
+
         // Task 2A — Share result. Snapshot captured on EndGame, consumed on Share tap.
         private IShareService shareService = new ClipboardShareService();
         private ShareCardBuilder.ShareInput lastShareInput;
@@ -92,6 +99,7 @@ namespace WordPuzzle
                 LoadPuzzleProgressBlocking(dataManager, tierCache);
                 LoadSettingsBlocking(dataManager);
                 LoadDailyProgressBlocking(dataManager);
+                LoadOnboardingBlocking(dataManager);
                 InitializeDailyPuzzleService();
 
                 stateManager = new GameStateManager(wordValidator, dataManager);
@@ -239,6 +247,7 @@ namespace WordPuzzle
                 uiManager.GetSettings().OnBackToMenu += ShowMainMenu;
                 uiManager.GetSettings().OnSettingsSaved += OnSettingsSaved;
                 uiManager.GetSettings().OnResetProgressConfirmed += OnResetProgressConfirmed;
+                uiManager.GetSettings().OnReplayTutorialRequested += OnReplayTutorialRequested;
             }
 
             // Wire gameplay
@@ -300,6 +309,13 @@ namespace WordPuzzle
                 uiManager.GetSettings().OnBackToMenu -= ShowMainMenu;
                 uiManager.GetSettings().OnSettingsSaved -= OnSettingsSaved;
                 uiManager.GetSettings().OnResetProgressConfirmed -= OnResetProgressConfirmed;
+                uiManager.GetSettings().OnReplayTutorialRequested -= OnReplayTutorialRequested;
+            }
+
+            if (tutorialOverlay != null)
+            {
+                tutorialOverlay.OnSkipRequested     -= HandleTutorialSkip;
+                tutorialOverlay.OnSuccessBeatFinished -= HandleTutorialSuccess;
             }
             uiManager.GetGameplay().OnWordSubmitted -= OnWordSubmitted;
             uiManager.GetGameplay().OnBackToMenu -= ShowMainMenu;
@@ -418,11 +434,44 @@ namespace WordPuzzle
 
         private void StartClassicMode()
         {
+            if (OnboardingRules.ShouldRouteToTutorial(cachedOnboarding))
+            {
+                StartTutorialRun();
+                return;
+            }
+            StartNormalClassic();
+        }
+
+        private void StartNormalClassic()
+        {
+            isTutorialRun = false;
+            pendingTutorialPuzzle = null;
             isDailyRun = false;
             pendingDailyPuzzle = null;
             activeMode = new ClassicMode();
             modeController.SetMode(activeMode);
             StartNewGame();
+        }
+
+        private void StartTutorialRun()
+        {
+            isTutorialRun = true;
+            isDailyRun = false;
+            pendingDailyPuzzle = null;
+            pendingTutorialPuzzle = TutorialPuzzle.Create();
+
+            if (tutorialOverlay == null)
+            {
+                // Never strand the player — skip straight to the real puzzle.
+                CompleteTutorial(false);
+                return;
+            }
+
+            activeMode = new ClassicMode();
+            modeController.SetMode(activeMode);
+            StartNewGame();
+            EnsureTutorialOverlaySubscribed();
+            tutorialOverlay.Begin();
         }
 
         // Task 1A — Daily puzzle entry point.
@@ -535,6 +584,61 @@ namespace WordPuzzle
             if (cachedDailyProgress == null) cachedDailyProgress = new DailyProgress();
             DailyStreakRules.RefreshTodayFlag(cachedDailyProgress, dailyClock.TodayIso);
         }
+
+        // Task 3A — load OnboardingData at boot (mirrors LoadDailyProgressBlocking).
+        private void LoadOnboardingBlocking(IDataManager dataManager)
+        {
+            try
+            {
+                var task = dataManager.LoadOnboardingAsync();
+                cachedOnboarding = task.IsCompleted ? task.Result : task.GetAwaiter().GetResult();
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogWarning($"Onboarding load failed; using defaults: {ex.Message}");
+                cachedOnboarding = new OnboardingData();
+            }
+            if (cachedOnboarding == null) cachedOnboarding = new OnboardingData();
+        }
+
+        // Task 3A — complete the tutorial (called by overlay events or fallback).
+        private async void CompleteTutorial(bool skipped)
+        {
+            isTutorialRun = false;
+            pendingTutorialPuzzle = null;
+            cachedOnboarding = OnboardingRules.MarkCompleted(cachedOnboarding, skipped);
+            if (dataManagerRef != null)
+            {
+                try { await dataManagerRef.SaveOnboardingAsync(cachedOnboarding); }
+                catch (System.Exception ex) { Debug.LogError($"[Tutorial] persist failed: {ex.Message}"); }
+            }
+            if (tutorialOverlay != null) tutorialOverlay.Hide();
+            StartNormalClassic();
+        }
+
+        // Task 3A — settings screen "Replay Tutorial" handler.
+        private async void OnReplayTutorialRequested()
+        {
+            cachedOnboarding = OnboardingRules.Reset(cachedOnboarding);
+            if (dataManagerRef != null)
+            {
+                try { await dataManagerRef.SaveOnboardingAsync(cachedOnboarding); }
+                catch (System.Exception ex) { Debug.LogError($"[Tutorial] reset persist failed: {ex.Message}"); }
+            }
+            // Next time Classic is tapped, the gate in StartClassicMode reroutes to tutorial.
+        }
+
+        // Task 3A — subscribe overlay events exactly once.
+        private void EnsureTutorialOverlaySubscribed()
+        {
+            if (tutorialOverlaySubscribed || tutorialOverlay == null) return;
+            tutorialOverlay.OnSkipRequested      += HandleTutorialSkip;
+            tutorialOverlay.OnSuccessBeatFinished += HandleTutorialSuccess;
+            tutorialOverlaySubscribed = true;
+        }
+
+        private void HandleTutorialSkip()    => CompleteTutorial(true);
+        private void HandleTutorialSuccess() => CompleteTutorial(false);
 
         // Task 1A — load daily puzzle pool from Resources and bind to the system clock.
         private void InitializeDailyPuzzleService()
@@ -716,7 +820,12 @@ namespace WordPuzzle
             PuzzleDefinition puzzleDefinition;
             Difficulty difficulty;
 
-            if (isDailyRun && pendingDailyPuzzle != null)
+            if (isTutorialRun && pendingTutorialPuzzle != null)
+            {
+                puzzleDefinition = pendingTutorialPuzzle;
+                difficulty = Difficulty.Easy;
+            }
+            else if (isDailyRun && pendingDailyPuzzle != null)
             {
                 // Task 1A — deterministic daily puzzle.
                 puzzleDefinition = pendingDailyPuzzle;
@@ -797,6 +906,18 @@ namespace WordPuzzle
             else if (!string.IsNullOrEmpty(result.reason))
             {
                 gameplay.ShowFeedback(result.reason, Color.red);
+            }
+
+            if (isTutorialRun && tutorialOverlay != null)
+            {
+                var st = stateManager.GetCurrentState();
+                bool reachedEnd = st.wordChain != null
+                    && st.wordChain.Count > 0
+                    && string.Equals(
+                        st.wordChain[st.wordChain.Count - 1],
+                        pendingTutorialPuzzle.endWord,
+                        System.StringComparison.OrdinalIgnoreCase);
+                tutorialOverlay.OnSubmission(result.accepted, reachedEnd);
             }
         }
 
@@ -902,6 +1023,9 @@ namespace WordPuzzle
 
         private void CheckGameOver()
         {
+            // Tutorial completion is driven by the overlay success beat, not EndGame.
+            if (isTutorialRun) return;
+
             if (activeMode == null || !activeMode.IsGameOver()) return;
 
             // PuzzleShowMode (Spec §3.3): tier advancement is now driven internally
