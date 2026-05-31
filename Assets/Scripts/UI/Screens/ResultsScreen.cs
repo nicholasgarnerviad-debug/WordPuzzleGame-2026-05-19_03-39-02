@@ -32,10 +32,12 @@ namespace WordPuzzle.UI
         public event Action OnMainMenu;
         public event Action OnShareRequested;
 
-        // Style tokens (accent-gold for streak number, text-muted for the come-back line).
-        private static readonly Color C_ACCENT_GOLD = new Color32(0xC9, 0xB4, 0x58, 0xFF);
-        private static readonly Color C_TEXT_PRIMARY = new Color32(0xE7, 0xE1, 0xC4, 0xFF);
-        private static readonly Color C_TEXT_MUTED  = new Color32(0x8A, 0x93, 0xA1, 0xFF);
+        // Style tokens.
+        // Task 8A: gold is kept for the primary streak number (focal element in streakText richtext)
+        // and for the toast confirmation. longestStreakText (Best: N) is secondary — demoted to muted.
+        private static readonly Color C_ACCENT_GOLD  = new Color32(0xC9, 0xB4, 0x58, 0xFF);
+        private static readonly Color C_TEXT_PRIMARY  = new Color32(0xE7, 0xE1, 0xC4, 0xFF);
+        private static readonly Color C_TEXT_MUTED   = new Color32(0x8A, 0x93, 0xA1, 0xFF);
 
         private UnityAction playAgainAction;
         private UnityAction mainMenuAction;
@@ -169,7 +171,9 @@ namespace WordPuzzle.UI
             if (longestStreakText != null)
             {
                 longestStreakText.text = bestLine;
-                longestStreakText.color = C_ACCENT_GOLD;
+                // Task 8A: "Best: N" is secondary info — demoted to text-muted. Gold is reserved
+                // for the primary streak number in the streakText richtext above.
+                longestStreakText.color = C_TEXT_MUTED;
                 longestStreakText.gameObject.SetActive(true);
             }
             if (comeBackTomorrowText != null)

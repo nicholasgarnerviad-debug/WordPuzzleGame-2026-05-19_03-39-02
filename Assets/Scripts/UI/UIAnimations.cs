@@ -12,14 +12,34 @@ namespace WordPuzzle.UI
     {
         /// <summary>Task 7A — when true, all animation coroutines apply end-state instantly and return.</summary>
         public static bool ReduceMotion = false;
+
+        // ============================================================
+        //  Task 8D — Motion vocabulary constants
+        //  Single source of truth for all animation durations and easing.
+        // ============================================================
+
+        /// <summary>Micro-interactions: button taps, letter-tile punches, key presses.</summary>
+        public const float MICRO = 0.16f;
+
+        /// <summary>Standard transitions: screen fades, element enter/exit.</summary>
+        public const float STANDARD = 0.22f;
+
+        /// <summary>
+        /// Ease-out cubic: fast start, decelerates to rest. Used for all Task 8 motions.
+        /// Formula: 1 - (1-t)^3
+        /// </summary>
+        public static float EaseOutCubic(float t) => 1f - Mathf.Pow(1f - t, 3f);
+
+        // ============================================================
+
         /// <summary>
         /// Animates a button tap with scale down then back up effect.
         /// Animation: 1.0 → 0.95 → 1.0 with ease-out easing.
         /// </summary>
         /// <param name="button">The RectTransform of the button to animate</param>
-        /// <param name="duration">Total animation duration in seconds (default 0.3s)</param>
+        /// <param name="duration">Total animation duration in seconds (default MICRO)</param>
         /// <returns>Coroutine for use with StartCoroutine()</returns>
-        public static IEnumerator ScaleButtonTap(RectTransform button, float duration = 0.15f)
+        public static IEnumerator ScaleButtonTap(RectTransform button, float duration = MICRO)
         {
             if (ReduceMotion) { button.localScale = Vector3.one; yield break; }
             Vector3 originalScale = button.localScale;
@@ -31,8 +51,7 @@ namespace WordPuzzle.UI
             {
                 elapsedTime += Time.deltaTime;
                 float progress = elapsedTime / (duration * 0.5f);
-                float easedProgress = EaseOut(progress);
-                float scale = Mathf.Lerp(1f, targetScale, easedProgress);
+                float scale = Mathf.Lerp(1f, targetScale, EaseOutCubic(progress));
                 button.localScale = originalScale * scale;
                 yield return null;
             }
@@ -44,8 +63,7 @@ namespace WordPuzzle.UI
             {
                 elapsedTime += Time.deltaTime;
                 float progress = elapsedTime / (duration * 0.5f);
-                float easedProgress = EaseOut(progress);
-                float scale = Mathf.Lerp(targetScale, 1f, easedProgress);
+                float scale = Mathf.Lerp(targetScale, 1f, EaseOutCubic(progress));
                 button.localScale = originalScale * scale;
                 yield return null;
             }
@@ -56,12 +74,12 @@ namespace WordPuzzle.UI
 
         /// <summary>
         /// Animates a tile tap with scale up then back down effect.
-        /// Animation: 1.0 → 1.1 → 1.0 with ease-out easing.
+        /// Animation: 1.0 → 1.1 → 1.0 with ease-out-cubic easing.
         /// </summary>
         /// <param name="tile">The RectTransform of the tile to animate</param>
-        /// <param name="duration">Total animation duration in seconds (default 0.3s)</param>
+        /// <param name="duration">Total animation duration in seconds (default MICRO)</param>
         /// <returns>Coroutine for use with StartCoroutine()</returns>
-        public static IEnumerator ScaleTileTap(RectTransform tile, float duration = 0.15f)
+        public static IEnumerator ScaleTileTap(RectTransform tile, float duration = MICRO)
         {
             if (ReduceMotion) { tile.localScale = Vector3.one; yield break; }
             Vector3 originalScale = tile.localScale;
@@ -73,8 +91,7 @@ namespace WordPuzzle.UI
             {
                 elapsedTime += Time.deltaTime;
                 float progress = elapsedTime / (duration * 0.5f);
-                float easedProgress = EaseOut(progress);
-                float scale = Mathf.Lerp(1f, targetScale, easedProgress);
+                float scale = Mathf.Lerp(1f, targetScale, EaseOutCubic(progress));
                 tile.localScale = originalScale * scale;
                 yield return null;
             }
@@ -86,8 +103,7 @@ namespace WordPuzzle.UI
             {
                 elapsedTime += Time.deltaTime;
                 float progress = elapsedTime / (duration * 0.5f);
-                float easedProgress = EaseOut(progress);
-                float scale = Mathf.Lerp(targetScale, 1f, easedProgress);
+                float scale = Mathf.Lerp(targetScale, 1f, EaseOutCubic(progress));
                 tile.localScale = originalScale * scale;
                 yield return null;
             }
@@ -97,14 +113,14 @@ namespace WordPuzzle.UI
         }
 
         /// <summary>
-        /// Animates a word addition with bounce scale and fade in effect.
-        /// Animation: Bounce scale (1.0 → 1.2 → 1.0) + Fade in (0 → 1 opacity).
+        /// Task 8D — calm word-add settle: fade in + gentle scale rise (1.0→1.04→1.0), ease-out, no bounce.
+        /// Replaces the former overshoot (1.0→1.2→1.0) which felt cartoon-bouncy.
         /// Starts with alpha = 0, ends with alpha = 1.
         /// </summary>
         /// <param name="word">The CanvasGroup of the word to animate</param>
-        /// <param name="duration">Total animation duration in seconds (default 0.4s)</param>
+        /// <param name="duration">Total animation duration in seconds (default STANDARD)</param>
         /// <returns>Coroutine for use with StartCoroutine()</returns>
-        public static IEnumerator WordAddAnimation(CanvasGroup word, float duration = 0.18f)
+        public static IEnumerator WordAddAnimation(CanvasGroup word, float duration = STANDARD)
         {
             if (ReduceMotion)
             {
@@ -116,34 +132,27 @@ namespace WordPuzzle.UI
             Vector3 originalScale = wordTransform.localScale;
             float elapsedTime = 0f;
 
-            // Initial state: alpha = 0
+            // Initial state: alpha = 0, scale at 1.0 (no pre-squeeze)
             word.alpha = 0f;
 
-            // Scale up phase: 1.0 → 1.2, fade in: 0 → 1
+            // Rise phase: scale 1.0 → 1.04, fade 0 → 1 (ease-out-cubic)
             while (elapsedTime < duration * 0.5f)
             {
                 elapsedTime += Time.deltaTime;
-                float progress = elapsedTime / (duration * 0.5f);
-                float easedScaleProgress = EaseOut(progress);
-                float easedFadeProgress = EaseInOut(progress);
-
-                float scale = Mathf.Lerp(1f, 1.2f, easedScaleProgress);
-                word.alpha = Mathf.Lerp(0f, 1f, easedFadeProgress);
-                wordTransform.localScale = originalScale * scale;
+                float p = EaseOutCubic(Mathf.Clamp01(elapsedTime / (duration * 0.5f)));
+                word.alpha = p;
+                wordTransform.localScale = originalScale * Mathf.Lerp(1f, 1.04f, p);
                 yield return null;
             }
 
             elapsedTime = 0f;
 
-            // Scale down phase: 1.2 → 1.0, maintain alpha at 1
+            // Settle phase: scale 1.04 → 1.0, alpha stays 1 (ease-out-cubic)
             while (elapsedTime < duration * 0.5f)
             {
                 elapsedTime += Time.deltaTime;
-                float progress = elapsedTime / (duration * 0.5f);
-                float easedProgress = EaseOut(progress);
-
-                float scale = Mathf.Lerp(1.2f, 1f, easedProgress);
-                wordTransform.localScale = originalScale * scale;
+                float p = EaseOutCubic(Mathf.Clamp01(elapsedTime / (duration * 0.5f)));
+                wordTransform.localScale = originalScale * Mathf.Lerp(1.04f, 1f, p);
                 yield return null;
             }
 
@@ -154,14 +163,14 @@ namespace WordPuzzle.UI
 
         /// <summary>
         /// Animates a fade in or fade out transition.
-        /// Fade in: opacity 0 → 1.
-        /// Fade out: opacity 1 → 0.
+        /// Fade in: opacity 0 → 1. Fade out: opacity 1 → 0.
+        /// Task 8D: default duration changed to STANDARD (0.22s); uses EaseOutCubic.
         /// </summary>
         /// <param name="screen">The CanvasGroup of the screen to animate</param>
         /// <param name="fadeIn">True for fade in, false for fade out</param>
-        /// <param name="duration">Total animation duration in seconds (default 0.5s)</param>
+        /// <param name="duration">Total animation duration in seconds (default STANDARD)</param>
         /// <returns>Coroutine for use with StartCoroutine()</returns>
-        public static IEnumerator FadeTransition(CanvasGroup screen, bool fadeIn, float duration = 0.5f)
+        public static IEnumerator FadeTransition(CanvasGroup screen, bool fadeIn, float duration = STANDARD)
         {
             float startAlpha = fadeIn ? 0f : 1f;
             float targetAlpha = fadeIn ? 1f : 0f;
@@ -173,8 +182,7 @@ namespace WordPuzzle.UI
             {
                 elapsedTime += Time.deltaTime;
                 float progress = elapsedTime / duration;
-                float easedProgress = EaseInOut(progress);
-                screen.alpha = Mathf.Lerp(startAlpha, targetAlpha, easedProgress);
+                screen.alpha = Mathf.Lerp(startAlpha, targetAlpha, EaseOutCubic(progress));
                 yield return null;
             }
 

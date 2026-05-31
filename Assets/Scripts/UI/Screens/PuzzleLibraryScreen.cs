@@ -44,11 +44,15 @@ namespace WordPuzzle.UI
         private static readonly Color C_HEADER_BG       = HexC("#1B1F27");
         private static readonly Color C_HEADER_TIER     = HexC("#FFFFFF");
         private static readonly Color C_HEADER_TIER_LK  = HexC("#5A6270");
-        private static readonly Color C_HEADER_COUNT    = HexC("#C9B458");
+        // Task 8A: demoted from gold #C9B458 to text-muted #8A93A1. The tier count is
+        // secondary info; gold is reserved for the in-progress current-item indicator.
+        private static readonly Color C_HEADER_COUNT    = HexC("#8A93A1");
         private static readonly Color C_HEADER_COUNT_LK = HexC("#5A6270");
 
         private static readonly Color C_BADGE_OPTIMAL_BG = HexC("#2A2F3A");
-        private static readonly Color C_BADGE_OPTIMAL_FG = HexC("#C9B458");
+        // Task 8A: optimal-steps badge FG demoted from gold #C9B458 to text-muted #8A93A1.
+        // Badge is informational, not the focal element; in-progress border/icon keep gold.
+        private static readonly Color C_BADGE_OPTIMAL_FG = HexC("#8A93A1");
         private static readonly Color C_PROGRESS_BG      = HexC("#2A2F3A");
         private static readonly Color C_SUBTITLE         = HexC("#8A93A1");
         private static readonly Color C_PUZZLE_ID        = HexC("#7A828F");

@@ -75,9 +75,14 @@ namespace WordPuzzle.UI
         private static readonly Color C_LABEL_REACHED        = HexToColor("#6AAA64");
 
         // Legacy label palette (kept for FROM/TO + steps subtitle).
+        // Task 8A: LBL_TO demoted from gold #C9B458 to text-muted #8A93A1.
+        // The TO-row label is secondary info; gold is reserved for focus/hint/win moments.
         private static readonly Color LBL_FROM       = HexToColor("#7A828F");
-        private static readonly Color LBL_TO         = HexToColor("#C9B458");
+        private static readonly Color LBL_TO         = HexToColor("#8A93A1");
         private static readonly Color LBL_STEPS      = HexToColor("#8A93A1");
+
+        // Task 8A/8C — secondary UI labels (score, etc.) use text-muted so they don't compete.
+        private static readonly Color C_LABEL_SECONDARY = HexToColor("#8A93A1");
 
         // ---------- Spec §3 layout constants ----------
         private const float TILE_SIZE_LADDER = 64f;
@@ -171,17 +176,17 @@ namespace WordPuzzle.UI
             EnsureRevealPreviewRow();
             HideRevealPreviewRow();
 
-            // §3.6 — runtime styling for tier indicator (Bold, gold #C9B458, centered, 28pt).
-            // Enforced at runtime so scene-side regressions cannot silently break presentation.
+            // Task 8A — tier indicator demoted: secondary info must not compete with gold focal elements.
+            // Changed from Bold+gold(#C9B458)+28pt to Normal+text-muted(#8A93A1)+20pt, still centered.
             if (tierIndicatorText != null)
             {
-                tierIndicatorText.fontStyle = FontStyles.Bold;
-                tierIndicatorText.color = new Color32(0xC9, 0xB4, 0x58, 0xFF);
-                tierIndicatorText.fontSize = 28;
+                tierIndicatorText.fontStyle = FontStyles.Normal;
+                tierIndicatorText.color = new Color32(0x8A, 0x93, 0xA1, 0xFF);
+                tierIndicatorText.fontSize = 20;
                 tierIndicatorText.alignment = TextAlignmentOptions.Center;
                 var rt = tierIndicatorText.rectTransform;
                 rt.anchoredPosition = new Vector2(0f, 795f);
-                rt.sizeDelta = new Vector2(700f, 60f);
+                rt.sizeDelta = new Vector2(700f, 48f);
                 tierIndicatorText.gameObject.SetActive(true);
             }
         }
@@ -430,7 +435,10 @@ namespace WordPuzzle.UI
 
         public void SetScore(int score)
         {
-            if (scoreText != null) scoreText.text = $"Score: {score}";
+            if (scoreText == null) return;
+            scoreText.text = $"Score: {score}";
+            // Task 8A/8C: score is secondary info — muted so it doesn't pull focus from tiles.
+            scoreText.color = C_LABEL_SECONDARY;
         }
 
         public void SetTimer(float timeRemaining)
@@ -606,11 +614,83 @@ namespace WordPuzzle.UI
             _haptics?.Buzz();
         }
 
-        /// <summary>Task 7 — called by GameBootstrap on EndGame (win).</summary>
+        /// <summary>Task 7/8B — called by GameBootstrap on EndGame (win).</summary>
         public void OnGameWon()
         {
             _sfx?.PlayWin();
             _haptics?.Buzz();
+            // Task 8B — celebratory ascent beat on the TO row (after sfx/haptic).
+            StartCoroutine(WinAscentBeat());
+        }
+
+        /// <summary>
+        /// Task 8B — WinAscentBeat: transitions endWordRow tiles toward accent-green
+        /// with a brief upward Y nudge + scale settle, ease-out, ~500ms total.
+        /// If ReduceMotion is on, applies the green end-state instantly with no motion.
+        /// Does NOT fire sfx or haptics (those already fired in OnGameWon).
+        /// </summary>
+        private IEnumerator WinAscentBeat()
+        {
+            if (endWordRow == null) yield break;
+
+            // Apply green end-state to all TO-row tiles immediately (color transition).
+            ApplyEndRowWinColors();
+
+            if (UIAnimations.ReduceMotion)
+            {
+                // Accessibility: instant end-state, no motion.
+                yield break;
+            }
+
+            const float duration = 0.50f;   // ~500ms total, ease-out, not bouncy
+            const float nudgeY   = 12f;     // upward Y nudge in local pixels
+            const float peakScale = 1.04f;  // gentle scale peak — not cartoon
+
+            Vector3 originPos   = endWordRow.localPosition;
+            Vector3 peakPos     = originPos + new Vector3(0f, nudgeY, 0f);
+            Vector3 originScale = endWordRow.localScale;
+            Vector3 peakScaleV  = originScale * peakScale;
+
+            float half = duration * 0.5f;
+            float t = 0f;
+
+            // Rise phase: nudge up + scale out (ease-out-cubic)
+            while (t < half)
+            {
+                t += Time.unscaledDeltaTime;
+                float p = UIAnimations.EaseOutCubic(Mathf.Clamp01(t / half));
+                endWordRow.localPosition = Vector3.LerpUnclamped(originPos, peakPos, p);
+                endWordRow.localScale    = Vector3.LerpUnclamped(originScale, peakScaleV, p);
+                yield return null;
+            }
+
+            t = 0f;
+
+            // Settle phase: return to origin (ease-out-cubic)
+            while (t < half)
+            {
+                t += Time.unscaledDeltaTime;
+                float p = UIAnimations.EaseOutCubic(Mathf.Clamp01(t / half));
+                endWordRow.localPosition = Vector3.LerpUnclamped(peakPos, originPos, p);
+                endWordRow.localScale    = Vector3.LerpUnclamped(peakScaleV, originScale, p);
+                yield return null;
+            }
+
+            // Ensure exact rest state.
+            endWordRow.localPosition = originPos;
+            endWordRow.localScale    = originScale;
+        }
+
+        /// <summary>Task 8B — sets all endWordRow tiles to the accent-green won state.</summary>
+        private void ApplyEndRowWinColors()
+        {
+            if (endWordRow == null) return;
+            for (int i = 0; i < endWordRow.childCount; i++)
+            {
+                var tile = endWordRow.GetChild(i).GetComponent<LetterTile>();
+                if (tile == null) continue;
+                ApplyTileStyle(tile, LadderTileStyle.EndWordReached);
+            }
         }
 
         public void FlipRevealEndWord()
@@ -995,8 +1075,10 @@ namespace WordPuzzle.UI
             vlg.childControlHeight = false;
             vlg.childForceExpandWidth = false;
             vlg.childForceExpandHeight = false;
+            // Task 8C: ROW_GAP_V (8px) between chain rows; tight top/bottom pad so chain
+            // doesn't crowd the FROM/TO rows on small portrait devices (1080x1920 and smaller).
             vlg.spacing = ROW_GAP_V;
-            vlg.padding = new RectOffset(12, 12, 12, 12);
+            vlg.padding = new RectOffset(8, 8, 8, 8);
 
             var csf = t.GetComponent<ContentSizeFitter>();
             if (csf == null) csf = t.gameObject.AddComponent<ContentSizeFitter>();
