@@ -25,6 +25,27 @@ FROM  C  A  T            FROM  S  T  O  N  E
 | **Puzzle Show** | None | Curated tier library (15 puzzles per tier × 6 tiers = 90) | Reach end word; tap a card to play any unlocked puzzle |
 | **Time Attack** | 60s or 120s, Timed or Survival | Random 3–7 letter words back-to-back | Solve as many as you can before the timer runs out |
 
+### Share Result
+- A **Share Result** button on the Results screen copies a compact, paste-anywhere summary to
+  the clipboard (`GUIUtility.systemCopyBuffer`). No third-party plugin required.
+- Format mirrors Wordle's emoji grid — one row per accepted chain step, `🟩` at the position that
+  changed, `⬛` at unchanged positions:
+  ```
+  Word Ladder — Daily #123
+  CAT → BAG  •  2 steps
+  🟩⬛⬛
+  ⬛⬛🟩
+  🔥 Streak 5 · Best 12
+  ```
+- Mode label varies: `Classic`, `Daily #N`, `Puzzle Show T<tier>`, `Time Attack 60s [Survival]`.
+- Time segment (`m:ss`) is only included for timed modes (Time Attack).
+- Streak footer is only included for the Daily mode.
+- **Native image share** (the OS share sheet with a PNG of the grid) requires a third-party plugin
+  (e.g. [NativeShare](https://github.com/yasirkula/UnityNativeShare)). The seam is in place:
+  `Assets/Scripts/Game/IShareService.cs` and `ShareCardBuilder.RenderPng(input)` produce the PNG.
+  Adding the NativeShare package requires explicit approval; until then, the default
+  `ClipboardShareService` is used.
+
 ### Daily Puzzle + Streak
 - Today's puzzle is derived from the player's **local date** with no network call:
   `index = (Today − 2025-01-01).Days mod 450`. Every client on the same calendar day

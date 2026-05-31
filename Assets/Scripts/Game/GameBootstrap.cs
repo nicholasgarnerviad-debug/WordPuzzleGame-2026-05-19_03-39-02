@@ -45,6 +45,10 @@ namespace WordPuzzle
         private PuzzleDefinition pendingDailyPuzzle;
         private int pendingDailyIndex = -1;
 
+        // Task 2A — Share result. Snapshot captured on EndGame, consumed on Share tap.
+        private IShareService shareService = new ClipboardShareService();
+        private ShareCardBuilder.ShareInput lastShareInput;
+
         private void Start()
         {
             // Try to get UIManager from same GameObject if not assigned
@@ -250,6 +254,7 @@ namespace WordPuzzle
             // Wire results
             uiManager.GetResults().OnPlayAgain += PlayAgain;
             uiManager.GetResults().OnMainMenu += ShowMainMenu;
+            uiManager.GetResults().OnShareRequested += ShareLastResult;
         }
 
         private void OnDestroy()
@@ -307,6 +312,7 @@ namespace WordPuzzle
 
             uiManager.GetResults().OnPlayAgain -= PlayAgain;
             uiManager.GetResults().OnMainMenu -= ShowMainMenu;
+            uiManager.GetResults().OnShareRequested -= ShareLastResult;
         }
 
         private void Update()
@@ -920,10 +926,16 @@ namespace WordPuzzle
             // Snapshot daily-run state before we tear down, then route to results.
             bool wasDailyRun = isDailyRun;
             int dailyIndex = pendingDailyIndex;
+
+            // Task 2A — capture the share input BEFORE the active mode is cleared.
+            // (state.wordChain / current puzzle are still valid here.)
+            CaptureShareInput(wasDailyRun, dailyIndex);
+
             isDailyRun = false;
             pendingDailyPuzzle = null;
             pendingDailyIndex = -1;
 
+            var snapshotMode = activeMode;
             activeMode = null;
             var stats = modeController.GetCurrentStats();
             uiManager.GetResults().DisplayStats(stats);
@@ -934,6 +946,82 @@ namespace WordPuzzle
             }
 
             uiManager.ShowResults();
+        }
+
+        // Task 2A — assemble the ShareInput from the just-finished run.
+        private void CaptureShareInput(bool wasDailyRun, int dailyIndex)
+        {
+            try
+            {
+                var state = stateManager?.GetCurrentState();
+                if (state == null || state.puzzle == null) { lastShareInput = null; return; }
+
+                var input = new ShareCardBuilder.ShareInput
+                {
+                    startWord = state.puzzle.startWord,
+                    endWord = state.puzzle.endWord,
+                    chain = new System.Collections.Generic.List<string>(state.wordChain ?? new System.Collections.Generic.List<string>()),
+                    totalTimeSeconds = state.elapsedTime,
+                };
+
+                if (wasDailyRun)
+                {
+                    input.mode = ShareCardBuilder.ModeKind.Daily;
+                    input.dailyIndex = dailyIndex >= 0 ? dailyIndex : (int?)null;
+                    if (cachedDailyProgress != null)
+                    {
+                        // Streak values reflect post-completion state after RecordDailyCompletionAndSurface;
+                        // for the share payload we use the post-apply values (incremented streak).
+                        input.streakCurrent = cachedDailyProgress.currentStreak;
+                        input.streakBest = cachedDailyProgress.longestStreak;
+                    }
+                }
+                else if (activeMode is PuzzleShowMode psm)
+                {
+                    input.mode = ShareCardBuilder.ModeKind.PuzzleShow;
+                    input.puzzleShowTier = psm.CurrentTier;
+                }
+                else if (activeMode is TimeAttackMode tam)
+                {
+                    input.mode = ShareCardBuilder.ModeKind.TimeAttack;
+                    var cfg = tam.Config;
+                    if (cfg != null)
+                    {
+                        input.timeAttackBaseSeconds = Mathf.RoundToInt(cfg.baseTimeSeconds);
+                        input.timeAttackSurvival = cfg.subMode == TimeAttackSubMode.Survival;
+                    }
+                }
+                else
+                {
+                    input.mode = ShareCardBuilder.ModeKind.Classic;
+                }
+
+                lastShareInput = input;
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogWarning($"[Share] CaptureShareInput failed: {ex.Message}");
+                lastShareInput = null;
+            }
+        }
+
+        private void ShareLastResult()
+        {
+            if (lastShareInput == null)
+            {
+                Debug.LogWarning("[Share] No share input available; nothing to copy.");
+                return;
+            }
+            // For daily runs, RecordDailyCompletionAndSurface runs after CaptureShareInput
+            // and updates the streak in-place. Pull the latest values just before sharing.
+            if (lastShareInput.mode == ShareCardBuilder.ModeKind.Daily && cachedDailyProgress != null)
+            {
+                lastShareInput.streakCurrent = cachedDailyProgress.currentStreak;
+                lastShareInput.streakBest = cachedDailyProgress.longestStreak;
+            }
+            string text = ShareCardBuilder.Build(lastShareInput);
+            bool ok = shareService.Share(text);
+            uiManager.GetResults().ShowToast(ok ? "Copied!" : "Copy failed");
         }
 
         // Task 1B/1C — apply streak rules + persist + drive the ResultsScreen daily widgets.

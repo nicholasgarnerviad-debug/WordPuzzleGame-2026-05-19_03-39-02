@@ -24,8 +24,13 @@ namespace WordPuzzle.UI
         [SerializeField] private TextMeshProUGUI longestStreakText;
         [SerializeField] private TextMeshProUGUI comeBackTomorrowText;
 
+        // Task 2A — share button + toast. Optional in scene; ShowToast no-ops when null.
+        [SerializeField] private Button shareButton;
+        [SerializeField] private TextMeshProUGUI toastText;
+
         public event Action OnPlayAgain;
         public event Action OnMainMenu;
+        public event Action OnShareRequested;
 
         // Style tokens (accent-gold for streak number, text-muted for the come-back line).
         private static readonly Color C_ACCENT_GOLD = new Color32(0xC9, 0xB4, 0x58, 0xFF);
@@ -52,6 +57,11 @@ namespace WordPuzzle.UI
             // §2.1 Visual swap: main-menu button becomes the spec "⌂ HOME" Home button.
             // SerializedField name unchanged per §2.3; behavior (navigate to MainMenu) unchanged.
             ApplyHomeButtonLabel(mainMenuButton);
+
+            // Task 2A — share button listener.
+            if (shareButton != null)
+                shareButton.onClick.AddListener(() => OnShareRequested?.Invoke());
+            if (toastText != null) toastText.gameObject.SetActive(false);
         }
 
         // §2.1/§2.3 Home-button visual swap.
@@ -76,6 +86,45 @@ namespace WordPuzzle.UI
 
             if (mainMenuButton != null && mainMenuAction != null)
                 mainMenuButton.onClick.RemoveListener(mainMenuAction);
+
+            if (shareButton != null) shareButton.onClick.RemoveAllListeners();
+        }
+
+        /// <summary>
+        /// Task 2A — show a short auto-fading confirmation. Uses the dedicated
+        /// toastText if wired, otherwise temporarily writes into modeNameText.
+        /// </summary>
+        public void ShowToast(string message)
+        {
+            if (toastText != null)
+            {
+                toastText.text = message;
+                toastText.color = C_ACCENT_GOLD;
+                toastText.gameObject.SetActive(true);
+                StopAllCoroutines();
+                StartCoroutine(HideToastAfter(1.6f));
+                return;
+            }
+            // Fallback: append to mode name briefly (silent if that's also null).
+            if (modeNameText != null && !string.IsNullOrEmpty(message))
+            {
+                string original = modeNameText.text;
+                modeNameText.text = $"{original}   <color=#C9B458>· {message}</color>";
+                StopAllCoroutines();
+                StartCoroutine(RestoreModeNameAfter(1.6f, original));
+            }
+        }
+
+        private System.Collections.IEnumerator HideToastAfter(float seconds)
+        {
+            yield return new WaitForSecondsRealtime(seconds);
+            if (toastText != null) toastText.gameObject.SetActive(false);
+        }
+
+        private System.Collections.IEnumerator RestoreModeNameAfter(float seconds, string original)
+        {
+            yield return new WaitForSecondsRealtime(seconds);
+            if (modeNameText != null) modeNameText.text = original;
         }
 
         public void DisplayStats(GameModeStats stats)
