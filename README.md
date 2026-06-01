@@ -257,15 +257,19 @@ All via `PlayerPrefs` (JSON values). `DataManager` owns them.
 
 ## 13. Known tech debt / candidate tasks
 
-These are real, current, and make good standalone "master prompts." (A consolidation pass was drafted and **intentionally reverted** — these remain open.)
+**Closed in the Task 9 consolidation (commit `17e6ab3`):**
+1. ✅ **Orphaned managers removed** — `CoinSystem` + `PlayerDataManager` stripped from the 3 legacy scenes and deleted; one-time stale `"Coins"` key cleanup in `DataManager`.
+2. ✅ **Undo collapsed to one path** — dead `GameSnapshot`/`undoHistory` stack deleted; `HandleUndo` is chain-rewind only (power-ups stay spent by design).
+3. ✅ **Score + streak floored** at 0 on undo (`Mathf.Max(0, …)`).
+4. ✅ **Typed reject reason** — `WordValidator` returns a `WordRejectReason` enum (in the `Puzzle` assembly); `GameStateManager` maps enum→text in one place; the `IndexOf` parser is gone. User strings unchanged.
+5. ✅ **`HaveOneLetterDifference` unified** — `PuzzleGenerator` now calls `WordOps`.
 
-1. **Two orphaned managers.** `CoinSystem` (`Monetization/`) and `PlayerDataManager` (`Persistence/`) are unused MonoBehaviours, attached only in the 3 **legacy unused scenes** (`ClassicMode/PuzzleShowMode/TimeAttackMode.unity`, in Build Settings but never `LoadScene`'d). Both write a stale `"Coins"` key. Consolidating means stripping those components from the 3 scenes, deleting the scripts (+`.meta`), and a one-time `"Coins"` cleanup. **Watch:** GUID-check scenes/prefabs before deleting any MonoBehaviour script.
-2. **Dead undo snapshot stack.** `MutableGameState.undoHistory` (`Stack<GameSnapshot>`) is never pushed to, so `HandleUndo` always takes the fallback branch and the snapshot-restore branch is unreachable (hint/reveal budgets aren't refunded). Pick one path and delete the other.
-3. **Score not floored on undo** — `score -= lastWord.Length` can go negative; needs `Mathf.Max(0, …)`.
-4. **Brittle validator→UI reason coupling** — `WordValidator` returns English strings; `GameStateManager.MapValidationMessage` re-parses via `IndexOf`. Replace with a typed reason enum carried on `ValidationResult` (mind the assembly boundary: the enum must live in `Puzzle`, not `State`).
-5. **Third `HaveOneLetterDifference` copy** in `PuzzleGenerator` (the `WordGraph`/`WordValidator` copies were already unified into `WordOps`).
+**Still open:**
 6. **Native image share** — `IShareService`/`ShareCardBuilder.RenderPng` seam is ready; wiring the OS share sheet needs an approved plugin (e.g. NativeShare).
 7. **AudioMixer + real SFX clips** — `SfxManager` has slots but no clips/mixer in the repo yet.
+8. **Full Classic resume** — Resume restores tier/daily puzzles (id-resolvable); random Classic isn't reconstructable from the current save snapshot (no end-word/solution stored), so it hides Resume. A snapshot-schema extension would enable full Classic resume.
+
+> **Verification caveat (important for any agent):** the unityMCP EditMode test runner is currently **non-functional** — it collapses to the assembly root and never invokes NUnit, reporting `"Passed"` even for a deliberately-failing canary. Treat its summary as "not run." Verify changes by **clean compile + reading test assertions against the implementation** until the runner is fixed (see [§17](#17-notes-for-ai-agents-working-in-this-repo)).
 
 ---
 
