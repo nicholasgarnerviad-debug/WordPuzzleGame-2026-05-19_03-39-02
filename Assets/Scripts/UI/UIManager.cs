@@ -16,6 +16,8 @@ namespace WordPuzzle.UI
         [SerializeField] private PuzzleLibraryScreen libraryScreen;
         [SerializeField] private SettingsScreen settingsScreen;
         [SerializeField] private TimeAttackSetupScreen timeAttackSetupScreen;
+        // Task 9F — Statistics screen.
+        [SerializeField] private StatsScreen statsScreen;
 
         private void Awake()
         {
@@ -35,6 +37,7 @@ namespace WordPuzzle.UI
             if (libraryScreen != null) libraryScreen.Hide();
             if (settingsScreen != null) settingsScreen.Hide();
             if (timeAttackSetupScreen != null) timeAttackSetupScreen.Hide();
+            if (statsScreen != null) statsScreen.Hide();
         }
 
         public void ShowGameplay()
@@ -45,6 +48,7 @@ namespace WordPuzzle.UI
             if (libraryScreen != null) libraryScreen.Hide();
             if (settingsScreen != null) settingsScreen.Hide();
             if (timeAttackSetupScreen != null) timeAttackSetupScreen.Hide();
+            if (statsScreen != null) statsScreen.Hide();
         }
 
         public void ShowResults()
@@ -55,6 +59,7 @@ namespace WordPuzzle.UI
             if (libraryScreen != null) libraryScreen.Hide();
             if (settingsScreen != null) settingsScreen.Hide();
             if (timeAttackSetupScreen != null) timeAttackSetupScreen.Hide();
+            if (statsScreen != null) statsScreen.Hide();
         }
 
         public void ShowLibrary()
@@ -65,6 +70,7 @@ namespace WordPuzzle.UI
             if (libraryScreen != null) libraryScreen.Show();
             if (settingsScreen != null) settingsScreen.Hide();
             if (timeAttackSetupScreen != null) timeAttackSetupScreen.Hide();
+            if (statsScreen != null) statsScreen.Hide();
         }
 
         public void ShowSettings()
@@ -75,6 +81,7 @@ namespace WordPuzzle.UI
             if (libraryScreen != null) libraryScreen.Hide();
             if (settingsScreen != null) settingsScreen.Show();
             if (timeAttackSetupScreen != null) timeAttackSetupScreen.Hide();
+            if (statsScreen != null) statsScreen.Hide();
         }
 
         // §5.4 — Time Attack setup screen routing.
@@ -86,6 +93,19 @@ namespace WordPuzzle.UI
             if (libraryScreen != null) libraryScreen.Hide();
             if (settingsScreen != null) settingsScreen.Hide();
             if (timeAttackSetupScreen != null) timeAttackSetupScreen.Show();
+            if (statsScreen != null) statsScreen.Hide();
+        }
+
+        // Task 9F — Statistics screen routing.
+        public void ShowStats()
+        {
+            mainMenuScreen.Hide();
+            gameplayScreen.Hide();
+            resultsScreen.Hide();
+            if (libraryScreen != null) libraryScreen.Hide();
+            if (settingsScreen != null) settingsScreen.Hide();
+            if (timeAttackSetupScreen != null) timeAttackSetupScreen.Hide();
+            if (statsScreen != null) statsScreen.Show();
         }
 
         // Screen accessors
@@ -95,6 +115,7 @@ namespace WordPuzzle.UI
         public PuzzleLibraryScreen GetLibrary() => libraryScreen;
         public SettingsScreen GetSettings() => settingsScreen;
         public TimeAttackSetupScreen GetTimeAttackSetup() => timeAttackSetupScreen;
+        public StatsScreen GetStats() => statsScreen;
 
     }
 }

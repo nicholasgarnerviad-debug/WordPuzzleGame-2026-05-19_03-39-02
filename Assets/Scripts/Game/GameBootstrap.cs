@@ -66,6 +66,13 @@ namespace WordPuzzle
         [SerializeField] private SfxManager sfxManager;
         private IHaptics haptics;
 
+        // Task 9F — Statistics screen.
+        // Task 9G — Resume: snapshot loaded at boot; PuzzleDefinition cached if resumable.
+        private PlayerProgress cachedPlayerProgress;
+        private GameStateSnapshot cachedResumeSnapshot;
+        private PuzzleDefinition cachedResumePuzzle;
+        private string cachedResumeMode;  // "PuzzleShow" | "Daily" — set by TryLoadResumable
+
         private void Start()
         {
             // Try to get UIManager from same GameObject if not assigned
@@ -110,6 +117,7 @@ namespace WordPuzzle
                 LoadSettingsBlocking(dataManager);
                 LoadDailyProgressBlocking(dataManager);
                 LoadOnboardingBlocking(dataManager);
+                LoadPlayerProgressBlocking(dataManager);
                 InitializeDailyPuzzleService();
 
                 stateManager = new GameStateManager(wordValidator, dataManager);
@@ -135,6 +143,9 @@ namespace WordPuzzle
                 // so the game runs in Editor without an ad SDK.
                 adService = GetComponent<IAdService>() ?? (IAdService)new NullAdService();
                 adPolicy  = new AdPolicyService(adService);
+
+                // Task 9G — attempt to load a resumable snapshot (requires daily pool ready).
+                LoadResumeSnapshotBlocking(dataManager);
 
                 // Task 7 — wire juice subsystems after all systems + UI are ready.
                 ApplyJuiceSettings();
@@ -293,6 +304,8 @@ namespace WordPuzzle
             uiManager.GetMainMenu().OnTimeAttackSelected += ShowTimeAttackSetup;
             uiManager.GetMainMenu().OnLibrarySelected += ShowLibrary;
             uiManager.GetMainMenu().OnSettingsSelected += ShowSettings;
+            uiManager.GetMainMenu().OnStatsSelected += ShowStats;
+            uiManager.GetMainMenu().OnResumeSelected += ResumeGame;
 
             // Wire library back button + puzzle-tap → PuzzleShowMode (§5 library wiring)
             if (uiManager.GetLibrary() != null)
@@ -316,6 +329,10 @@ namespace WordPuzzle
                 uiManager.GetSettings().OnResetProgressConfirmed += OnResetProgressConfirmed;
                 uiManager.GetSettings().OnReplayTutorialRequested += OnReplayTutorialRequested;
             }
+
+            // Task 9F — Stats screen back-button.
+            if (uiManager.GetStats() != null)
+                uiManager.GetStats().OnBackToMenu += ShowMainMenu;
 
             // Wire gameplay
             uiManager.GetGameplay().OnWordSubmitted += OnWordSubmitted;
@@ -358,6 +375,8 @@ namespace WordPuzzle
             uiManager.GetMainMenu().OnTimeAttackSelected -= ShowTimeAttackSetup;
             uiManager.GetMainMenu().OnLibrarySelected -= ShowLibrary;
             uiManager.GetMainMenu().OnSettingsSelected -= ShowSettings;
+            uiManager.GetMainMenu().OnStatsSelected -= ShowStats;
+            uiManager.GetMainMenu().OnResumeSelected -= ResumeGame;
 
             if (uiManager.GetLibrary() != null)
             {
@@ -378,6 +397,9 @@ namespace WordPuzzle
                 uiManager.GetSettings().OnResetProgressConfirmed -= OnResetProgressConfirmed;
                 uiManager.GetSettings().OnReplayTutorialRequested -= OnReplayTutorialRequested;
             }
+
+            if (uiManager.GetStats() != null)
+                uiManager.GetStats().OnBackToMenu -= ShowMainMenu;
 
             if (tutorialOverlay != null)
             {
@@ -416,6 +438,7 @@ namespace WordPuzzle
             pendingDailyIndex = -1;
             uiManager.ShowMainMenu();
             RefreshDailyButtonState();
+            RefreshResumeAffordance();
         }
 
         // Task 1C — keep the DAILY button label in sync with persisted streak state.
@@ -461,6 +484,9 @@ namespace WordPuzzle
             // Task 7A — sync motion gate + sfx volume immediately.
             UIAnimations.ReduceMotion = cachedSettings.reduceMotion;
             if (sfxManager != null) sfxManager.SetSettings(cachedSettings);
+
+            // Task 9E — re-apply accessible palette on every settings save.
+            WordPuzzle.UI.AccessiblePalette.Apply(cachedSettings);
 
             if (dataManagerRef == null) return;
             try
@@ -773,6 +799,10 @@ namespace WordPuzzle
 
             // 7A — motion gate (static field read by UIAnimations + LetterTile coroutines).
             UIAnimations.ReduceMotion = cachedSettings.reduceMotion;
+
+            // Task 9E (boot wire) — seed accessible palette so colorblind/large-text
+            // are active before the player ever opens Settings.
+            WordPuzzle.UI.AccessiblePalette.Apply(cachedSettings);
 
             // 7B — haptics: construct once; use NullHaptics on platforms without Handheld.
             if (haptics == null)
@@ -1174,6 +1204,28 @@ namespace WordPuzzle
             var stats = modeController.GetCurrentStats();
             uiManager.GetResults().DisplayStats(stats);
 
+            // Task 9F — increment mode-specific counters before showing results.
+            // Determine win: chain tail equals endWord.
+            bool isWin = false;
+            try
+            {
+                var curState = stateManager.GetCurrentState();
+                if (curState?.wordChain != null && curState.wordChain.Count > 0 &&
+                    curState.puzzle != null)
+                {
+                    string tail = curState.wordChain[curState.wordChain.Count - 1];
+                    isWin = string.Equals(tail, curState.puzzle.endWord,
+                        System.StringComparison.OrdinalIgnoreCase);
+                }
+            }
+            catch { /* state may be unavailable; treat as loss */ }
+            IncrementModeStats(isWin, snapshotMode);
+
+            // Task 9G — clear resume cache so MainMenu won't offer stale "Resume".
+            cachedResumeSnapshot = null;
+            cachedResumePuzzle   = null;
+            cachedResumeMode     = null;
+
             if (wasDailyRun)
             {
                 RecordDailyCompletionAndSurface(dailyIndex);
@@ -1344,6 +1396,260 @@ namespace WordPuzzle
         private void PlayAgain()
         {
             ShowMainMenu();
+        }
+
+        // ─── Task 9F — Statistics screen ─────────────────────────────────────────
+
+        private void ShowStats()
+        {
+            var screen = uiManager.GetStats();
+            if (screen == null) return;
+            screen.Populate(cachedDailyProgress, cachedPlayerProgress);
+            uiManager.ShowStats();
+        }
+
+        private void LoadPlayerProgressBlocking(IDataManager dataManager)
+        {
+            try
+            {
+                var task = dataManager.GetPlayerProgressAsync();
+                cachedPlayerProgress = task.IsCompleted ? task.Result : task.GetAwaiter().GetResult();
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogWarning($"PlayerProgress load failed; using defaults: {ex.Message}");
+                cachedPlayerProgress = new PlayerProgress();
+            }
+            if (cachedPlayerProgress == null) cachedPlayerProgress = new PlayerProgress();
+        }
+
+        /// <summary>
+        /// Task 9F — Increment mode-specific play/win counters after a game ends.
+        /// <paramref name="endedMode"/> is the mode that just finished (activeMode is
+        /// already null when this is called).  Persisted via UpdatePlayerProgressAsync.
+        /// </summary>
+        private async void IncrementModeStats(bool wasWin, IGameMode endedMode = null)
+        {
+            if (dataManagerRef == null || cachedPlayerProgress == null) return;
+
+            cachedPlayerProgress.totalPuzzlesCompleted++;
+
+            if (endedMode is TimeAttackMode)
+            {
+                cachedPlayerProgress.timeAttackStats.gamesPlayed++;
+            }
+            else
+            {
+                // Classic / Daily / PuzzleShow all count as classic-family games.
+                cachedPlayerProgress.classicStats.gamesPlayed++;
+                if (wasWin) cachedPlayerProgress.classicStats.gamesWon++;
+            }
+
+            try
+            {
+                await dataManagerRef.UpdatePlayerProgressAsync(cachedPlayerProgress);
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogWarning($"[Stats] IncrementModeStats persist failed: {ex.Message}");
+            }
+        }
+
+        // ─── Task 9G — Resume ────────────────────────────────────────────────────
+
+        /// <summary>
+        /// Pure, testable resumability check.  Returns true and populates
+        /// <paramref name="def"/> when the snapshot represents a resolvable
+        /// in-progress puzzle.  Never throws.
+        /// <para>
+        /// ASSUMPTION: Resume covers tier/daily puzzles (id-resolvable via tier
+        /// cache or daily pool).  Random Classic puzzles are not id-resolvable from
+        /// the snapshot alone, so they return false (hide Resume gracefully).
+        /// </para>
+        /// </summary>
+        public static bool TryGetResumable(
+            GameStateSnapshot snapshot,
+            System.Func<int, PuzzleDefinition> resolve,
+            out PuzzleDefinition def)
+        {
+            def = null;
+            try
+            {
+                if (snapshot == null) return false;
+                if (snapshot.wordChain == null || snapshot.wordChain.Length < 1) return false;
+                if (string.IsNullOrEmpty(snapshot.currentMode) ||
+                    snapshot.currentMode == "Menu") return false;
+
+                def = resolve?.Invoke(snapshot.currentPuzzleId);
+                if (def == null) return false;
+
+                // Already won: chain tail == endWord.
+                string tail = snapshot.wordChain[snapshot.wordChain.Length - 1];
+                if (string.Equals(tail, def.endWord, System.StringComparison.OrdinalIgnoreCase))
+                {
+                    def = null;
+                    return false;
+                }
+
+                return true;
+            }
+            catch
+            {
+                def = null;
+                return false;
+            }
+        }
+
+        private void LoadResumeSnapshotBlocking(IDataManager dataManager)
+        {
+            try
+            {
+                var task = dataManager.LoadGameStateAsync();
+                var snap = task.IsCompleted ? task.Result : task.GetAwaiter().GetResult();
+
+                PuzzleDefinition def;
+                bool resumable = TryGetResumable(snap, ResolveAnyPuzzleById, out def);
+                if (resumable)
+                {
+                    cachedResumeSnapshot = snap;
+                    cachedResumePuzzle   = def;
+                    // Determine mode string for the affordance label.
+                    cachedResumeMode = snap.currentMode ?? "Gameplay";
+                }
+                else
+                {
+                    cachedResumeSnapshot = null;
+                    cachedResumePuzzle   = null;
+                    cachedResumeMode     = null;
+                }
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogWarning($"[Resume] Snapshot load failed: {ex.Message}");
+                cachedResumeSnapshot = null;
+                cachedResumePuzzle   = null;
+            }
+        }
+
+        /// <summary>
+        /// Resolve a puzzleId by checking tier cache first, then daily pool.
+        /// Returns null if not found (random Classic, removed puzzle, etc.).
+        /// </summary>
+        private PuzzleDefinition ResolveAnyPuzzleById(int puzzleId)
+        {
+            var fromTier = FindPuzzleDefinitionById(puzzleId);
+            if (fromTier != null) return fromTier;
+
+            // Check daily pool.
+            if (dailyPuzzleService != null && dailyPuzzleService.PoolCount > 0)
+            {
+                // DailyPuzzleService exposes pool only via GetTodayPuzzle/TodayIndex;
+                // load the raw pool via Resources to resolve by id.
+                return FindDailyPuzzleById(puzzleId);
+            }
+            return null;
+        }
+
+        private PuzzleDefinition FindDailyPuzzleById(int puzzleId)
+        {
+            // Load daily pool from Resources and scan for matching id.
+            // Non-fatal: returns null on any error.
+            try
+            {
+                var asset = UnityEngine.Resources.Load<UnityEngine.TextAsset>("Data/daily_puzzles");
+                if (asset == null) return null;
+                var wrapper = UnityEngine.JsonUtility.FromJson<DailyPoolWrapper>(asset.text);
+                if (wrapper?.puzzles == null) return null;
+                foreach (var p in wrapper.puzzles)
+                {
+                    if (p != null && p.puzzleId == puzzleId) return p;
+                }
+            }
+            catch { /* non-fatal */ }
+            return null;
+        }
+
+        [System.Serializable]
+        private class DailyPoolWrapper
+        {
+            public PuzzleDefinition[] puzzles;
+        }
+
+        private void RefreshResumeAffordance()
+        {
+            var menu = uiManager?.GetMainMenu();
+            if (menu == null) return;
+
+            if (cachedResumePuzzle == null)
+            {
+                menu.SetResumeVisible(false);
+                return;
+            }
+
+            string desc = $"{cachedResumePuzzle.startWord}→{cachedResumePuzzle.endWord}";
+            menu.SetResumeVisible(true, desc);
+        }
+
+        private void ResumeGame()
+        {
+            if (cachedResumePuzzle == null || cachedResumeSnapshot == null)
+            {
+                Debug.LogWarning("[Resume] No resumable puzzle; ignoring tap.");
+                return;
+            }
+
+            var def = cachedResumePuzzle;
+            var snap = cachedResumeSnapshot;
+
+            // Clear cached resume so it cannot be re-entered.
+            cachedResumeSnapshot = null;
+            cachedResumePuzzle   = null;
+            cachedResumeMode     = null;
+
+            // Reconstruct the puzzle model.
+            var puzzle = new WordPuzzleModel(
+                def.puzzleId,
+                def.startWord,
+                def.endWord,
+                def.optimalSteps,
+                def.solution,
+                def.seedValue,
+                Difficulty.Easy
+            );
+
+            // Start the puzzle fresh (this overwrites SaveState), then restore chain.
+            isTutorialRun = false;
+            isDailyRun = false;
+            pendingDailyPuzzle = null;
+            activeMode = new WordPuzzle.Modes.ClassicMode();
+            modeController.SetMode(activeMode);
+
+            modeController.StartGame(puzzle);
+            uiManager.ShowGameplay();
+
+            // Re-apply the saved word chain (skip start word which is already in chain).
+            if (snap.wordChain != null)
+            {
+                for (int i = 1; i < snap.wordChain.Length; i++)
+                {
+                    string w = snap.wordChain[i];
+                    if (!string.IsNullOrEmpty(w))
+                        stateManager.Dispatch(new SubmitWordAction(w));
+                }
+            }
+
+            // Restore typed-but-not-submitted input.
+            if (!string.IsNullOrEmpty(snap.currentInput))
+            {
+                foreach (char c in snap.currentInput)
+                    stateManager.Dispatch(new PressLetterAction(c));
+            }
+
+            var state = stateManager.GetCurrentState();
+            uiManager.GetGameplay().SetPuzzleDisplay(state.puzzle.startWord, state.puzzle.endWord);
+            uiManager.GetGameplay().SetScore(state.score);
+            uiManager.GetGameplay().ShowFeedback("", UnityEngine.Color.white);
+            UpdateGameplayUI();
         }
     }
 }

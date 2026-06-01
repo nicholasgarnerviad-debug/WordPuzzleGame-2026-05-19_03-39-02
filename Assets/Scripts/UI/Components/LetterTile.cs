@@ -50,6 +50,7 @@ namespace WordPuzzle.UI.Components
 
         private RectTransform rectTransform;
         private Image borderImage;       // outline-only child used to draw the border
+        private TextMeshProUGUI stateGlyphText; // non-color accessibility cue (corner glyph)
         private TileState currentState = TileState.DefaultEmpty;
         private float currentSize = 90f;
         private char currentLetter = ' ';
@@ -119,7 +120,7 @@ namespace WordPuzzle.UI.Components
             le.minHeight = currentSize;
 
             if (letterText != null)
-                letterText.fontSize = Mathf.Max(12f, currentSize * 0.55f);
+                letterText.fontSize = Mathf.Max(12f, currentSize * 0.55f * AccessiblePalette.TextScale);
         }
 
         /// <summary>Punch-scale animation (ease-OutBack feel) over the given duration.</summary>
@@ -275,6 +276,31 @@ namespace WordPuzzle.UI.Components
                 }
             }
 
+            // Accessibility glyph — top-right corner, non-color state cue.
+            if (stateGlyphText == null)
+            {
+                Transform existing = transform.Find("StateGlyph");
+                if (existing != null) stateGlyphText = existing.GetComponent<TextMeshProUGUI>();
+                if (stateGlyphText == null)
+                {
+                    var glyphGO = new GameObject("StateGlyph", typeof(RectTransform));
+                    glyphGO.transform.SetParent(transform, false);
+                    var grt = glyphGO.GetComponent<RectTransform>();
+                    grt.anchorMin = new Vector2(1f, 1f);
+                    grt.anchorMax = new Vector2(1f, 1f);
+                    grt.pivot = new Vector2(1f, 1f);
+                    grt.anchoredPosition = new Vector2(-4f, -4f);
+                    grt.sizeDelta = new Vector2(20f, 20f);
+                    stateGlyphText = glyphGO.AddComponent<TextMeshProUGUI>();
+                    stateGlyphText.alignment = TextAlignmentOptions.TopRight;
+                    stateGlyphText.fontStyle = FontStyles.Bold;
+                    stateGlyphText.fontSize = 14f;
+                    stateGlyphText.raycastTarget = false;
+                    stateGlyphText.enableWordWrapping = false;
+                    stateGlyphText.text = string.Empty;
+                }
+            }
+
             // Label child.
             if (letterText == null)
             {
@@ -291,7 +317,7 @@ namespace WordPuzzle.UI.Components
                     letterText = labelGO.AddComponent<TextMeshProUGUI>();
                     letterText.alignment = TextAlignmentOptions.Center;
                     letterText.fontStyle = FontStyles.Bold;
-                    letterText.fontSize = Mathf.Max(12f, currentSize * 0.55f);
+                    letterText.fontSize = Mathf.Max(12f, currentSize * 0.55f * AccessiblePalette.TextScale);
                     letterText.color = C_TEXT;
                     letterText.raycastTarget = false;
                     letterText.enableWordWrapping = false;
@@ -324,6 +350,9 @@ namespace WordPuzzle.UI.Components
             Color textC = C_TEXT;
             Color shadowC = new Color(0f, 0f, 0f, 0f);
             bool hasBorder = false;
+            // Non-color glyph: empty by default; set for CorrectInChain / InvalidFlash.
+            string glyph = string.Empty;
+            Color glyphC = C_TEXT;
 
             switch (currentState)
             {
@@ -342,10 +371,11 @@ namespace WordPuzzle.UI.Components
                     break;
 
                 case TileState.RevealedByHint:
-                    fill = C_HINT_GOLD;
+                    // Hint: use AccessiblePalette so color adapts; keep gold in Off mode.
+                    fill = AccessiblePalette.Hint;
                     hasBorder = false;
                     textC = C_BG;
-                    shadowC = new Color(C_HINT_GOLD.r, C_HINT_GOLD.g, C_HINT_GOLD.b, 0.35f);
+                    shadowC = new Color(fill.r, fill.g, fill.b, 0.35f);
                     break;
 
                 case TileState.CurrentInputTyped:
@@ -365,15 +395,23 @@ namespace WordPuzzle.UI.Components
                     break;
 
                 case TileState.CorrectInChain:
-                    fill = C_ACCENT;
+                    // Palette-aware: blue in deuteranopia, green in default.
+                    fill = AccessiblePalette.Correct;
                     hasBorder = false;
                     textC = C_TEXT;
+                    // Non-color cue: checkmark glyph survives grayscale.
+                    glyph = "✓"; // ✓
+                    glyphC = new Color(1f, 1f, 1f, 0.85f);
                     break;
 
                 case TileState.InvalidFlash:
-                    fill = C_DANGER;
+                    // Palette-aware: orange in deuteranopia, red in default.
+                    fill = AccessiblePalette.Error;
                     hasBorder = false;
                     textC = C_TEXT;
+                    // Non-color cue: X glyph survives grayscale.
+                    glyph = "✗"; // ✗
+                    glyphC = new Color(1f, 1f, 1f, 0.85f);
                     if (invalidFlashCoroutine != null) StopCoroutine(invalidFlashCoroutine);
                     if (isActiveAndEnabled)
                         invalidFlashCoroutine = StartCoroutine(AutoRevertInvalid());
@@ -386,6 +424,12 @@ namespace WordPuzzle.UI.Components
             if (borderImage != null)
             {
                 borderImage.color = hasBorder ? border : new Color(0f, 0f, 0f, 0f);
+            }
+            // Apply non-color glyph cue.
+            if (stateGlyphText != null)
+            {
+                stateGlyphText.text = glyph;
+                stateGlyphText.color = glyphC;
             }
         }
 

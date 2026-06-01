@@ -3,8 +3,20 @@ using System;
 namespace WordPuzzle.Persistence
 {
     /// <summary>
+    /// Colorblind simulation mode.
+    /// Off = default design-token palette.
+    /// Deuteranopia = blue/orange-safe palette (no red/green reliance).
+    /// </summary>
+    public enum ColorBlindMode
+    {
+        Off,
+        Deuteranopia
+    }
+
+    /// <summary>
     /// Persistent user-facing settings (Spec §3.2).
     /// Persisted via PlayerPrefs key "settings_v1" through DataManager.
+    /// New fields (Task 9E) default safely; absent JSON keys leave Unity defaults intact.
     /// </summary>
     [Serializable]
     public class SettingsData
@@ -23,6 +35,15 @@ namespace WordPuzzle.Persistence
         // Task 7B — device haptic feedback.
         public bool hapticsEnabled = true;
 
+        // Task 9E — colorblind palette mode (defaults Off = normal palette).
+        public ColorBlindMode colorBlindMode = ColorBlindMode.Off;
+
+        // Task 9E — high-contrast mode (bold borders, max fill/text contrast).
+        public bool highContrast = false;
+
+        // Task 9E — text scale multiplier, clamped [1.0, 1.5] at apply time.
+        public float textScale = 1.0f;
+
         // Schema version; bump on breaking shape changes.
         public int version = 1;
 
@@ -38,6 +59,9 @@ namespace WordPuzzle.Persistence
                 muted = this.muted,
                 reduceMotion = this.reduceMotion,
                 hapticsEnabled = this.hapticsEnabled,
+                colorBlindMode = this.colorBlindMode,
+                highContrast = this.highContrast,
+                textScale = this.textScale,
                 version = this.version
             };
         }

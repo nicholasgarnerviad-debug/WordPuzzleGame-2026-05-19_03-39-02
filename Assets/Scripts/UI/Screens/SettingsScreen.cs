@@ -35,6 +35,11 @@ namespace WordPuzzle.UI
         [SerializeField] private Toggle reduceMotionToggle;
         [SerializeField] private Toggle hapticsToggle;
 
+        // Task 9E — colorblind + high-contrast toggles; largeText toggle (assign in scene; no-op when null).
+        [SerializeField] private Toggle colorBlindModeToggle;  // Off / Deuteranopia
+        [SerializeField] private Toggle highContrastToggle;
+        [SerializeField] private Toggle largeTextToggle;       // textScale 1.0 → 1.3
+
         // --- Buttons ---
         [SerializeField] private Button homeButton;
         [SerializeField] private Button resetProgressButton;
@@ -117,6 +122,12 @@ namespace WordPuzzle.UI
                 reduceMotionToggle.onValueChanged.AddListener(OnReduceMotionChanged);
             if (hapticsToggle != null)
                 hapticsToggle.onValueChanged.AddListener(OnHapticsToggleChanged);
+            if (colorBlindModeToggle != null)
+                colorBlindModeToggle.onValueChanged.AddListener(OnColorBlindModeChanged);
+            if (highContrastToggle != null)
+                highContrastToggle.onValueChanged.AddListener(OnHighContrastChanged);
+            if (largeTextToggle != null)
+                largeTextToggle.onValueChanged.AddListener(OnLargeTextChanged);
 
             if (homeButton != null)
             {
@@ -156,6 +167,12 @@ namespace WordPuzzle.UI
                 reduceMotionToggle.onValueChanged.RemoveListener(OnReduceMotionChanged);
             if (hapticsToggle != null)
                 hapticsToggle.onValueChanged.RemoveListener(OnHapticsToggleChanged);
+            if (colorBlindModeToggle != null)
+                colorBlindModeToggle.onValueChanged.RemoveListener(OnColorBlindModeChanged);
+            if (highContrastToggle != null)
+                highContrastToggle.onValueChanged.RemoveListener(OnHighContrastChanged);
+            if (largeTextToggle != null)
+                largeTextToggle.onValueChanged.RemoveListener(OnLargeTextChanged);
 
             if (homeButton != null)
                 homeButton.onClick.RemoveListener(OnHomeClicked);
@@ -191,6 +208,10 @@ namespace WordPuzzle.UI
                 if (muteToggle != null) muteToggle.isOn = currentSettings.muted;
                 if (reduceMotionToggle != null) reduceMotionToggle.isOn = currentSettings.reduceMotion;
                 if (hapticsToggle != null) hapticsToggle.isOn = currentSettings.hapticsEnabled;
+                if (colorBlindModeToggle != null)
+                    colorBlindModeToggle.isOn = currentSettings.colorBlindMode != ColorBlindMode.Off;
+                if (highContrastToggle != null) highContrastToggle.isOn = currentSettings.highContrast;
+                if (largeTextToggle != null) largeTextToggle.isOn = currentSettings.textScale > 1.0f;
 
                 UpdateValueLabel(masterVolumeValueLabel, currentSettings.masterVolume);
                 UpdateValueLabel(sfxVolumeValueLabel, currentSettings.sfxVolume);
@@ -202,6 +223,8 @@ namespace WordPuzzle.UI
             }
 
             ApplyAudioListenerVolume(currentSettings);
+            // Seed the accessible palette so tile colors are correct immediately.
+            AccessiblePalette.Apply(currentSettings);
         }
 
         /// <summary>Returns a clone of the in-screen settings (does not save).</summary>
@@ -255,6 +278,31 @@ namespace WordPuzzle.UI
         {
             if (suppressEvents) return;
             currentSettings.hapticsEnabled = value;
+            ScheduleDebouncedSave();
+        }
+
+        // Task 9E — colorblind / high-contrast / large-text handlers.
+        private void OnColorBlindModeChanged(bool enabled)
+        {
+            if (suppressEvents) return;
+            currentSettings.colorBlindMode = enabled ? ColorBlindMode.Deuteranopia : ColorBlindMode.Off;
+            AccessiblePalette.Apply(currentSettings);
+            ScheduleDebouncedSave();
+        }
+
+        private void OnHighContrastChanged(bool value)
+        {
+            if (suppressEvents) return;
+            currentSettings.highContrast = value;
+            AccessiblePalette.Apply(currentSettings);
+            ScheduleDebouncedSave();
+        }
+
+        private void OnLargeTextChanged(bool value)
+        {
+            if (suppressEvents) return;
+            currentSettings.textScale = value ? 1.3f : 1.0f;
+            AccessiblePalette.Apply(currentSettings);
             ScheduleDebouncedSave();
         }
 

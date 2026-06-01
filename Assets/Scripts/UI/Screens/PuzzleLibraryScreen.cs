@@ -343,18 +343,22 @@ namespace WordPuzzle.UI
                 state == LocalPuzzleState.Locked ? C_LOCKED_TEXT : C_BADGE_OPTIMAL_FG,
                 FontStyles.Bold);
 
-            // State icon top-right at (-8,-6).
+            // State icon top-right — shape-coded, legible in grayscale (Task 9E non-color cue).
+            // Locked:           🔒-style  "[ ]"  padlock shape (bracket + gap)
+            // UnlockedUnplayed: "○"        hollow circle — not started
+            // InProgress:       "◑"        half-filled circle — in progress
+            // Completed:        "✓"        checkmark — done
             string iconText = state switch
             {
-                LocalPuzzleState.Locked => "[L]",
-                LocalPuzzleState.UnlockedUnplayed => "*",
-                LocalPuzzleState.InProgress => "In Progress",
-                LocalPuzzleState.Completed => "v",
-                _ => string.Empty
+                LocalPuzzleState.Locked          => "[ ]",
+                LocalPuzzleState.UnlockedUnplayed => "○",
+                LocalPuzzleState.InProgress       => "◑",
+                LocalPuzzleState.Completed        => "✓",
+                _                                 => string.Empty
             };
-            int iconSize = (state == LocalPuzzleState.InProgress) ? 12 : 22;
-            FontStyles iconStyle = (state == LocalPuzzleState.InProgress) ? FontStyles.Bold : FontStyles.Normal;
-            float iconWidth = (state == LocalPuzzleState.InProgress) ? 90f : 30f;
+            int iconSize = 18;
+            FontStyles iconStyle = FontStyles.Bold;
+            float iconWidth = 30f;
 
             CreateAnchored(fill, "StateIcon",
                 iconText, iconSize,

@@ -402,25 +402,11 @@ namespace WordPuzzle.Puzzle
             foreach (string candidate in candidates)
             {
                 if (candidate == word) continue;
-                if (!HaveOneLetterDifference(word, candidate)) continue;
+                if (!WordOps.HaveOneLetterDifference(word, candidate)) continue;
                 if (strictCommon && commonWords != null && !commonWords.Contains(candidate)) continue;
                 neighbors.Add(candidate);
             }
             return neighbors;
-        }
-
-        private static bool HaveOneLetterDifference(string a, string b)
-        {
-            if (a.Length != b.Length)
-                return false;
-
-            int diff = 0;
-            for (int i = 0; i < a.Length; i++)
-            {
-                if (a[i] != b[i] && ++diff > 1)
-                    return false;
-            }
-            return diff == 1;
         }
 
         /// <summary>

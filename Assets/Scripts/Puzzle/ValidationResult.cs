@@ -1,5 +1,15 @@
 namespace WordPuzzle.Puzzle
 {
+    /// <summary>Typed rejection category set by WordValidator. Lives in Puzzle assembly
+    /// (no State dependency) so GameStateManager can switch on it without string parsing.</summary>
+    public enum WordRejectReason
+    {
+        None,
+        NotInDictionary,
+        NotOneLetterDifferent,
+        AlreadyUsed
+    }
+
     public class ValidationResult
     {
         private bool _isValid;
@@ -8,6 +18,7 @@ namespace WordPuzzle.Puzzle
         private bool _isProgress;
         private int _distanceToStart;
         private int _distanceToEnd;
+        private WordRejectReason _rejectReason;
 
         public bool IsValid
         {
@@ -43,6 +54,12 @@ namespace WordPuzzle.Puzzle
         {
             get => _distanceToEnd;
             set => _distanceToEnd = value;
+        }
+
+        public WordRejectReason RejectReason
+        {
+            get => _rejectReason;
+            set => _rejectReason = value;
         }
 
         // Legacy field names for backward compatibility
@@ -82,10 +99,17 @@ namespace WordPuzzle.Puzzle
             set => DistanceToEnd = value;
         }
 
+        public WordRejectReason rejectReason
+        {
+            get => RejectReason;
+            set => RejectReason = value;
+        }
+
         public ValidationResult() { }
 
         public ValidationResult(bool valid, string msg, bool nextStep,
-                               bool progress, int distStart, int distEnd)
+                               bool progress, int distStart, int distEnd,
+                               WordRejectReason rejectReason = WordRejectReason.None)
         {
             IsValid = valid;
             Message = msg;
@@ -93,6 +117,7 @@ namespace WordPuzzle.Puzzle
             IsProgress = progress;
             DistanceToStart = distStart;
             DistanceToEnd = distEnd;
+            RejectReason = rejectReason;
         }
     }
 }

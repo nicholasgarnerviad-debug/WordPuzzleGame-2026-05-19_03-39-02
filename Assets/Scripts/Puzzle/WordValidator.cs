@@ -56,7 +56,8 @@ namespace WordPuzzle.Puzzle
                     nextStep: false,
                     progress: false,
                     distStart: -1,
-                    distEnd: -1
+                    distEnd: -1,
+                    rejectReason: WordRejectReason.NotInDictionary
                 );
             }
 
@@ -69,7 +70,8 @@ namespace WordPuzzle.Puzzle
                     nextStep: false,
                     progress: false,
                     distStart: -1,
-                    distEnd: -1
+                    distEnd: -1,
+                    rejectReason: WordRejectReason.AlreadyUsed
                 );
             }
 
@@ -82,7 +84,8 @@ namespace WordPuzzle.Puzzle
                     nextStep: false,
                     progress: false,
                     distStart: -1,
-                    distEnd: -1
+                    distEnd: -1,
+                    rejectReason: WordRejectReason.NotOneLetterDifferent
                 );
             }
 

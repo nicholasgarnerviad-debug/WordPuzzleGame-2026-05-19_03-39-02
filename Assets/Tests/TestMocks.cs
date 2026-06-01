@@ -14,17 +14,36 @@ public class MockWordValidator : IWordValidator
     private bool isValid = true;
     private bool isNextStep = true;
 
+    // Task 9C — controllable typed rejection reason + arbitrary Message.
+    // Lets QA drive the enum-driven reject path and prove that the user-facing
+    // text is derived from RejectReason, NOT from Message.
+    private WordPuzzle.Puzzle.WordRejectReason rejectReason = WordPuzzle.Puzzle.WordRejectReason.None;
+    private string message = "";
+
     public void SetValidResult(bool valid, bool nextStep)
     {
         isValid = valid;
         isNextStep = nextStep;
     }
 
+    /// <summary>
+    /// Task 9C — configure a rejected validation result: isValid=false, isNextStep=false,
+    /// the given typed RejectReason, and an arbitrary (possibly nonsense) Message so tests
+    /// can confirm the user-facing string ignores Message and is derived from the enum.
+    /// </summary>
+    public void SetRejection(WordPuzzle.Puzzle.WordRejectReason reason, string msg)
+    {
+        isValid = false;
+        isNextStep = false;
+        rejectReason = reason;
+        message = msg;
+    }
+
     public void Initialize(string startWord, string endWord, string[] currentWordChain) { }
 
     public WordPuzzle.Puzzle.ValidationResult ValidateWord(string word)
     {
-        return new WordPuzzle.Puzzle.ValidationResult(isValid, "", isNextStep, true, -1, -1);
+        return new WordPuzzle.Puzzle.ValidationResult(isValid, message, isNextStep, true, -1, -1, rejectReason);
     }
 
     public bool IsValidNextWord(string word, string previousWord)

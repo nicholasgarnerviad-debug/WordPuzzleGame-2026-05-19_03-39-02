@@ -28,6 +28,17 @@ namespace WordPuzzle.Persistence
     {
         tierCache = new Dictionary<int, TierData>();
         tierLoader = new TierDataLoader();
+        CleanupLegacyKeys();
+    }
+
+    // 9A: one-time removal of stale key written by the now-deleted CoinSystem orphan.
+    private void CleanupLegacyKeys()
+    {
+        if (PlayerPrefs.HasKey("Coins"))
+        {
+            PlayerPrefs.DeleteKey("Coins");
+            PlayerPrefs.Save();
+        }
     }
 
     public async Task SaveGameStateAsync(GameStateSnapshot snapshot)

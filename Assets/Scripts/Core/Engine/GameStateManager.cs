@@ -87,7 +87,6 @@ namespace WordPuzzle.State
                 elapsedTime = 0f,
                 hintsRemaining = BalanceConfig.DefaultHintsPerPuzzle,
                 revealsRemaining = BalanceConfig.DefaultRevealsPerPuzzle,
-                undoHistory = new Stack<GameSnapshot>(),
                 revealedLetterIndices = new HashSet<int>(),
                 hintLetterIndex = -1,
                 revealedNextWord = "",
@@ -235,28 +234,27 @@ namespace WordPuzzle.State
                 workingState.currentInput = "";
                 workingState.currentStreak = 0;
 
-                // Map the validator's message to a SubmissionRejectReason + user-friendly reason.
-                var (reason, userReason) = MapValidationMessage(validation?.message);
+                // Map the validator's typed RejectReason to SubmissionRejectReason + user text.
+                var (reason, userReason) = MapWordRejectReason(validation?.RejectReason ?? WordRejectReason.None);
                 FireSubmissionResult(false, word, userReason, reason);
             }
         }
 
-        // §1 — translate WordValidator's raw message into a typed reject reason + UI text.
-        private static (SubmissionRejectReason reason, string userMessage) MapValidationMessage(string msg)
+        // §1 — translate WordValidator's typed WordRejectReason into SubmissionRejectReason + UI text.
+        // No string parsing: switch on the enum set by WordValidator.ValidateWord.
+        private static (SubmissionRejectReason reason, string userMessage) MapWordRejectReason(WordRejectReason r)
         {
-            if (string.IsNullOrEmpty(msg))
-                return (SubmissionRejectReason.NotInDictionary, "Not a real word");
-
-            // WordValidator emits these literal strings; we translate them here.
-            if (msg.IndexOf("not in dictionary", StringComparison.OrdinalIgnoreCase) >= 0)
-                return (SubmissionRejectReason.NotInDictionary, "Not a real word");
-            if (msg.IndexOf("already used", StringComparison.OrdinalIgnoreCase) >= 0)
-                return (SubmissionRejectReason.AlreadyUsed, "Already used");
-            if (msg.IndexOf("exactly one letter", StringComparison.OrdinalIgnoreCase) >= 0)
-                return (SubmissionRejectReason.NotOneLetterDifferent, "Change exactly one letter");
-
-            // Default fallback — surface validator text verbatim.
-            return (SubmissionRejectReason.NotInDictionary, msg);
+            switch (r)
+            {
+                case WordRejectReason.NotInDictionary:
+                    return (SubmissionRejectReason.NotInDictionary, "Not a real word");
+                case WordRejectReason.AlreadyUsed:
+                    return (SubmissionRejectReason.AlreadyUsed, "Already used");
+                case WordRejectReason.NotOneLetterDifferent:
+                    return (SubmissionRejectReason.NotOneLetterDifferent, "Change exactly one letter");
+                default:
+                    return (SubmissionRejectReason.NotInDictionary, "Not a real word");
+            }
         }
 
         private void FireSubmissionResult(bool accepted, string word, string reason, SubmissionRejectReason rejectReason)
@@ -472,42 +470,23 @@ namespace WordPuzzle.State
             if (workingState.wordChain.Count <= 1 || workingState.isWon || workingState.isLost)
                 return;
 
-            // Check if undo history is available
-            if (workingState.undoHistory.Count == 0)
-            {
-                // Fallback: simple word removal without full state restoration
-                var lastWord = workingState.wordChain[workingState.wordChain.Count - 1];
-                workingState.wordChain.RemoveAt(workingState.wordChain.Count - 1);
-                workingState.currentInput = "";
-
-                if (workingState.foundWords.Contains(lastWord))
-                {
-                    workingState.foundWords.Remove(lastWord);
-                    workingState.score -= lastWord.Length;
-                }
-
-                // Reset streak since we undid a valid step
-                workingState.currentStreak = Mathf.Max(0, workingState.currentStreak - 1);
-
-                // §1.3 — chain rewound, so any active hint/reveal preview is stale.
-                workingState.hintLetterIndex = -1;
-                workingState.revealedNextWord = string.Empty;
-                return;
-            }
-
-            // Restore from snapshot
-            var snapshot = workingState.undoHistory.Pop();
-            workingState.wordChain = new List<string>(snapshot.wordChain);
-            workingState.lives = snapshot.lives;
-            workingState.score = snapshot.score;
-            workingState.currentStreak = snapshot.currentStreak;
-            workingState.foundWords = new List<string>(snapshot.foundWords);
-            workingState.invalidAttempts = snapshot.invalidAttempts;
-            workingState.hintsRemaining = snapshot.hintsRemaining;
-            workingState.revealsRemaining = snapshot.revealsRemaining;
+            // Single authoritative undo path: chain rewind only. Power-ups stay spent.
+            // undoHistory was never pushed to, so the snapshot-restore branch is removed.
+            var lastWord = workingState.wordChain[workingState.wordChain.Count - 1];
+            workingState.wordChain.RemoveAt(workingState.wordChain.Count - 1);
             workingState.currentInput = "";
 
-            // §1.3 — chain rewound; clear hint/reveal preview rather than restoring stale state.
+            if (workingState.foundWords.Contains(lastWord))
+            {
+                workingState.foundWords.Remove(lastWord);
+                // C2 score floor — never go negative.
+                workingState.score = Mathf.Max(0, workingState.score - lastWord.Length);
+            }
+
+            // Streak decrements by one but never below zero.
+            workingState.currentStreak = Mathf.Max(0, workingState.currentStreak - 1);
+
+            // §1.3 — chain rewound, so any active hint/reveal preview is stale.
             workingState.hintLetterIndex = -1;
             workingState.revealedNextWord = string.Empty;
         }
@@ -687,23 +666,6 @@ namespace WordPuzzle.State
     }
 
     /// <summary>
-    /// Snapshot of game state for undo history. Stores complete state at a point in time.
-    /// </summary>
-    internal struct GameSnapshot
-    {
-        public List<string> wordChain;
-        public int lives;
-        public int score;
-        public int currentStreak;
-        public List<string> foundWords;
-        public int invalidAttempts;
-        public int hintsRemaining;
-        public int revealsRemaining;
-        public int hintLetterIndex;
-        public string revealedNextWord;
-    }
-
-    /// <summary>
     /// Mutable working state for the game. Used internally by GameStateManager
     /// to maintain runtime state while preserving the immutability contract of GameState.
     /// </summary>
@@ -726,7 +688,6 @@ namespace WordPuzzle.State
         // Economy tracking for Phase 2 — defaults mirror BalanceConfig (StartNewPuzzle always overwrites).
         public int hintsRemaining = BalanceConfig.DefaultHintsPerPuzzle;
         public int revealsRemaining = BalanceConfig.DefaultRevealsPerPuzzle;
-        public Stack<GameSnapshot> undoHistory = new Stack<GameSnapshot>();
         // DEPRECATED — replaced by hintLetterIndex + revealedNextWord. Retained for back-compat
         // with consumers that still read the index set; new hint/reveal paths do not write to it.
         public HashSet<int> revealedLetterIndices = new HashSet<int>();
