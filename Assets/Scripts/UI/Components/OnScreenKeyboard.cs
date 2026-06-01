@@ -110,6 +110,10 @@ namespace WordPuzzle.UI.Components
 
             var image = obj.GetComponent<Image>();
             image.color = bgColor;
+            image.raycastTarget = true; // explicit: this Image is the hit-target for the Button
+
+            var btn = obj.GetComponent<Button>();
+            btn.targetGraphic = image; // wire targetGraphic so Button.interactable state transitions are reliable
 
             var textObj = new GameObject("Label", typeof(RectTransform), typeof(TextMeshProUGUI));
             textObj.transform.SetParent(obj.transform, false);
@@ -126,6 +130,7 @@ namespace WordPuzzle.UI.Components
             tmp.fontSize = fontSize;
             tmp.alignment = TextAlignmentOptions.Center;
             tmp.fontStyle = FontStyles.Bold;
+            tmp.raycastTarget = false; // prevent TMP label from intercepting pointer events meant for the parent Button
 
             return obj;
         }
