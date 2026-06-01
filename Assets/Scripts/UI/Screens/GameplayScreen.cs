@@ -119,6 +119,12 @@ namespace WordPuzzle.UI
         public event Action OnUndoStep;
         public event Action OnAddTimeUsed;
 
+        // Routed keystrokes — GameBootstrap dispatches these through GameState so
+        // state.currentInput is the single source of truth. GameplayScreen no longer
+        // mutates its local currentInput field directly on key press.
+        public event Action<char> OnLetterTyped;
+        public event Action OnBackspace;
+
         // ============================================================
         //  Lifecycle
         // ============================================================
@@ -279,21 +285,17 @@ namespace WordPuzzle.UI
         // ============================================================
         private void HandleLetterPressed(char c)
         {
-            currentInput += char.ToLower(c);
-            // TEMP DEBUG — remove after tap-test confirms input pipeline works
-            if (feedbackText != null)
-            {
-                feedbackText.text = "INPUT: " + currentInput.ToUpper();
-                feedbackText.color = new Color(0.2f, 1f, 0.4f);
-                feedbackText.fontSize = 48f;
-            }
-            UpdateCurrentInputDisplay();
+            // Route through state — GameBootstrap dispatches PressLetterAction and
+            // calls UpdateGameplayUI which sets currentInput from state.currentInput.
+            OnLetterTyped?.Invoke(c);
 
             // Task 7B/7C — letter placed juice.
             _sfx?.PlayKeyPress();
             _haptics?.LightTap();
 
             // Task 7A — tile lock-in punch on the just-filled tile (respect ReduceMotion).
+            // currentInput is updated synchronously by SetCurrentInput before this runs
+            // because GameBootstrap calls UpdateGameplayUI immediately after dispatch.
             if (!UIAnimations.ReduceMotion && currentInputRow != null)
             {
                 int idx = currentInput.Length - 1;
@@ -307,31 +309,20 @@ namespace WordPuzzle.UI
 
         private void HandleBackspacePressed()
         {
-            if (currentInput.Length > 0)
-                currentInput = currentInput.Substring(0, currentInput.Length - 1);
-            // TEMP DEBUG — remove after tap-test confirms input pipeline works
-            if (feedbackText != null)
-            {
-                feedbackText.text = "INPUT: " + (currentInput.Length > 0 ? currentInput.ToUpper() : "<empty>");
-                feedbackText.color = new Color(1f, 0.6f, 0.2f);
-                feedbackText.fontSize = 48f;
-            }
-            UpdateCurrentInputDisplay();
+            // Route through state — GameBootstrap dispatches DeleteLetterAction and
+            // calls UpdateGameplayUI which sets currentInput from state.currentInput.
+            OnBackspace?.Invoke();
         }
 
         private void HandleEnterPressed()
         {
-            // TEMP DEBUG — remove after tap-test confirms input pipeline works
-            if (feedbackText != null)
-            {
-                feedbackText.text = "SUBMIT: " + currentInput.ToUpper();
-                feedbackText.color = new Color(0.4f, 0.8f, 1f);
-                feedbackText.fontSize = 48f;
-            }
+            // currentInput is authoritative from state (set via SetCurrentInput).
             if (!string.IsNullOrWhiteSpace(currentInput))
             {
                 OnWordSubmitted?.Invoke(currentInput);
-                ClearCurrentInput();
+                // Do not clear locally — GameBootstrap dispatches SubmitWordAction which
+                // resets state.currentInput to ""; UpdateGameplayUI will call SetCurrentInput("")
+                // which clears the row cleanly.
             }
         }
 

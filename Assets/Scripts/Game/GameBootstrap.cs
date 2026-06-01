@@ -338,6 +338,11 @@ namespace WordPuzzle
             uiManager.GetGameplay().OnWordSubmitted += OnWordSubmitted;
             uiManager.GetGameplay().OnBackToMenu += ShowMainMenu;
 
+            // Keystroke routing: each key dispatches through GameState so
+            // state.currentInput is the single source of truth — no local wipe.
+            uiManager.GetGameplay().OnLetterTyped += OnGameplayLetterTyped;
+            uiManager.GetGameplay().OnBackspace += OnGameplayBackspace;
+
             // Phase 2: Wire power-up handlers
             uiManager.GetGameplay().OnHintUsed += OnHintUsed;
             uiManager.GetGameplay().OnRevealUsed += OnRevealUsed;
@@ -408,6 +413,10 @@ namespace WordPuzzle
             }
             uiManager.GetGameplay().OnWordSubmitted -= OnWordSubmitted;
             uiManager.GetGameplay().OnBackToMenu -= ShowMainMenu;
+
+            // Keystroke routing unsubscribe.
+            uiManager.GetGameplay().OnLetterTyped -= OnGameplayLetterTyped;
+            uiManager.GetGameplay().OnBackspace -= OnGameplayBackspace;
 
             // Phase 2: Unsubscribe power-up handlers
             uiManager.GetGameplay().OnHintUsed -= OnHintUsed;
@@ -1056,6 +1065,20 @@ namespace WordPuzzle
                         System.StringComparison.OrdinalIgnoreCase);
                 tutorialOverlay.OnSubmission(result.accepted, reachedEnd);
             }
+        }
+
+        // Keystroke dispatch handlers — route keyboard taps through GameState so
+        // state.currentInput is authoritative and UpdateGameplayUI never wipes typed letters.
+        private void OnGameplayLetterTyped(char c)
+        {
+            stateManager.Dispatch(new PressLetterAction(c));
+            UpdateGameplayUI();
+        }
+
+        private void OnGameplayBackspace()
+        {
+            stateManager.Dispatch(new DeleteLetterAction());
+            UpdateGameplayUI();
         }
 
         // Phase 2: Power-up event handlers
