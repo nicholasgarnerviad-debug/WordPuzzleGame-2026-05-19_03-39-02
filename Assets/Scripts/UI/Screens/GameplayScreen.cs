@@ -84,13 +84,13 @@ namespace WordPuzzle.UI
         // Task 8A/8C — secondary UI labels (score, etc.) use text-muted so they don't compete.
         private static readonly Color C_LABEL_SECONDARY = HexToColor("#8A93A1");
 
-        // ---------- Spec §3 layout constants ----------
-        private const float TILE_SIZE_LADDER = 64f;
-        private const float TILE_GAP_H       = 6f;  // §3.2 inter-tile gap
-        private const float ROW_GAP_V        = 8f;  // §3 inter-row gap
-        private const float ROW_LABEL_PAD_L  = 64f; // §3 row left padding for label
+        // ---------- Spec §3 layout constants — sized for iPhone 13 Pro Max portrait ----------
+        private const float TILE_SIZE_LADDER = 110f; // larger tiles, ~5 fit 1080px wide with gaps
+        private const float TILE_GAP_H       = 8f;   // §3.2 inter-tile gap
+        private const float ROW_GAP_V        = 10f;  // §3 inter-row gap
+        private const float ROW_LABEL_PAD_L  = 0f;   // centre-align tiles, no left padding
         private const float AUTOSCROLL_DURATION = 0.18f; // §3.4 180ms ease-out
-        private const float CHAIN_ROW_HEIGHT  = TILE_SIZE_LADDER + 8f;
+        private const float CHAIN_ROW_HEIGHT  = TILE_SIZE_LADDER + 10f;
 
         // Task 7B/7C — juice hooks (null-safe; no-op when unset).
         private IHaptics _haptics;
@@ -184,9 +184,6 @@ namespace WordPuzzle.UI
                 tierIndicatorText.color = new Color32(0x8A, 0x93, 0xA1, 0xFF);
                 tierIndicatorText.fontSize = 20;
                 tierIndicatorText.alignment = TextAlignmentOptions.Center;
-                var rt = tierIndicatorText.rectTransform;
-                rt.anchoredPosition = new Vector2(0f, 795f);
-                rt.sizeDelta = new Vector2(700f, 48f);
                 tierIndicatorText.gameObject.SetActive(true);
             }
         }
@@ -1044,13 +1041,13 @@ namespace WordPuzzle.UI
             if (row == null) return;
             var hlg = row.GetComponent<HorizontalLayoutGroup>();
             if (hlg == null) hlg = row.gameObject.AddComponent<HorizontalLayoutGroup>();
-            hlg.childAlignment = TextAnchor.MiddleLeft;
+            hlg.childAlignment = TextAnchor.MiddleCenter;
             hlg.childControlWidth = false;
             hlg.childControlHeight = false;
             hlg.childForceExpandWidth = false;
             hlg.childForceExpandHeight = false;
             hlg.spacing = spacing;
-            hlg.padding = new RectOffset(leftPad, 0, 0, 0);
+            hlg.padding = new RectOffset(leftPad, leftPad, 0, 0);
         }
 
         private static void ClearChildren(Transform t)

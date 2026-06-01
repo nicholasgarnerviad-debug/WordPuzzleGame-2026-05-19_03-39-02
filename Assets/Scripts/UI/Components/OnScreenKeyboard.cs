@@ -17,15 +17,19 @@ namespace WordPuzzle.UI.Components
         public event Action OnEnterPressed;
 
         private static readonly string[] Rows = { "QWERTYUIOP", "ASDFGHJKL", "ZXCVBNM" };
-        private const float KeyWidth = 70f;
-        private const float KeyHeight = 70f;
+        // Key sizing for 1080px-wide canvas: 10 keys + 9 gaps = 10*88+9*6 = 934px (fits 1080)
+        private const float KeyWidth = 88f;
+        private const float KeyHeight = 82f;
         private const float KeySpacing = 6f;
-        private const float RowSpacing = 8f;
+        private const float RowSpacing = 10f;
 
         private readonly Dictionary<char, Button> _letterButtons = new Dictionary<char, Button>();
+        private bool _built;
 
-        private void Start()
+        private void Awake()
         {
+            if (_built) return;
+            _built = true;
             BuildKeyboard();
         }
 
