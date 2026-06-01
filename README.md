@@ -1,268 +1,352 @@
 # Word Ladder
 
-A modern, mobile-portrait word-ladder puzzle game built in Unity 6000.4.6f1. Transform a start word into an end word one letter at a time — every intermediate step must be a real English word that differs from the previous word by exactly one letter.
+A modern, mobile-portrait word-ladder puzzle game built in **Unity 6000.4.6f1** (Unity 6 LTS), portrait **1080×1920**. Transform a start word into an end word one letter at a time — every intermediate step must be a real English word that differs from the previous word by exactly one letter.
 
 ```
 FROM  C  A  T            FROM  S  T  O  N  E
-                                ↓
-       ↓                         S  T  O  R  E
-                                ↓
-      B  A  T  ← changed 1       S  T  A  R  E
-                                ↓
-      B  A  G  ← changed 1       S  H  A  R  E
-                                ↓
- TO   B  A  G            TO     S  H  A  R  P
+       |                        S  T  O  R  E   ← changed 1
+      B  A  T  ← changed 1      S  T  A  R  E   ← changed 1
+      B  A  G  ← changed 1      S  H  A  R  E   ← changed 1
+ TO   B  A  G            TO     S  H  A  R  P   ← changed 1
 ```
+
+> **This README is also the canonical context document for AI-assisted development.** It is written so an LLM (e.g. Claude Opus) can read it and author precise, surgical task prompts ("master prompts") for this repo. See **[§14 Writing a master prompt](#14-writing-a-master-prompt-for-this-repo)** and the **[Shared Context Block](#shared-context-block-paste-into-every-task-prompt)** at the end.
 
 ---
 
-## Game modes
+## Table of contents
+1. [Game modes](#1-game-modes)
+2. [Power-ups](#2-power-ups)
+3. [Economy & monetization](#3-economy--monetization)
+4. [Juice: motion, haptics, sound](#4-juice-motion-haptics-sound)
+5. [Visual identity](#5-visual-identity)
+6. [First-launch tutorial](#6-first-launch-tutorial)
+7. [Puzzle Show tiers](#7-puzzle-show-tiers)
+8. [Word validation](#8-word-validation)
+9. [Balance config — the single source of truth](#9-balance-config--the-single-source-of-truth)
+10. [Architecture](#10-architecture)
+11. [Persistence keys](#11-persistence-keys)
+12. [Testing & tooling](#12-testing--tooling)
+13. [Known tech debt / candidate tasks](#13-known-tech-debt--candidate-tasks)
+14. [Writing a master prompt for this repo](#14-writing-a-master-prompt-for-this-repo)
+15. [Design tokens](#15-design-tokens)
+16. [Building & running](#16-building--running)
+17. [Notes for AI agents working in this repo](#17-notes-for-ai-agents-working-in-this-repo)
+
+---
+
+## 1. Game modes
 
 | Mode | Timer | Puzzles | Win condition |
 |---|---|---|---|
-| **Classic** | None | Random 3–7 letter words, BFS-generated | Reach the end word; next puzzle auto-loads |
+| **Classic** | None | Random, BFS-generated; start/end restricted to a common-words subset | Reach the end word; next puzzle auto-loads. First-ever launch routes into the tutorial. |
 | **Daily** | None | One puzzle per day, identical for every player (no server) | Reach the end word; counts toward your streak |
-| **Puzzle Show** | None | Curated tier library (15 puzzles per tier × 6 tiers = 90) | Reach end word; tap a card to play any unlocked puzzle |
-| **Time Attack** | 60s or 120s, Timed or Survival | Random 3–7 letter words back-to-back | Solve as many as you can before the timer runs out |
+| **Puzzle Show** | None | Curated tier library (15 puzzles × 6 tiers = 90) | Reach end word; tap any unlocked card to play it |
+| **Time Attack** | 60s or 120s, Timed or Survival | Random words back-to-back | Solve as many as possible before time runs out |
 
-### Share Result
-- A **Share Result** button on the Results screen copies a compact, paste-anywhere summary to
-  the clipboard (`GUIUtility.systemCopyBuffer`). No third-party plugin required.
-- Format mirrors Wordle's emoji grid — one row per accepted chain step, `🟩` at the position that
-  changed, `⬛` at unchanged positions:
-  ```
-  Word Ladder — Daily #123
-  CAT → BAG  •  2 steps
-  🟩⬛⬛
-  ⬛⬛🟩
-  🔥 Streak 5 · Best 12
-  ```
-- Mode label varies: `Classic`, `Daily #N`, `Puzzle Show T<tier>`, `Time Attack 60s [Survival]`.
-- Time segment (`m:ss`) is only included for timed modes (Time Attack).
-- Streak footer is only included for the Daily mode.
-- **Native image share** (the OS share sheet with a PNG of the grid) requires a third-party plugin
-  (e.g. [NativeShare](https://github.com/yasirkula/UnityNativeShare)). The seam is in place:
-  `Assets/Scripts/Game/IShareService.cs` and `ShareCardBuilder.RenderPng(input)` produce the PNG.
-  Adding the NativeShare package requires explicit approval; until then, the default
-  `ClipboardShareService` is used.
+**Daily puzzle + streak** — Today's puzzle is derived from the player's **local date** with no network call: `index = (Today − 2025-01-01).Days mod N`, where `N` = pool size in `Assets/Resources/Data/daily_puzzles.json` (all entries pre-validated Hamming-1 + dictionary). Streak rules (`DailyStreakRules`, pure/testable): completing today increments `currentStreak` iff yesterday was completed; a missed day resets to 1; same-day re-completion never double-counts; `longestStreak = max(longestStreak, currentStreak)`. Persisted under `daily_v1`.
 
-### Daily Puzzle + Streak
-- Today's puzzle is derived from the player's **local date** with no network call:
-  `index = (Today − 2025-01-01).Days mod 450`. Every client on the same calendar day
-  picks the same `PuzzleDefinition` from `Assets/Resources/Data/daily_puzzles.json`
-  (450 entries, all pre-validated Hamming-1 + dictionary).
-- **Streak rules**: completing today's daily once increments `currentStreak` if yesterday
-  was also completed; a missed day resets the streak to 1; same-day re-completion never
-  double-counts; `longestStreak = max(longestStreak, currentStreak)`.
-- Persisted under PlayerPrefs key `daily_v1` (`DailyProgress`): last completion ISO date,
-  current + longest streak, last 60 completed dates, today's flag + index.
-- MainMenu shows `DAILY` (or `DAILY ✓ N` once today is done). Results screen surfaces
-  `Streak: N days` in accent gold + `Best: M` + a "Come back tomorrow" line.
+**Time Attack sub-modes** — **Timed**: fixed countdown (60s/120s), no rewards. **Survival**: each solve grants `BalanceConfig.SurvivalRewardSeconds` (15s) so a skilled player can sustain. Configured via `TimeAttackConfig` (factories `Default60`/`Default120`/`DefaultSurvival`, all read `BalanceConfig`).
 
-### Time Attack sub-modes
-- **Timed**: Fixed countdown from 60s or 120s. No time rewards.
-- **Survival**: Each completed puzzle adds reward seconds (+10s for the 60s base, +15s for the 120s base) so a skilled player can play forever.
+**Share result** — `ResultsScreen` "Share" copies a Wordle-style emoji grid to the clipboard (`ClipboardShareService`, zero third-party deps). One row per accepted step, `🟩` at the changed position, `⬛` elsewhere; mode-specific label/footer. Native image share is seam-ready (`IShareService` + `ShareCardBuilder`) but requires an approved plugin.
 
 ---
 
-## Power-ups
+## 2. Power-ups
 
-| Power-up | Effect | Available in |
+| Power-up | Effect | Default budget / puzzle | Coin cost | Available in |
+|---|---|---|---|---|
+| **Hint** | Gold-highlights the position in the current word to change next | `BalanceConfig.DefaultHintsPerPuzzle` = **3** | `HintCost` = 0 | All modes |
+| **Reveal** | Shows the next solution word as a ghost preview row | `BalanceConfig.DefaultRevealsPerPuzzle` = **1** | `RevealCost` = 25 | All modes |
+| **Undo** | Pops the last accepted chain word | n/a | `UndoCost` = 0 | All modes |
+| **+Time** | Adds `AddTimeGrantSeconds` (10s); charges = 1 (60s base) / 2 (120s base) | from `TimeAttackConfig` | — | Time Attack only |
+
+Reveal is deliberately **scarcer and pricier** than Hint (it's strictly stronger). Budgets seed in `GameStateManager.StartNewPuzzle` from `BalanceConfig`. Submitting a valid word or using Undo clears any active hint/reveal preview.
+
+---
+
+## 3. Economy & monetization
+
+**Single economy:** `EconomyManager : IEconomyManager` (constructed + `InitializeAsync()` in `GameBootstrap`), persisting coins through `DataManager` → `PlayerProgress.totalCoins`. (A legacy `CoinSystem` MonoBehaviour also exists but is orphaned — see [§13](#13-known-tech-debt--candidate-tasks).)
+
+**Faucet / sink model** (all amounts in `BalanceConfig`):
+
+| Direction | Source / sink | Amount |
 |---|---|---|
-| **Hint** | Gold-highlights the position in your current word that needs to change to reach the next solution step | All modes |
-| **Reveal** | Shows the next word in the solution path as a ghosted preview row | All modes |
-| **Undo** | Pops the last accepted chain word | All modes |
-| **+Time** | Adds seconds to the clock: +5s (60s base, 3 charges) or +10s (120s base, 2 charges) | Time Attack only |
+| 🟢 Faucet | Puzzle completion (`GrantPuzzleReward`) | `PuzzleCompletionReward` = +10 |
+| 🟢 Faucet | Daily bonus (stacks) | `DailyBonusReward` = +25 |
+| 🟢 Faucet | Rewarded video (opt-in) | `RewardedAdHintGrant` = +1 Hint |
+| 🔴 Sink | Reveal (extra) | `RevealCost` = −25 |
+| ⚪ Free baseline | Per puzzle | 3 hints + 1 reveal, regardless of balance |
 
-Each puzzle starts with a fixed budget per power-up. Submitting a valid word or using Undo clears any active Hint/Reveal preview to keep the UI honest.
+**Anti-deadlock guarantee:** the free per-puzzle baseline + no fail/lives gate means a broke player can always finish; 3 completions (3×10) more than fund one Reveal (25). Power-ups accelerate, never gate — no pay-to-win.
+
+**Ads (Google Mobile Ads, already integrated):**
+- `IAdService` (in the low-dep `Puzzle` assembly so tests can mock it) → `AdService : MonoBehaviour` (real AdMob) + `NullAdService` (Editor/headless fallback).
+- **Ad unit IDs are AdMob TEST IDs as `[SerializeField]` placeholders — never real IDs in source.**
+- **Rewarded video is opt-in only** (`GameBootstrap.RequestRewardedHintAd` / `RequestRewardedContinue`); reward granted **exactly once** on the SDK's reward callback, **never** on dismiss/failure.
+- `AdPolicyService` enforces the **interstitial frequency cap** — both a time cooldown (`InterstitialCooldownSeconds` = 300) **and** a puzzle count (`InterstitialPuzzleCap` = 5), between-session only, gated on a stubbed `AdsRemoved` flag (future "remove ads" IAP). Clock is injectable for tests.
 
 ---
 
-## Puzzle Show tier progression
+## 4. Juice: motion, haptics, sound
 
-The library is organized into 6 tiers of increasing difficulty:
+All three feedback channels fire on the same four moments and all respect a **reduce-motion** accessibility flag.
 
-| Tier | Word length | Optimal steps | Puzzle count |
+| Moment | Animation (≤200ms ease-out) | Haptic | Sound |
 |---|---|---|---|
-| 1 | 3 letters | 2 | 15 |
-| 2 | 3 letters | 3 | 15 |
-| 3 | 4 letters | 2–3 | 15 |
-| 4 | 4 letters | 4 | 15 |
-| 5 | 5 letters | 2 | 15 |
-| 6 | 5 letters | 3–4 | 15 |
+| Letter placed | tile lock-in punch (`LetterTile.PunchScale`) | light tap | key-press |
+| Word accepted | row settle + changed tile → green glow | medium tap | accept |
+| Word rejected | input-row shake (skipped if reduce-motion; reason still shows) | buzz | reject |
+| Puzzle won | `GameplayScreen.WinAscentBeat` (TO row gold→green, upward rise+settle, ~500ms) | buzz | win sting |
 
-Tier 1 is unlocked by default. Complete **10 puzzles in the current tier** to unlock the next tier. Progress (completed puzzle IDs, in-progress IDs, current tier) is persisted to `PlayerPrefs` under the key `puzzle_progress_v1`.
-
-The Puzzle Library screen renders each puzzle as a level card with state:
-- **Locked** — grey card, padlock affordance (higher tier)
-- **Unlocked / Unplayed** — neutral card with `FROM → TO` preview and step count
-- **In Progress** — gold border
-- **Completed** — green border with checkmark
+- **reduce-motion:** `SettingsData.reduceMotion` → `UIAnimations.ReduceMotion` (static, set from `GameBootstrap` on settings load/save). Every animation coroutine in `UIAnimations` and `LetterTile` snaps to the end-state and `yield break`s when true.
+- **Haptics:** `IHaptics` → `HandheldHaptics(Func<bool> enabled, Action vibrate = Handheld.Vibrate)` + `NullHaptics`. `Handheld.Vibrate` is a coarse full-buzz; fine-grained haptics need a plugin (TODO, not added). Gated on `SettingsData.hapticsEnabled`. The injectable `vibrate` action makes it unit-testable.
+- **Sound:** `SfxManager` (pooled `AudioSource`; clip slots assigned in-scene). No `AudioMixer`/clips in the repo yet → AudioListener-level. Pure static gate `SfxManager.EffectiveSfxVolume(SettingsData)` returns 0 when muted (testable).
 
 ---
 
-## Word validation
+## 5. Visual identity
 
-A submitted word is accepted onto the chain only if all of these hold:
-
-1. Exists in the 8,399-word curated dictionary (`Assets/Resources/Data/word_library.json`).
-2. Differs from the previous chain word by **exactly one letter at the same position** (Hamming-1).
-3. Is the same length as the previous chain word.
-4. Has not already been used in the current chain.
-
-When a word is rejected, the screen surfaces a specific reason via `OnWordSubmissionResult`:
-
-- "Word not in dictionary" — fails dictionary check
-- "Must change exactly one letter" — fails Hamming-1
-- "Word must be N letters" — wrong length (from `GameStateManager` wrapper)
-- "Word already used"
-- "Type a word" — empty (from `GameStateManager` wrapper)
-
-Rejected submissions never end the puzzle. There are no "lives" — players keep typing until they reach the end word or quit.
+Dark, gold-accented "premium puzzle" identity with a vertical ladder/ascent metaphor.
+- **Gold discipline:** `accent-gold #C9B458` is reserved for the **current focus/target** — the current-input/hint tiles, the in-progress library card, the primary streak number, tutorial emphasis. Secondary chrome (TO label, tier indicator, score, "Best:", library header/badge) is demoted to `text-muted #8A93A1`.
+- **Ascent:** the chain climbs toward the anchored TO row at the bottom; the win beat reinforces upward motion.
+- **Motion vocabulary** (one place: `UIAnimations`): `MICRO = 0.16s` (micro-interactions), `STANDARD = 0.22s` (transitions), `EaseOutCubic`. Deliberate and weighted — no cartoon bounce.
 
 ---
 
-## Settings
+## 6. First-launch tutorial
 
-Reachable from the main menu. Persisted to `PlayerPrefs` key `settings_v1`.
-
-- **Master volume** slider (0–100) — drives `AudioListener.volume`
-- **SFX volume** slider (persisted; AudioMixer integration planned)
-- **Music volume** slider (persisted)
-- **Mute All** toggle — forces `AudioListener.volume` to 0
-- **Reset Progress** — wipes `puzzle_progress_v1` and player progress with a confirmation modal. Settings themselves are preserved.
+On first launch (flag `onboarding_v1` absent/incomplete), tapping **Classic** routes into a scripted tutorial instead of a random puzzle.
+- Fixed ladder **CAT → BAT → BAG** (`TutorialPuzzle.Create()`), injected like the daily puzzle.
+- `TutorialOverlay` — non-modal step-gated coach marks (accent-gold emphasis) with a **Skip** button at every step; advances only on intended actions; rejection reuses the existing `OnWordSubmissionResult` feedback; a short success beat then drops into the first real puzzle.
+- Gating logic is pure/testable: `OnboardingRules.ShouldRouteToTutorial / MarkCompleted / Reset`. Persisted as `OnboardingData { completed, skipped }` under `onboarding_v1`.
+- **Replay tutorial** in Settings clears the flag. The flag **survives Reset Progress** (only Replay clears it). If the overlay isn't wired, the gate no-ops so a player is never stranded.
 
 ---
 
-## Architecture
+## 7. Puzzle Show tiers
 
-### Core layout
+| Tier | Word length | Optimal steps | Count |
+|---|---|---|---|
+| 1 | 3 | 2 | 15 |
+| 2 | 3 | 3 | 15 |
+| 3 | 4 | 2–3 | 15 |
+| 4 | 4 | 4 | 15 |
+| 5 | 5 | 2–3 | 15 |
+| 6 | 5 | 3–4 | 15 |
+
+Tier 1 unlocked by default. Complete **`BalanceConfig.PuzzlesRequiredToAdvanceTier` (10)** puzzles in the current tier to unlock the next; `MaxTier = 6`. Progress (`PuzzleProgressData`: completed IDs, in-progress IDs, current tier) persists under `puzzle_progress_v1`. The library renders cards as **Locked** (grey/padlock), **Unlocked/Unplayed** (neutral, FROM→TO preview), **In Progress** (gold border), **Completed** (green border + check). The authoritative tier→puzzleId map comes from `tier_definitions.json` (never hardcoded math).
+
+---
+
+## 8. Word validation
+
+`WordValidator : IWordValidator` accepts a word onto the chain only if **all** hold:
+1. Exists in the 8,399-word curated dictionary (`word_library.json`).
+2. Differs from the previous chain word by **exactly one letter at the same position** (Hamming-1, via `WordOps.HaveOneLetterDifference`).
+3. Same length as the previous word.
+4. Not already used in the current chain.
+
+Distances are computed **once per puzzle**: `WordValidator.Initialize` caches `WordGraph.ComputeDistancesFrom(target)` so `ValidateWord` does **zero BFS per submission**. `isProgress` = strictly closer to the target than the previous word.
+
+On rejection, `GameStateManager` surfaces a user-facing reason via the `OnWordSubmissionResult` event (consumed by `GameBootstrap` → `GameplayScreen`). User strings: `"Not a real word"`, `"Already used"`, `"Change exactly one letter"`, `"Word must be N letters"`, `"Type a word"`. Rejected submissions never end the puzzle — there are **no lives**; players keep typing until they reach the end word or quit.
+
+> Note: the validator currently returns English `Message` strings that `GameStateManager.MapValidationMessage` re-parses with `IndexOf` to pick the reason — brittle if reworded. A typed-enum refactor is a known candidate task ([§13](#13-known-tech-debt--candidate-tasks)).
+
+---
+
+## 9. Balance config — the single source of truth
+
+`Assets/Scripts/Puzzle/BalanceConfig.cs` (global namespace, lowest-dependency `Puzzle` assembly so everything can read it). **All tunable numbers live here** — never reintroduce magic-number literals in consumers.
+
 ```
-Assets/
-├── Resources/
-│   └── Data/
-│       ├── word_library.json        # 8,399 curated 3–5 letter words
-│       └── tier_definitions.json    # 90 puzzles × 6 tiers, validated ladders
-├── Scenes/
-│   └── GameUI.unity                  # Single-scene UI app
-├── Scripts/
-│   ├── Core/
-│   │   ├── Engine/                   # GameState, GameStateManager, GameAction
-│   │   └── Persistence/              # IDataManager, DataManager (PlayerPrefs)
-│   ├── Game/
-│   │   ├── GameBootstrap.cs          # Wires the whole graph; mode routing
-│   │   └── Modes/                    # ClassicMode, PuzzleShowMode, TimeAttackMode + TimeAttackConfig
-│   ├── Puzzle/
-│   │   ├── WordGraph.cs              # HashSet-backed dictionary + neighbor lookup
-│   │   ├── WordValidator.cs          # Hamming-1 + dictionary check + repeat check
-│   │   └── PuzzleGenerator.cs        # BFS over the word graph
-│   └── UI/
-│       ├── UIManager.cs              # Screen orchestration
-│       └── Screens/
-│           ├── MainMenuScreen.cs
-│           ├── GameplayScreen.cs     # The ladder view (start/chain/preview/end)
-│           ├── PuzzleLibraryScreen.cs
-│           ├── TimeAttackSetupScreen.cs
-│           ├── SettingsScreen.cs
-│           └── ResultsScreen.cs
-├── Tests/
-│   ├── Unit/                         # GameStateManagerTests, LetterTileTests, etc.
-│   └── Integration/
-└── Editor/
-    ├── VerifyWordLibrary.cs          # Tools/Verify Library/Run — validates all 90 puzzles
-    ├── VerifyPuzzles.cs              # Tier-gate + UI probes
-    ├── VerifyLadder.cs               # Hint/Reveal/Undo semantics probes
-    ├── VerifyRedesign.cs             # Badge/chain/HOME button probes
-    ├── VerifyPolish.cs               # Visual polish probes
-    └── SceneBuilder7.cs              # Idempotent rebuild of TimeAttackSetupScreen + AddTime
+Power-ups:   DefaultHintsPerPuzzle=3  DefaultRevealsPerPuzzle=1
+             HintCost=0  RevealCost=25  UndoCost=0
+Time Attack: TimeAttackBaseSecondsShort=60  TimeAttackBaseSecondsLong=120
+             AddTimeChargesShort=1  AddTimeChargesLong=2
+             AddTimeGrantSeconds=10  SurvivalRewardSeconds=15
+Generation:  MaxBfsDepth=10  MaxGenerationAttempts=20
+             Easy/Medium/HardWordLength=3/4/5
+             Easy/Medium/HardTargetDistance=2/4/6
+Tiers:       MaxTier=6  PuzzlesRequiredToAdvanceTier=10
+Economy:     PuzzleCompletionReward=10  DailyBonusReward=25  RewardedAdHintGrant=1
+Ads:         InterstitialCooldownSeconds=300  InterstitialPuzzleCap=5
 ```
 
-### State flow
-`GameStateManager` owns an immutable `GameState` snapshot plus a private `MutableGameState`. UI subscribes to state changes; `GameAction` instances are dispatched through `Dispatch()` which routes to handlers (`HandleSubmitWord`, `HandleUseHint`, `HandleUseReveal`, `HandleUndo`, `HandleUseAddTime`). Each handler mutates the working state, then notifies subscribers and persists.
+`Constants.cs` forwards its legacy power-up/tier fields to `BalanceConfig` to avoid drift.
 
-### Ladder UI semantics
-`GameplayScreen` renders five layered row types inside the chain view:
-1. **Start word row** — anchored top, FROM label
-2. **Chain history rows** — each accepted word; the tile at the position that *changed from the previous row* is highlighted green (#6AAA64) using a diff-highlight algorithm
-3. **Current input row** — what the player is typing. If a hint is active, the indicated tile is gold (#C9B458)
-4. **Reveal preview row** — only visible when reveal is active. Outline-only tiles, except the changed-letter index in gold
-5. **End word row** — anchored bottom, TO label. Turns green when the chain reaches it
-
-Auto-scrolls 180ms ease-out after every chain mutation so the current-input row sits 8px above the end-word row.
-
-### Mode routing
-- `MainMenu → Classic` → `StartClassicMode()` → random length 3–7 puzzle
-- `MainMenu → Puzzle Show` → opens `PuzzleLibraryScreen`; tapping a card calls `OnLibraryPuzzleSelected(int puzzleId)` → starts that specific puzzle
-- `MainMenu → Time Attack` → opens `TimeAttackSetupScreen` (2×2 grid) → on confirm calls `StartTimeAttackModeWithConfig(TimeAttackConfig)` → starts a session
-- **HOME** button on any in-game screen returns to MainMenu and tears down the active mode cleanly
+**Generation quality filter:** `common_words.json` (≈1,472 verified words = every tier/daily ladder word ∪ a curated common list) restricts generated START/END (and intermediates) to fair words. Fallback chain: strict-common → relaxed-common-endpoints → known-good fallback (`cat→cot→cog→dog`). Curated tier/daily puzzles bypass the generator and are exempt.
 
 ---
 
-## Building and running
+## 10. Architecture
 
-### Requirements
-- Unity 6000.4.6f1 (Unity 6 LTS)
-- TextMeshPro (included in Unity)
-- Designed for portrait 1080×1920; CanvasScaler matches height
+### Module / namespace map
+```
+Assets/Scripts/
+├── Core/
+│   ├── Engine/        WordPuzzle.State    GameState (immutable), GameStateManager (reducer/Dispatch),
+│   │                                      GameAction, Constants, EconomyManager, IEconomyManager
+│   └── Persistence/   WordPuzzle.Persistence  IDataManager, DataManager, PlayerProgress, SaveData,
+│                                          SettingsData, DailyProgress, OnboardingData, TierDataLoader
+├── Game/             WordPuzzle.Game      GameBootstrap (DI wiring), BootstrapInitializer,
+│                                          DailyPuzzleService, DailyStreakRules, OnboardingRules,
+│                                          TutorialPuzzle, ShareCardBuilder, IShareService,
+│                                          IAdService impls (AdService, AdPolicyService, NullAdService)
+│   └── Modes/         WordPuzzle.Modes    ClassicMode, PuzzleShowMode, TimeAttackMode(+Config),
+│                                          IGameMode, ModeController
+├── Puzzle/           WordPuzzle.Puzzle    WordGraph, WordValidator (IWordValidator), PuzzleGenerator,
+│                                          WordOps, BalanceConfig, IAdService, WordPuzzle (model),
+│                                          PuzzleDefinition, TierData, Difficulty, ValidationResult
+└── UI/               WordPuzzle.UI        UIManager, UIAnimations, TimerDisplay, Themes/UITheme,
+                                           Audio/SfxManager, Haptics/(IHaptics,HandheldHaptics,NullHaptics),
+                                           TutorialOverlay, Components/(LetterTile, OnScreenKeyboard, …),
+                                           Screens/(MainMenu, Gameplay, PuzzleLibrary, Results,
+                                           Settings, TimeAttackSetup)
 
-### Open the project
-1. Clone this repo
-2. Open the root folder in Unity Hub → **Add project from disk**
-3. Open `Assets/Scenes/GameUI.unity`
-4. Press **Play**
+Assets/Resources/Data/  word_library.json (8,399), tier_definitions.json (90), daily_puzzles.json, common_words.json
+Assets/Scenes/          GameUI.unity  ← the ONLY live scene. MainMenu/ClassicMode/PuzzleShowMode/
+                                        TimeAttackMode/SampleScene are legacy and never LoadScene'd.
+Assets/Tests/           Unit/ + Integration/  (NUnit; TestMocks.cs has Mock* doubles)
+Assets/Editor/          SceneBuilder*.cs + Verify* menu-item tools
+```
+Assembly dependency direction: `Puzzle` (lowest) ← `Persistence`/`State` ← `Modes` ← `Game`/`UI`. **`Puzzle` must never reference `State`/`UI`** (circular). Put shared low-level types in `Puzzle`.
 
-### Running tests
-- Edit-mode unit tests: **Window → General → Test Runner → EditMode → Run All**
-- Tests live in `Assets/Tests/Unit/` and `Assets/Tests/Integration/`
+### State flow (immutable + Dispatch — DO NOT change this shape)
+`GameStateManager` owns an immutable `GameState` snapshot plus a private `MutableGameState`. UI subscribes to state; `GameAction` instances go through `Dispatch()`, which routes to handlers: `HandlePressLetter`, `HandleDeleteLetter`, `HandleSubmitWord`, `HandleUseHint`, `HandleUseReveal`, `HandleUseAddTime`, `HandleUndo`. Each handler mutates the working state, then notifies subscribers and persists. Events: `OnWordSubmissionResult` (accept/reject + reason), `OnTimeAdded` (AddTime/Survival seconds).
 
-### Editor verification utilities
-The `Tools/` menu contains agent-built menu items for in-editor probes:
-- `Tools/Verify Library/Run` — confirms all 90 puzzles pass Hamming-1 + dictionary validation
-- `Tools/Verify Puzzles/*`, `Tools/Verify Ladder/*`, `Tools/Verify Polish/*`, `Tools/Verify Redesign/*` — per-feature probes
-- `Tools/SceneBuilder7/Run All` — idempotent scene rebuild for `TimeAttackSetupScreen` + AddTime button
-- `Tools/Tester7/*` — quick navigation between screens for visual QA
+### Public interfaces to preserve (method names/signatures)
+`IWordValidator`, `IDataManager`, `IGameMode`, `IEconomyManager`. (You may change a *return payload* if a task explicitly says so, but keep the method surface.)
+
+### Mode routing (`GameBootstrap`)
+- `Classic` → `StartClassicMode()` → tutorial gate, else random puzzle (common-words filtered).
+- `Daily` → `StartDailyMode()` → today's deterministic puzzle.
+- `Puzzle Show` → `PuzzleLibraryScreen`; tap → `OnLibraryPuzzleSelected(int puzzleId)`.
+- `Time Attack` → `TimeAttackSetupScreen` → `StartTimeAttackModeWithConfig(TimeAttackConfig)`.
+- **HOME** on any in-game screen returns to MainMenu and tears down the active mode + event subscriptions cleanly.
 
 ---
 
-## Design tokens
+## 11. Persistence keys
+
+All via `PlayerPrefs` (JSON values). `DataManager` owns them.
+
+| Key | Holds | Cleared by Reset Progress? |
+|---|---|---|
+| `puzzle_progress_v1` | `PuzzleProgressData` (tiers, completed IDs) | ✅ yes |
+| `wordpuzzle_progress` | `PlayerProgress` (coins, stats) | ✅ yes |
+| `wordpuzzle_save` | in-flight `GameStateSnapshot` | ✅ yes |
+| `daily_v1` | `DailyProgress` (streak) | ✅ yes |
+| `settings_v1` | `SettingsData` (volumes, mute, reduceMotion, hapticsEnabled) | ❌ preserved |
+| `onboarding_v1` | `OnboardingData` (tutorial done/skipped) | ❌ preserved (only Replay clears) |
+
+`DataManager.ResetAllAsync` clears the four "yes" keys and preserves settings + onboarding. (`"Coins"` is a legacy key written only by the orphaned `CoinSystem`/`PlayerDataManager` — see [§13](#13-known-tech-debt--candidate-tasks).)
+
+---
+
+## 12. Testing & tooling
+
+- **NUnit EditMode** tests under `Assets/Tests/Unit/{Engine,Persistence,UI}` and `Assets/Tests/Integration`. The `Unit.Tests` asmdef references the `Game.*` assemblies (incl. `Game.Puzzle`, `Game.UI`, `Game.Persistence`); UI-folder tests use a separate `Tests` asmdef. Most new tests need **no asmdef change**.
+- **Mocks** in `Assets/Tests/TestMocks.cs`: `MockDataManager`, `MockWordValidator`, `MockEconomyManager`, `MockAdService`. Extend these rather than inventing new doubles.
+- **Conventions:** pure-logic classes (e.g. `DailyStreakRules`, `OnboardingRules`, `WordOps`, `BalanceConfig`, `SfxManager.EffectiveSfxVolume`) are tested standalone; `GameStateManager` tests build it with the mocks; persistence tests use `new DataManager()` against PlayerPrefs with `[SetUp]/[TearDown]` key cleanup.
+- **Run:** Window → General → Test Runner → EditMode → Run All. (See [§17](#17-notes-for-ai-agents-working-in-this-repo) for the MCP test-runner caveat.)
+- **Editor tools** (`Tools/` menu): `Verify*` probes (library/ladder/polish), `SceneBuilder*` idempotent scene builders.
+
+---
+
+## 13. Known tech debt / candidate tasks
+
+These are real, current, and make good standalone "master prompts." (A consolidation pass was drafted and **intentionally reverted** — these remain open.)
+
+1. **Two orphaned managers.** `CoinSystem` (`Monetization/`) and `PlayerDataManager` (`Persistence/`) are unused MonoBehaviours, attached only in the 3 **legacy unused scenes** (`ClassicMode/PuzzleShowMode/TimeAttackMode.unity`, in Build Settings but never `LoadScene`'d). Both write a stale `"Coins"` key. Consolidating means stripping those components from the 3 scenes, deleting the scripts (+`.meta`), and a one-time `"Coins"` cleanup. **Watch:** GUID-check scenes/prefabs before deleting any MonoBehaviour script.
+2. **Dead undo snapshot stack.** `MutableGameState.undoHistory` (`Stack<GameSnapshot>`) is never pushed to, so `HandleUndo` always takes the fallback branch and the snapshot-restore branch is unreachable (hint/reveal budgets aren't refunded). Pick one path and delete the other.
+3. **Score not floored on undo** — `score -= lastWord.Length` can go negative; needs `Mathf.Max(0, …)`.
+4. **Brittle validator→UI reason coupling** — `WordValidator` returns English strings; `GameStateManager.MapValidationMessage` re-parses via `IndexOf`. Replace with a typed reason enum carried on `ValidationResult` (mind the assembly boundary: the enum must live in `Puzzle`, not `State`).
+5. **Third `HaveOneLetterDifference` copy** in `PuzzleGenerator` (the `WordGraph`/`WordValidator` copies were already unified into `WordOps`).
+6. **Native image share** — `IShareService`/`ShareCardBuilder.RenderPng` seam is ready; wiring the OS share sheet needs an approved plugin (e.g. NativeShare).
+7. **AudioMixer + real SFX clips** — `SfxManager` has slots but no clips/mixer in the repo yet.
+
+---
+
+## 14. Writing a master prompt for this repo
+
+A good task prompt for this codebase has a consistent shape. Reuse it:
+
+1. **Paste the [Shared Context Block](#shared-context-block-paste-into-every-task-prompt)** (repo layout, hard constraints, design tokens) at the top — it grounds the agent.
+2. **State a single GOAL** (one concern per prompt; this repo was built one swarm per concern).
+3. **`PLAN FIRST`** — require the agent to locate exact files + method seams against the real files, list assumptions where ambiguous, and *not* edit before confirming. (Critical: parts of this README may drift; the agent must verify against the tree.)
+4. **Break the work into lettered sub-tasks** (e.g. `TASK 9A / 9B …`), each with concrete file/seam targets.
+5. **Give explicit ACCEPTANCE criteria** — what an EditMode test must assert, what stays green, what the manual check is.
+6. **Repeat the hard constraints** (immutable state + Dispatch; preserve `IWordValidator/IDataManager/IGameMode/IEconomyManager`; all tests green; delete `.meta` with assets; never commit `Library/Temp/obj`; surgical diffs).
+7. **Optionally `USE SWARM`** for 3+ file / cross-module work; keep single-file fixes solo.
+
+**Effective patterns observed:** name the exact constant in `BalanceConfig` to read; specify the testable seam (inject a `Func<>`/`Action` rather than calling `Time`/`Handheld`/SDK directly); say where in `GameBootstrap` to wire; tell the agent which existing mock to extend; and for anything visual, acknowledge the final check is a manual portrait eyeball.
+
+### Shared Context Block (paste into every task prompt)
+```
+Repo: Unity 6000.4.6f1 mobile word-ladder game ("Word Ladder"). Portrait 1080x1920.
+Single live scene: Assets/Scenes/GameUI.unity. Architecture: immutable GameState + Dispatch
+(GameStateManager; handlers HandlePressLetter/HandleDeleteLetter/HandleSubmitWord/HandleUseHint/
+HandleUseReveal/HandleUseAddTime/HandleUndo; events OnWordSubmissionResult, OnTimeAdded).
+Tunable numbers live in Assets/Scripts/Puzzle/BalanceConfig.cs (single source of truth).
+Persistence: PlayerPrefs JSON via DataManager (keys: puzzle_progress_v1, wordpuzzle_progress,
+wordpuzzle_save, daily_v1, settings_v1, onboarding_v1).
+Assemblies (dep direction): Puzzle (lowest; BalanceConfig, WordGraph, WordValidator, IAdService) <-
+Persistence/State <- Modes <- Game/UI. Puzzle must NOT reference State/UI.
+Design tokens: bg-base #0F1217, bg-surface #1B1F27, surface-2 #242936, accent-gold #C9B458
+(reserve for current focus/target), accent-green #6AAA64, accent-red #C9215C,
+text-primary #E7E1C4/#F5F7FA, text-muted #8A93A1, text-dim #5A6270.
+
+Hard constraints (ALL prompts):
+- Preserve the immutable GameState + Dispatch architecture and the public interfaces
+  IWordValidator, IDataManager, IGameMode, IEconomyManager unless a task says otherwise.
+- All existing EditMode/PlayMode tests stay green. Delete the .meta when you delete a Unity asset,
+  and GUID-check scenes/prefabs before deleting any MonoBehaviour script.
+- Never commit Library/Temp/obj. Minimal, surgical diffs.
+- PLAN FIRST: confirm exact method seams against the real files before editing; state assumptions
+  where ambiguous. Tunables go in BalanceConfig, never as new magic-number literals.
+```
+
+---
+
+## 15. Design tokens
 
 | Token | Hex | Use |
 |---|---|---|
 | `bg-base` | `#0F1217` | Screen backgrounds |
 | `bg-surface` | `#1B1F27` | Buttons, panels, tiles |
 | `surface-2` | `#242936` | Filled letter tiles |
-| `accent-gold` | `#C9B458` | Targets, hints, titles |
-| `accent-green` | `#6AAA64` | Correct chain, success, +TIME |
+| `accent-gold` | `#C9B458` | **Current focus/target only** — hints, active input, primary streak |
+| `accent-green` | `#6AAA64` | Correct chain, success, +TIME, win |
 | `accent-red` | `#C9215C` | Destructive actions, reveal accent |
 | `text-primary` | `#E7E1C4` / `#F5F7FA` | Body, button labels |
-| `text-muted` | `#8A93A1` | Subtitles, FROM label |
+| `text-muted` | `#8A93A1` | Subtitles, demoted secondary chrome |
 | `text-dim` | `#5A6270` | Locked card text, version |
+
+---
+
+## 16. Building & running
+
+**Requirements:** Unity 6000.4.6f1, TextMeshPro (bundled), Google Mobile Ads (integrated). Portrait 1080×1920; CanvasScaler matches height.
+
+1. Clone, open the root folder via Unity Hub → *Add project from disk*.
+2. Open `Assets/Scenes/GameUI.unity` and press **Play**.
+3. Tests: Window → General → Test Runner → EditMode → Run All.
+
+---
+
+## 17. Notes for AI agents working in this repo
+
+Environment quirks learned the hard way — relevant when an agent verifies its own work:
+- **The unityMCP `run_tests` runner is unreliable for pass/fail.** It reports `summary.total=0`, collapses results to a single root node, and has reported `"Passed"` for a suite containing a must-fail test. Treat `"Passed"` as *compiles + discovered*, **not** runtime-green — verify by reading test-source assertions against the implementation. EditMode runs require the editor **not** in Play Mode (`manage_editor stop` first).
+- **`execute_code` (in-editor C#) is broken here** (mono "filename or extension is too long"; Roslyn not installed). You cannot script Play-mode drives or screenshots — visual/feel acceptance is a human-in-Editor check.
+- **Confirm scene context before/after agent work.** Loading a scene in the editor replaces the open one; agents have left the editor on a non-`GameUI` scene and/or in Play mode. Re-open `GameUI.unity` and stop Play mode to restore the expected view.
+- **`git status` before planning/committing.** Background agents occasionally drop shell-misfire junk files at repo root (e.g. `nul`, `{`, `0`) and can even pick up a *later* task autonomously — clean junk and check the tree before each commit.
+- Untracked tooling dirs (`.claude/`, `.swarm/`, `.claude-flow/`, `agentdb.*`, `_Recovery/`) are not part of the game — never commit them.
 
 ---
 
 ## Project history
 
-The project was built iteratively through seven AI-orchestrated swarms, each focused on a single concern. The git log captures the progression:
-
-- `swarm-1` Word library, settings, redesign, ladder semantics
-- `swarm-2/3` Modern polish: letter tiles, on-screen keyboard, hint/undo/reveal feedback
-- `swarm-3` Library cards, tier gate, FROM/TO labels
-- `swarm-4` Home button, badge reparenting, settings feature
-- `swarm-5` Ladder hint/reveal semantics (next-word, changed-position)
-- `swarm-6` Word submit bug fix, per-mode behaviors, AddTime power-up
-- `swarm-7` UI completion: TimeAttackSetupScreen + AddTime button in scene
-
-See `Assets/Screenshots/` for chronological visual snapshots.
-
----
-
-## Status
-
-Shippable v1.0. Polish backlog tracked for v1.1:
-- Library card badge anchor unification
-- HOME button visual treatment consistency
-- Locked-card affordance (alpha/glyph)
-- Results stats layout merge
-- PuzzleShow tier indicator emphasis
-- 4-power-up row spacing balance
-- Empty placeholder tile labeling
+Built iteratively through AI-orchestrated swarms, one concern each: word library & ladder semantics → modern tile/keyboard polish → library cards & tier gate → HOME/settings → hint/reveal semantics → per-mode behaviors & AddTime → TimeAttack UI → share result → daily + streak → **balance config & common-words generation** → **economy & rewarded ads** → **tactile juice (motion/haptics/sound)** → **premium visual identity (gold focus, ascent, motion vocabulary)**. The git log captures the progression.
