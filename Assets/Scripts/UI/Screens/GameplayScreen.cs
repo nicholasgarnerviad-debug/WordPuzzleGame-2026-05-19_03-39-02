@@ -280,6 +280,13 @@ namespace WordPuzzle.UI
         private void HandleLetterPressed(char c)
         {
             currentInput += char.ToLower(c);
+            // TEMP DEBUG — remove after tap-test confirms input pipeline works
+            if (feedbackText != null)
+            {
+                feedbackText.text = "INPUT: " + currentInput.ToUpper();
+                feedbackText.color = new Color(0.2f, 1f, 0.4f);
+                feedbackText.fontSize = 48f;
+            }
             UpdateCurrentInputDisplay();
 
             // Task 7B/7C — letter placed juice.
@@ -302,11 +309,25 @@ namespace WordPuzzle.UI
         {
             if (currentInput.Length > 0)
                 currentInput = currentInput.Substring(0, currentInput.Length - 1);
+            // TEMP DEBUG — remove after tap-test confirms input pipeline works
+            if (feedbackText != null)
+            {
+                feedbackText.text = "INPUT: " + (currentInput.Length > 0 ? currentInput.ToUpper() : "<empty>");
+                feedbackText.color = new Color(1f, 0.6f, 0.2f);
+                feedbackText.fontSize = 48f;
+            }
             UpdateCurrentInputDisplay();
         }
 
         private void HandleEnterPressed()
         {
+            // TEMP DEBUG — remove after tap-test confirms input pipeline works
+            if (feedbackText != null)
+            {
+                feedbackText.text = "SUBMIT: " + currentInput.ToUpper();
+                feedbackText.color = new Color(0.4f, 0.8f, 1f);
+                feedbackText.fontSize = 48f;
+            }
             if (!string.IsNullOrWhiteSpace(currentInput))
             {
                 OnWordSubmitted?.Invoke(currentInput);

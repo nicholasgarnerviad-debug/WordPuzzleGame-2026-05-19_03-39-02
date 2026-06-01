@@ -30,6 +30,20 @@ namespace WordPuzzle.UI.Components
         {
             if (_built) return;
             _built = true;
+
+            // Pin our own RectTransform: bottom-stretch anchor, pivot at (0.5,0),
+            // so anchoredPosition.y = padding above the canvas bottom edge.
+            // This ensures the keyboard is never clipped below the screen.
+            var selfRT = GetComponent<RectTransform>();
+            if (selfRT != null)
+            {
+                selfRT.anchorMin        = new Vector2(0f, 0f);
+                selfRT.anchorMax        = new Vector2(1f, 0f);
+                selfRT.pivot            = new Vector2(0.5f, 0f);
+                selfRT.sizeDelta        = new Vector2(0f, 305f);
+                selfRT.anchoredPosition = new Vector2(0f, 0f);
+            }
+
             BuildKeyboard();
         }
 
@@ -37,8 +51,11 @@ namespace WordPuzzle.UI.Components
         {
             Transform root = keyboardRoot != null ? keyboardRoot : transform;
 
+            // With pivot=(0.5,0), y=0 is the bottom of our rect. Stack rows upward.
+            // Row 0 (QWERTY) at top, row 2 (ZXCVBNM) at bottom — so row 0 has the highest y.
             float totalHeight = Rows.Length * (KeyHeight + RowSpacing);
-            float yStart = totalHeight / 2f - KeyHeight / 2f;
+            // yStart: top of first row (inside rect, measured from bottom = 0)
+            float yStart = totalHeight - KeyHeight / 2f;
 
             for (int rowIndex = 0; rowIndex < Rows.Length; rowIndex++)
             {
