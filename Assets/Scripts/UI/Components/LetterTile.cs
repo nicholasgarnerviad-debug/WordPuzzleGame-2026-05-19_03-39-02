@@ -105,6 +105,12 @@ namespace WordPuzzle.UI.Components
             ApplyStateVisuals();
         }
 
+        /// <summary>Sets the letter label color directly (avoids GetComponentInChildren ambiguity with StateGlyph).</summary>
+        public void SetLetterColor(Color color)
+        {
+            if (letterText != null) letterText.color = color;
+        }
+
         /// <summary>Sets the tile size (width and height in pixels).</summary>
         public void SetSize(float size)
         {
@@ -304,7 +310,9 @@ namespace WordPuzzle.UI.Components
             // Label child.
             if (letterText == null)
             {
-                letterText = GetComponentInChildren<TextMeshProUGUI>(true);
+                // Search only named "Letter" or "LetterText" children to avoid grabbing StateGlyph.
+                Transform existingLabel = transform.Find("Letter") ?? transform.Find("LetterText");
+                if (existingLabel != null) letterText = existingLabel.GetComponent<TextMeshProUGUI>();
                 if (letterText == null)
                 {
                     var labelGO = new GameObject("Letter", typeof(RectTransform));
@@ -319,11 +327,14 @@ namespace WordPuzzle.UI.Components
                     letterText.fontStyle = FontStyles.Bold;
                     letterText.fontSize = Mathf.Max(12f, currentSize * 0.55f * AccessiblePalette.TextScale);
                     letterText.color = C_TEXT;
-                    letterText.raycastTarget = false;
                     letterText.enableWordWrapping = false;
                     if (font != null) letterText.font = font;
                 }
             }
+            // Always ensure the letter label renders on top of Border/Shadow/StateGlyph,
+            // and never blocks raycasts (input must reach the tile's Button or parent).
+            letterText.raycastTarget = false;
+            letterText.transform.SetAsLastSibling();
 
             // Optional button (legacy).
             if (button == null) button = GetComponent<Button>();

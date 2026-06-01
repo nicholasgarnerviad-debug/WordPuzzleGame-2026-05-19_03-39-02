@@ -1016,8 +1016,8 @@ namespace WordPuzzle.UI
         private static void SetTextColor(LetterTile tile, Color color)
         {
             if (tile == null) return;
-            var label = tile.GetComponentInChildren<TextMeshProUGUI>(true);
-            if (label != null) label.color = color;
+            // Use the dedicated setter to avoid grabbing the StateGlyph TMP instead of the letter label.
+            tile.SetLetterColor(color);
         }
 
         // ============================================================
