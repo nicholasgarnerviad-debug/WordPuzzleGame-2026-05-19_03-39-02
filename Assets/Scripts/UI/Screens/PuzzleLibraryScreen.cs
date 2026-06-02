@@ -446,17 +446,12 @@ namespace WordPuzzle.UI
         }
 
         // §15D — rounded corners via Unity's built-in sliced UISprite (matches the app's soft radius).
-        private static Sprite _rounded;
+        // Task 22B — route the library's tier rows + puzzle cards (and their borders/back button)
+        // through the one shared, generously-rounded button background so corners match every
+        // other screen. Colour/raycast/children are untouched.
         private static void ApplyRounded(Image img)
         {
-            if (img == null) return;
-            if (_rounded == null) _rounded = Resources.GetBuiltinResource<Sprite>("UI/Skin/UISprite.psd");
-            if (_rounded != null)
-            {
-                img.sprite = _rounded;
-                img.type = Image.Type.Sliced;
-                img.pixelsPerUnitMultiplier = 2f; // tightens the corner radius for a calm, modern look
-            }
+            UIThemeManager.ApplyRoundedButton(img);
         }
 
         private static Color StateBg(PuzzleState s) => s switch

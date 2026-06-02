@@ -984,7 +984,6 @@ namespace WordPuzzle.UI
         // ================================================================
         private GameObject winPanel;
         private TextMeshProUGUI winStepsText;
-        private static Sprite _roundedWin;
 
         /// <summary>
         /// Overlay a small win card on the finished board. steps = moves taken.
@@ -1047,8 +1046,6 @@ namespace WordPuzzle.UI
 
         private void BuildWinPanel()
         {
-            if (_roundedWin == null) _roundedWin = Resources.GetBuiltinResource<Sprite>("UI/Skin/UISprite.psd");
-
             winPanel = new GameObject("WinPanel", typeof(RectTransform));
             winPanel.transform.SetParent(transform, false);
             var prt = (RectTransform)winPanel.transform;
@@ -1069,7 +1066,7 @@ namespace WordPuzzle.UI
             crt.pivot = new Vector2(0.5f, 0.5f);
             crt.sizeDelta = new Vector2(560f, 360f);
             var cardImg = card.AddComponent<Image>();
-            cardImg.sprite = _roundedWin; cardImg.type = Image.Type.Sliced; cardImg.pixelsPerUnitMultiplier = 2f;
+            UIThemeManager.ApplyRoundedButton(cardImg); // Task 22B — match the shared bubbly corner language
             cardImg.color = new Color32(0x24, 0x29, 0x36, 0xFF); // surface-2
 
             MakeWinText(card.transform, "Title", "SOLVED", 54, new Vector2(0f, 1f), new Vector2(1f, 1f),
@@ -1110,7 +1107,7 @@ namespace WordPuzzle.UI
             rt.anchorMin = rt.anchorMax = anchor; rt.pivot = new Vector2(0.5f, 0f);
             rt.anchoredPosition = pos; rt.sizeDelta = size;
             var img = go.AddComponent<Image>();
-            img.sprite = _roundedWin; img.type = Image.Type.Sliced; img.pixelsPerUnitMultiplier = 2f;
+            UIThemeManager.ApplyRoundedButton(img); // Task 22B — shared bubbly corner
             img.color = bg;
             var btn = go.AddComponent<Button>();
             btn.transition = Selectable.Transition.None;

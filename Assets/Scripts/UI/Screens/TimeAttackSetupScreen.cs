@@ -145,6 +145,7 @@ namespace WordPuzzle.UI
             var img = card.GetComponent<Image>();
             if (img != null)
             {
+                UIThemeManager.ApplyRoundedButton(img); // Task 22B — shared bubbly corner
                 img.color = C_BG_SURFACE2;
                 img.raycastTarget = true;
             }

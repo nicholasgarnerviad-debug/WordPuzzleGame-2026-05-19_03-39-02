@@ -174,33 +174,42 @@ public static class UIThemeManager
     /// <summary>Manually set a theme instance. Useful for testing or runtime theme switching.</summary>
     public static void SetTheme(UITheme theme) => instance = theme;
 
-    // ── Task 21B — one shared rounded-rectangle button background (9-slice). ──
-    // Unity's built-in "UISprite" is a 9-slice rounded-rect, so its corner radius stays crisp at
-    // any button size (no third-party asset). Routing button backgrounds through here keeps corners
-    // consistent app-wide and matches the soft radius used by the gameplay cards/tiles.
+    // ── Task 22A — one shared, generously-rounded button background (9-slice). ──
+    // A dedicated rounded-rect sprite (Assets/Resources/UI/RoundedButtonBubbly.png, 128px texture
+    // with a baked 44px corner 9-slice border) replaces the timid built-in UISprite. Routing every
+    // button background through here gives a consistent, crisp "bubbly" corner at any size — the
+    // small power-up button and the wide menu button alike — without stretching the corner. Falls
+    // back to Unity's built-in UISprite only if the dedicated asset is missing.
     private static UnityEngine.Sprite _roundedButton;
+    private static bool _roundedButtonLoaded;
     public static UnityEngine.Sprite RoundedButtonSprite
     {
         get
         {
-            if (_roundedButton == null)
-                _roundedButton = UnityEngine.Resources.GetBuiltinResource<UnityEngine.Sprite>("UI/Skin/UISprite.psd");
+            if (!_roundedButtonLoaded)
+            {
+                _roundedButton = UnityEngine.Resources.Load<UnityEngine.Sprite>("UI/RoundedButtonBubbly");
+                if (_roundedButton == null)
+                    _roundedButton = UnityEngine.Resources.GetBuiltinResource<UnityEngine.Sprite>("UI/Skin/UISprite.psd");
+                _roundedButtonLoaded = true;
+            }
             return _roundedButton;
         }
     }
 
     /// <summary>
-    /// Apply the shared rounded-rectangle background to a button/panel Image without changing its
-    /// colour, raycast, or children (badges/icons/labels). Higher pixelsPerUnitMultiplier = tighter
-    /// corner radius. Safe to call repeatedly; no-op if the Image or sprite is unavailable.
+    /// Apply the shared generously-rounded background to a button/panel Image without changing its
+    /// colour, raycast, or children (badges/icons/labels). The corner radius is baked into the
+    /// 9-slice sprite, so pixelsPerUnitMultiplier stays at 1 to honour the designed (bubbly) radius.
+    /// Safe to call repeatedly; no-op if the Image or sprite is unavailable.
     /// </summary>
-    public static void ApplyRoundedButton(UnityEngine.UI.Image img, float cornerTightness = 2f)
+    public static void ApplyRoundedButton(UnityEngine.UI.Image img, float pixelsPerUnitMultiplier = 1f)
     {
         if (img == null) return;
         var sprite = RoundedButtonSprite;
         if (sprite == null) return;
         img.sprite = sprite;
         img.type = UnityEngine.UI.Image.Type.Sliced;
-        img.pixelsPerUnitMultiplier = cornerTightness;
+        img.pixelsPerUnitMultiplier = pixelsPerUnitMultiplier;
     }
 }
