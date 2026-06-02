@@ -92,7 +92,9 @@ namespace WordPuzzle.Puzzle
         public PuzzleDefinition GenerateRandomPuzzle(Difficulty difficulty)
         {
             int wordLength    = GetWordLengthForDifficulty(difficulty);
-            int targetDistance = GetTargetDistance(difficulty);
+            // Task 17 — never aim below the length floor.
+            int targetDistance = System.Math.Max(GetTargetDistance(difficulty),
+                                                  BalanceConfig.MinMovesForLength(wordLength));
 
             // (1) Strict common: both start/end and all intermediates must be common.
             if (commonWords != null)
@@ -103,7 +105,7 @@ namespace WordPuzzle.Puzzle
                     if (string.IsNullOrEmpty(startWord)) continue;
 
                     var path = FindPathOfLength(startWord, targetDistance, strictCommon: true);
-                    if (path.Count > 1)
+                    if (MeetsFloor(path))
                         return BuildPuzzle(path);
                 }
 
@@ -114,7 +116,7 @@ namespace WordPuzzle.Puzzle
                     if (string.IsNullOrEmpty(startWord)) continue;
 
                     var path = FindPathOfLengthRelaxed(startWord, targetDistance);
-                    if (path.Count > 1 && IsCommonWord(path[path.Count - 1]))
+                    if (MeetsFloor(path) && IsCommonWord(path[path.Count - 1]))
                         return BuildPuzzle(path);
                 }
             }
@@ -127,7 +129,7 @@ namespace WordPuzzle.Puzzle
                     if (string.IsNullOrEmpty(startWord)) continue;
 
                     var path = FindPathOfLength(startWord, targetDistance, strictCommon: false);
-                    if (path.Count > 1)
+                    if (MeetsFloor(path))
                         return BuildPuzzle(path);
                 }
             }
@@ -146,7 +148,11 @@ namespace WordPuzzle.Puzzle
         public PuzzleDefinition GenerateRandomPuzzleOfLength(int wordLength, int targetDistance = -1)
         {
             if (wordLength < 2) wordLength = 3;
-            if (targetDistance < 1) targetDistance = System.Math.Max(2, wordLength - 2);
+            // Task 17 — target derives from the length floor (one place), never the inline max(2,len-2).
+            if (targetDistance < 1)
+                targetDistance = System.Math.Max(BalanceConfig.MinMovesForLength(wordLength), wordLength - 2);
+            else
+                targetDistance = System.Math.Max(targetDistance, BalanceConfig.MinMovesForLength(wordLength));
 
             // (1) Strict common.
             if (commonWords != null)
@@ -157,7 +163,7 @@ namespace WordPuzzle.Puzzle
                     if (string.IsNullOrEmpty(startWord)) continue;
 
                     var path = FindPathOfLength(startWord, targetDistance, strictCommon: true);
-                    if (path.Count > 1)
+                    if (MeetsFloor(path))
                         return BuildPuzzle(path);
                 }
 
@@ -168,7 +174,7 @@ namespace WordPuzzle.Puzzle
                     if (string.IsNullOrEmpty(startWord)) continue;
 
                     var path = FindPathOfLengthRelaxed(startWord, targetDistance);
-                    if (path.Count > 1 && IsCommonWord(path[path.Count - 1]))
+                    if (MeetsFloor(path) && IsCommonWord(path[path.Count - 1]))
                         return BuildPuzzle(path);
                 }
 
@@ -179,7 +185,7 @@ namespace WordPuzzle.Puzzle
                     if (string.IsNullOrEmpty(startWord)) continue;
 
                     var path = FindAnyShortPath(startWord, System.Math.Max(2, targetDistance));
-                    if (path.Count > 1)
+                    if (MeetsFloor(path))
                         return BuildPuzzle(path);
                 }
             }
@@ -191,7 +197,7 @@ namespace WordPuzzle.Puzzle
                     if (string.IsNullOrEmpty(startWord)) continue;
 
                     var path = FindPathOfLength(startWord, targetDistance, strictCommon: false);
-                    if (path.Count > 1)
+                    if (MeetsFloor(path))
                         return BuildPuzzle(path);
                 }
 
@@ -201,7 +207,7 @@ namespace WordPuzzle.Puzzle
                     if (string.IsNullOrEmpty(startWord)) continue;
 
                     var path = FindAnyShortPath(startWord, System.Math.Max(2, targetDistance));
-                    if (path.Count > 1)
+                    if (MeetsFloor(path))
                         return BuildPuzzle(path);
                 }
             }
@@ -281,6 +287,42 @@ namespace WordPuzzle.Puzzle
         }
 
         // ── private helpers ──────────────────────────────────────────────────────
+
+        // Task 17 — a candidate path is acceptable only if the TRUE shortest-path distance
+        // (over the FULL graph the player can traverse, not just the common subgraph the path
+        // was walked in) meets the length floor. This prevents puzzles that look like N moves
+        // but are actually solvable in fewer (e.g. 1) via another route.
+        private bool MeetsFloor(List<string> path)
+        {
+            if (path == null || path.Count < 2) return false;
+            int len = path[0].Length;
+            int floor = BalanceConfig.MinMovesForLength(len);   // already >= AbsoluteMinMoves (2)
+            return TrueShortestDistance(path[0], path[path.Count - 1]) >= floor;
+        }
+
+        /// <summary>True shortest-path edit distance over the full word graph (BFS). int.MaxValue if unreachable.</summary>
+        private int TrueShortestDistance(string start, string end)
+        {
+            if (string.IsNullOrEmpty(start) || string.IsNullOrEmpty(end)) return int.MaxValue;
+            if (start == end) return 0;
+
+            var visited = new HashSet<string> { start };
+            var queue   = new Queue<(string word, int dist)>();
+            queue.Enqueue((start, 0));
+
+            while (queue.Count > 0)
+            {
+                var (current, dist) = queue.Dequeue();
+                if (dist >= BalanceConfig.MaxBfsDepth) continue;
+                foreach (string neighbor in GetNeighborsFromGraph(current, strictCommon: false))
+                {
+                    if (neighbor == end) return dist + 1;
+                    if (visited.Add(neighbor))
+                        queue.Enqueue((neighbor, dist + 1));
+                }
+            }
+            return int.MaxValue;
+        }
 
         private PuzzleDefinition BuildPuzzle(List<string> path)
         {

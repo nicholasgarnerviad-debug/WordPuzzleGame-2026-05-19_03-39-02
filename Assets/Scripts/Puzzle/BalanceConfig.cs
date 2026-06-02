@@ -78,6 +78,31 @@ public static class BalanceConfig
     /// <summary>Target ladder distance for Hard puzzles.</summary>
     public const int HardTargetDistance = 6;
 
+    // ─── Minimum move floor (Task 17) ─────────────────────────────────────────
+
+    /// <summary>Absolute hard floor: no puzzle may be solvable in fewer than this many moves.</summary>
+    public const int AbsoluteMinMoves = 2;
+
+    /// <summary>
+    /// Task 17 — minimum moves (shortest-path edits) a puzzle of the given word length must
+    /// require. Single source of truth for the length→min-moves curve; always &gt;= AbsoluteMinMoves.
+    /// Curve: 3→2, 4→2, 5→3, 6→3, 7→4 (longer words generally demand longer ladders).
+    /// </summary>
+    public static int MinMovesForLength(int wordLength)
+    {
+        int min;
+        switch (wordLength)
+        {
+            case 3: min = 2; break;
+            case 4: min = 2; break;
+            case 5: min = 3; break;
+            case 6: min = 3; break;
+            case 7: min = 4; break;
+            default: min = wordLength >= 7 ? 4 : 2; break;
+        }
+        return min < AbsoluteMinMoves ? AbsoluteMinMoves : min;
+    }
+
     // ─── Tier pacing (Task 5A; Task 15: 7 tiers × 50) ─────────────────────────
 
     /// <summary>Total number of tiers in the game (Puzzle Show mode).</summary>

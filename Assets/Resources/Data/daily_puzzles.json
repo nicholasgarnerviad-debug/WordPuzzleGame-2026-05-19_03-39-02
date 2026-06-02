@@ -786,13 +786,14 @@
     },
     {
       "puzzleId": 10062,
-      "startWord": "light",
-      "endWord": "night",
-      "optimalSteps": 2,
+      "startWord": "power",
+      "endWord": "cover",
+      "optimalSteps": 3,
       "solution": [
-        "light",
-        "sight",
-        "night"
+        "power",
+        "lower",
+        "lover",
+        "cover"
       ],
       "seedValue": 62565
     },
@@ -810,13 +811,14 @@
     },
     {
       "puzzleId": 10064,
-      "startWord": "prime",
-      "endWord": "crime",
-      "optimalSteps": 2,
+      "startWord": "crime",
+      "endWord": "bride",
+      "optimalSteps": 3,
       "solution": [
+        "crime",
         "prime",
-        "grime",
-        "crime"
+        "pride",
+        "bride"
       ],
       "seedValue": 64583
     },
@@ -954,14 +956,14 @@
     },
     {
       "puzzleId": 10076,
-      "startWord": "light",
-      "endWord": "tight",
+      "startWord": "tough",
+      "endWord": "coach",
       "optimalSteps": 3,
       "solution": [
-        "light",
-        "night",
-        "fight",
-        "tight"
+        "tough",
+        "touch",
+        "couch",
+        "coach"
       ],
       "seedValue": 76691
     },
@@ -1940,13 +1942,14 @@
     },
     {
       "puzzleId": 11062,
-      "startWord": "light",
-      "endWord": "night",
-      "optimalSteps": 2,
+      "startWord": "growl",
+      "endWord": "drawn",
+      "optimalSteps": 3,
       "solution": [
-        "light",
-        "sight",
-        "night"
+        "growl",
+        "grown",
+        "drown",
+        "drawn"
       ],
       "seedValue": 62565
     },
@@ -1964,13 +1967,15 @@
     },
     {
       "puzzleId": 11064,
-      "startWord": "prime",
-      "endWord": "crime",
-      "optimalSteps": 2,
+      "startWord": "trick",
+      "endWord": "grape",
+      "optimalSteps": 4,
       "solution": [
-        "prime",
-        "grime",
-        "crime"
+        "trick",
+        "track",
+        "trace",
+        "grace",
+        "grape"
       ],
       "seedValue": 64583
     },
@@ -2108,14 +2113,14 @@
     },
     {
       "puzzleId": 11076,
-      "startWord": "light",
-      "endWord": "tight",
+      "startWord": "steam",
+      "endWord": "steer",
       "optimalSteps": 3,
       "solution": [
-        "light",
-        "night",
-        "fight",
-        "tight"
+        "steam",
+        "steal",
+        "steel",
+        "steer"
       ],
       "seedValue": 76691
     },
@@ -3094,13 +3099,14 @@
     },
     {
       "puzzleId": 12062,
-      "startWord": "light",
-      "endWord": "night",
-      "optimalSteps": 2,
+      "startWord": "whole",
+      "endWord": "write",
+      "optimalSteps": 3,
       "solution": [
-        "light",
-        "sight",
-        "night"
+        "whole",
+        "while",
+        "white",
+        "write"
       ],
       "seedValue": 62565
     },
@@ -3118,13 +3124,14 @@
     },
     {
       "puzzleId": 12064,
-      "startWord": "prime",
-      "endWord": "crime",
-      "optimalSteps": 2,
+      "startWord": "world",
+      "endWord": "round",
+      "optimalSteps": 3,
       "solution": [
-        "prime",
-        "grime",
-        "crime"
+        "world",
+        "would",
+        "wound",
+        "round"
       ],
       "seedValue": 64583
     },
@@ -3262,14 +3269,15 @@
     },
     {
       "puzzleId": 12076,
-      "startWord": "light",
-      "endWord": "tight",
-      "optimalSteps": 3,
+      "startWord": "score",
+      "endWord": "stuck",
+      "optimalSteps": 4,
       "solution": [
-        "light",
-        "night",
-        "fight",
-        "tight"
+        "score",
+        "store",
+        "stork",
+        "stock",
+        "stuck"
       ],
       "seedValue": 76691
     },
@@ -4248,13 +4256,15 @@
     },
     {
       "puzzleId": 13062,
-      "startWord": "light",
-      "endWord": "night",
-      "optimalSteps": 2,
+      "startWord": "blame",
+      "endWord": "shake",
+      "optimalSteps": 4,
       "solution": [
-        "light",
-        "sight",
-        "night"
+        "blame",
+        "flame",
+        "flake",
+        "slake",
+        "shake"
       ],
       "seedValue": 62565
     },
@@ -4272,13 +4282,15 @@
     },
     {
       "puzzleId": 13064,
-      "startWord": "prime",
-      "endWord": "crime",
-      "optimalSteps": 2,
+      "startWord": "slate",
+      "endWord": "stone",
+      "optimalSteps": 4,
       "solution": [
-        "prime",
-        "grime",
-        "crime"
+        "slate",
+        "state",
+        "stare",
+        "store",
+        "stone"
       ],
       "seedValue": 64583
     },
@@ -4416,14 +4428,15 @@
     },
     {
       "puzzleId": 13076,
-      "startWord": "light",
-      "endWord": "tight",
-      "optimalSteps": 3,
+      "startWord": "flake",
+      "endWord": "plane",
+      "optimalSteps": 4,
       "solution": [
-        "light",
-        "night",
-        "fight",
-        "tight"
+        "flake",
+        "slake",
+        "slate",
+        "plate",
+        "plane"
       ],
       "seedValue": 76691
     },
@@ -5402,13 +5415,14 @@
     },
     {
       "puzzleId": 14062,
-      "startWord": "light",
-      "endWord": "night",
-      "optimalSteps": 2,
+      "startWord": "grind",
+      "endWord": "giant",
+      "optimalSteps": 3,
       "solution": [
-        "light",
-        "sight",
-        "night"
+        "grind",
+        "grand",
+        "grant",
+        "giant"
       ],
       "seedValue": 62565
     },
@@ -5426,13 +5440,15 @@
     },
     {
       "puzzleId": 14064,
-      "startWord": "prime",
-      "endWord": "crime",
-      "optimalSteps": 2,
+      "startWord": "slick",
+      "endWord": "store",
+      "optimalSteps": 4,
       "solution": [
-        "prime",
-        "grime",
-        "crime"
+        "slick",
+        "stick",
+        "stock",
+        "stork",
+        "store"
       ],
       "seedValue": 64583
     },
@@ -5570,14 +5586,15 @@
     },
     {
       "puzzleId": 14076,
-      "startWord": "light",
-      "endWord": "tight",
-      "optimalSteps": 3,
+      "startWord": "break",
+      "endWord": "cream",
+      "optimalSteps": 4,
       "solution": [
-        "light",
-        "night",
-        "fight",
-        "tight"
+        "break",
+        "bread",
+        "dread",
+        "dream",
+        "cream"
       ],
       "seedValue": 76691
     },

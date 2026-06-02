@@ -32,15 +32,20 @@ GLOBAL_SEED = 1515
 
 # (tierId): (lengths, min_steps, max_steps). Mixed-length tiers split evenly.
 # Density verified (Task 15 PLAN): common-word ladders exist in abundance at every (len, step).
+# Task 17 — every tier's MIN now meets max(2, length-curve): 3,4-letter >=2; 5,6-letter >=3; 7-letter >=4.
 TIER_CURVE = {
-    1: ([3],    1, 2),
+    1: ([3],    2, 3),
     2: ([4],    2, 3),
-    3: ([5],    2, 3),
+    3: ([5],    3, 4),
     4: ([5, 6], 3, 4),
     5: ([6],    4, 5),
     6: ([6, 7], 4, 6),
     7: ([7],    4, 8),   # hardest — skewed toward 6/7/8-step ladders
 }
+
+# Task 17 — length → minimum TRUE-shortest moves (mirror of BalanceConfig.MinMovesForLength).
+def min_moves_for_length(L):
+    return {3: 2, 4: 2, 5: 3, 6: 3, 7: 4}.get(L, 2 if L < 7 else 4)
 
 
 def load(name):
@@ -85,7 +90,28 @@ def hamming1(a, b):
     return len(a) == len(b) and sum(1 for x, y in zip(a, b) if x != y) == 1
 
 
-def gen_tier(tier_id, lengths, lo, hi, common_by_len, rng):
+def bfs_dist(adj, s, e, cap):
+    """True shortest edit distance over a (full-dictionary) graph; -1 if > cap / unreachable."""
+    if s == e:
+        return 0
+    seen = {s}
+    frontier = [s]
+    d = 0
+    while frontier and d < cap:
+        d += 1
+        nxt = []
+        for u in frontier:
+            for v in adj[u]:
+                if v == e:
+                    return d
+                if v not in seen:
+                    seen.add(v)
+                    nxt.append(v)
+        frontier = nxt
+    return -1
+
+
+def gen_tier(tier_id, lengths, lo, hi, common_by_len, full_by_len, rng):
     """Generate PUZZLES_PER_TIER unique shortest-path ladders for one tier."""
     # Spread targets evenly across the band so harder tiers include their longest ladders.
     band = list(range(lo, hi + 1))
@@ -99,6 +125,8 @@ def gen_tier(tier_id, lengths, lo, hi, common_by_len, rng):
     for li, L in enumerate(lengths):
         words = common_by_len[L]
         adj = build_graph(words)
+        full_adj = full_by_len[L]                 # full-dictionary graph for true-distance checks
+        floor = min_moves_for_length(L)
         starts = [w for w in words if adj[w]]
         want = per_len[li]
         made = 0
@@ -118,6 +146,11 @@ def gen_tier(tier_id, lengths, lo, hi, common_by_len, rng):
             key = (s, e)
             if key in used_pairs or (e, s) in used_pairs:
                 continue
+            # Task 17 — reject any pair with a true full-dictionary shortcut below the floor
+            # (a "looks like N moves" puzzle that is really solvable in fewer).
+            true_d = bfs_dist(full_adj, s, e, hi)
+            if true_d < floor:
+                continue
             sol = paths[e]
             used_pairs.add(key)
             out.append((s, e, sol))
@@ -135,6 +168,12 @@ def main():
     for w in common:
         common_by_len[len(w)].append(w)
 
+    # Full-dictionary graphs per length — used to verify TRUE shortest distance (Task 17).
+    lib_by_len = collections.defaultdict(list)
+    for w in library:
+        lib_by_len[len(w)].append(w)
+    full_by_len = {L: build_graph(lib_by_len[L]) for L in (3, 4, 5, 6, 7)}
+
     print(f"DATA dir: {DATA}")
     print("common length pool:", {L: len(common_by_len[L]) for L in (3, 4, 5, 6, 7)})
 
@@ -145,7 +184,7 @@ def main():
     for tier_id in range(1, 8):
         lengths, lo, hi = TIER_CURVE[tier_id]
         rng = random.Random(GLOBAL_SEED + tier_id)
-        puzzles = gen_tier(tier_id, lengths, lo, hi, common_by_len, rng)
+        puzzles = gen_tier(tier_id, lengths, lo, hi, common_by_len, full_by_len, rng)
 
         pj = []
         steps_seen = []
