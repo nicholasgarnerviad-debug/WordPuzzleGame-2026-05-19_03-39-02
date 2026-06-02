@@ -412,6 +412,7 @@ namespace WordPuzzle.UI
             if (btn == null) return;
             var label = FindPowerUpLabel(btn, badge);
             if (label != null) label.fontStyle = FontStyles.Bold;
+            UIThemeManager.ApplyRoundedButton(btn.GetComponent<Image>()); // Task 21B — rounded corners
             ApplyPowerUpVisual(btn, badge, btn.interactable);
         }
 
@@ -481,15 +482,37 @@ namespace WordPuzzle.UI
             if (float.IsNegativeInfinity(keysTopLocalY)) return; // no keys found — leave as authored
 
             const float barGap = 14f; // small gap so the bar sits just above the keys
-            var btns = new[] { hintButton, undoButton, revealButton, addTimeButton };
-            foreach (var b in btns)
+
+            // Task 21A — distribute the VISIBLE power-up buttons evenly across the bar width so the
+            // bar reflows for 3 (Hint/Undo/Reveal) or 4 (+ +TIME in timed modes) with no overflow,
+            // clipping, or overlap. +TIME visibility is driven by SetAddTimeVisible (TimeAttack only),
+            // so activeSelf is the authoritative button count. Buttons are centre-anchored (pivot.x
+            // 0.5), so anchoredPosition.x is the slot centre and sizeDelta.x is the slot width.
+            var all = new[] { hintButton, undoButton, revealButton, addTimeButton };
+            int n = 0;
+            foreach (var b in all)
+                if (b != null && b.gameObject.activeSelf) n++;
+            if (n == 0) return;
+
+            const float sideMargin = 24f;
+            const float btnGap = 12f;
+            float barWidth = selfRt.rect.width - 2f * sideMargin;
+            float slotW = (barWidth - (n - 1) * btnGap) / n;
+            float left = -barWidth * 0.5f;
+
+            int idx = 0;
+            foreach (var b in all)
             {
-                if (b == null) continue;
+                if (b == null || !b.gameObject.activeSelf) continue;
                 var rt = b.GetComponent<RectTransform>();
-                if (rt == null) continue;
+                if (rt == null) { idx++; continue; }
+
+                var sd = rt.sizeDelta; sd.x = slotW; rt.sizeDelta = sd;
                 var ap = rt.anchoredPosition;
+                ap.x = left + slotW * 0.5f + idx * (slotW + btnGap);
                 ap.y = keysTopLocalY + barGap + rt.rect.height * 0.5f;
                 rt.anchoredPosition = ap;
+                idx++;
             }
         }
 
@@ -814,10 +837,18 @@ namespace WordPuzzle.UI
             ApplyPowerUpVisual(addTimeButton, addTimeCountText, remaining > 0); // Task 10B disabled look
         }
 
+        private bool? _addTimeVisible;
         public void SetAddTimeVisible(bool visible)
         {
             if (addTimeButton != null) addTimeButton.gameObject.SetActive(visible);
             if (addTimeCountText != null) addTimeCountText.gameObject.SetActive(visible);
+            // Task 21A — reflow the bar (3 vs 4 buttons) only when visibility actually changes;
+            // this is called every UpdateGameplayUI, so guard against per-frame relayout.
+            if (_addTimeVisible != visible)
+            {
+                _addTimeVisible = visible;
+                if (isActiveAndEnabled) StartCoroutine(SeatPowerUpBarDeferred());
+            }
         }
 
         public void SetTimerVisible(bool visible)

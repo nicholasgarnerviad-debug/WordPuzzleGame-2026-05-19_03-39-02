@@ -68,6 +68,10 @@ namespace WordPuzzle.UI
             if (shareButton != null)
                 shareButton.onClick.AddListener(() => OnShareRequested?.Invoke());
             if (toastText != null) toastText.gameObject.SetActive(false);
+
+            // Task 21B — consistent rounded corners on the results buttons.
+            foreach (var b in new[] { playAgainButton, mainMenuButton, shareButton })
+                if (b != null) UIThemeManager.ApplyRoundedButton(b.GetComponent<Image>());
         }
 
         // §2.1/§2.3 Home-button visual swap.

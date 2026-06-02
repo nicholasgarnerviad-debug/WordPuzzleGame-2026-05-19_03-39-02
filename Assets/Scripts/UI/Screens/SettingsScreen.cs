@@ -85,6 +85,11 @@ namespace WordPuzzle.UI
             HookListeners();
             if (resetConfirmOverlay != null) resetConfirmOverlay.SetActive(false);
             if (toastRoot != null) toastRoot.SetActive(false);
+
+            // Task 21B — consistent rounded corners on the settings buttons.
+            foreach (var b in new[] { homeButton, resetProgressButton, replayTutorialButton,
+                                      resetConfirmCancelButton, resetConfirmResetButton })
+                if (b != null) UIThemeManager.ApplyRoundedButton(b.GetComponent<Image>());
         }
 
         private void OnDisable()

@@ -147,6 +147,7 @@ namespace WordPuzzle.UI
         {
             if (btn == null) return;
             var img = btn.GetComponent<Image>();
+            UIThemeManager.ApplyRoundedButton(img); // Task 21B — consistent rounded corners
             var outline = btn.GetComponent<Outline>();
             var label = btn.GetComponentInChildren<TMP_Text>(true);
 
