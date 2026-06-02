@@ -956,6 +956,25 @@ namespace WordPuzzle
             gameplay.ShowFeedback($"+{Mathf.RoundToInt(seconds)}s", Color.cyan);
         }
 
+        /// <summary>
+        /// Spec §2 — Classic mode picks a random word length in [3,7] and attempts to
+        /// generate a solvable ladder.  If generation fails for length L it retries with
+        /// L-1, L-2, … down to 3.  Length 3 always falls through to the hard-coded
+        /// fallback inside PuzzleGenerator, so a non-null result is guaranteed.
+        /// </summary>
+        private PuzzleDefinition GenerateClassicPuzzle()
+        {
+            int length = UnityEngine.Random.Range(3, 8); // [3, 7] inclusive
+            for (int l = length; l >= 3; l--)
+            {
+                var def = puzzleGenerator.GenerateRandomPuzzleOfLength(l);
+                if (def != null && def.startWord.Length == l && def.endWord.Length == l
+                    && def.startWord != def.endWord)
+                    return def;
+            }
+            return puzzleGenerator.GenerateRandomPuzzle(Difficulty.Easy);
+        }
+
         private void StartNewGame()
         {
             PuzzleDefinition puzzleDefinition;
@@ -986,7 +1005,7 @@ namespace WordPuzzle
             }
             else
             {
-                puzzleDefinition = puzzleGenerator.GenerateRandomPuzzle(Difficulty.Easy);
+                puzzleDefinition = GenerateClassicPuzzle();
                 difficulty = Difficulty.Easy;
             }
 
