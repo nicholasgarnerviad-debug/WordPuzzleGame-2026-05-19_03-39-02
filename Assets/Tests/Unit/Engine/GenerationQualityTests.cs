@@ -138,4 +138,97 @@ public class GenerationQualityTests
         }
         return diff == 1;
     }
+
+    // ======================================================================
+    // TASK 14 — Dictionary integrity guards (data-quality regression tests).
+    // These read the real shipped JSON so a future cleanup/expansion pass
+    // cannot silently re-introduce junk or delete a curated/long word.
+    // ======================================================================
+
+    // Known abbreviations/acronyms/initialisms that must never validate as words.
+    private static readonly string[] JunkBlocklist =
+        { "abc", "fbi", "gps", "ibm", "irs", "mph", "mpg", "rpm", "std", "qty", "cpu", "asst", "dept" };
+
+    [System.Serializable] private class PuzzleEntry { public string startWord; public string endWord; public string[] solution; }
+    [System.Serializable] private class TierEntry   { public PuzzleEntry[] puzzles; }
+    [System.Serializable] private class TierDefs     { public TierEntry[] tiers; }
+    [System.Serializable] private class DailyDefs    { public PuzzleEntry[] puzzles; }
+
+    private static HashSet<string> LoadLibrarySet()
+    {
+        var set = new HashSet<string>();
+        foreach (var w in LoadWords("Data/word_library")) set.Add(w.ToLower());
+        return set;
+    }
+
+    private static T LoadJson<T>(string resourcePath) where T : class
+    {
+        var asset = Resources.Load<TextAsset>(resourcePath);
+        Assert.IsNotNull(asset, $"Missing Resources asset: {resourcePath}");
+        var parsed = JsonUtility.FromJson<T>(asset.text);
+        Assert.IsNotNull(parsed, $"Failed to parse {resourcePath}");
+        return parsed;
+    }
+
+    [Test]
+    public void Dictionary_ContainsNoJunkAbbreviations()
+    {
+        var lib = LoadLibrarySet();
+        var present = new List<string>();
+        foreach (var j in JunkBlocklist)
+            if (lib.Contains(j)) present.Add(j);
+        Assert.IsEmpty(present,
+            "Junk abbreviations/acronyms must not be in the dictionary: " + string.Join(", ", present));
+    }
+
+    [Test]
+    public void Dictionary_ContainsEveryCuratedSolutionWord_HammingOneValid()
+    {
+        var lib = LoadLibrarySet();
+        var failures = new List<string>();
+
+        void Check(string kind, PuzzleEntry[] puzzles)
+        {
+            if (puzzles == null) return;
+            foreach (var p in puzzles)
+            {
+                if (p.solution == null || p.solution.Length < 2) continue;
+                for (int i = 0; i < p.solution.Length; i++)
+                {
+                    string w = p.solution[i].ToLower();
+                    if (!lib.Contains(w))
+                        failures.Add($"{kind}: curated word '{w}' missing from dictionary");
+                    if (i > 0 && !DiffersByExactlyOneLetter(p.solution[i - 1].ToLower(), w))
+                        failures.Add($"{kind}: '{p.solution[i - 1]}'->'{w}' not a single-letter edit");
+                }
+            }
+        }
+
+        var tiers = LoadJson<TierDefs>("Data/tier_definitions");
+        int tierPuzzles = 0;
+        if (tiers.tiers != null)
+            foreach (var t in tiers.tiers) { Check("tier", t.puzzles); tierPuzzles += t.puzzles?.Length ?? 0; }
+        var daily = LoadJson<DailyDefs>("Data/daily_puzzles");
+        Check("daily", daily.puzzles);
+
+        Assert.AreEqual(90, tierPuzzles, "Expected 90 curated tier puzzles.");
+        Assert.AreEqual(450, daily.puzzles.Length, "Expected 450 curated daily puzzles.");
+        Assert.IsEmpty(failures,
+            $"{failures.Count} curated solution word(s) broken by a dictionary edit:\n" +
+            string.Join("\n", failures.GetRange(0, System.Math.Min(failures.Count, 25))));
+    }
+
+    [Test]
+    public void Dictionary_HasMinimumLongWordCoverage()
+    {
+        var lib = LoadLibrarySet();
+        int six = 0, seven = 0;
+        foreach (var w in lib)
+        {
+            if (w.Length == 6) six++;
+            else if (w.Length == 7) seven++;
+        }
+        Assert.GreaterOrEqual(six, 2000, $"6-letter coverage gutted: {six} (expected >= 2000).");
+        Assert.GreaterOrEqual(seven, 2000, $"7-letter coverage gutted: {seven} (expected >= 2000).");
+    }
 }

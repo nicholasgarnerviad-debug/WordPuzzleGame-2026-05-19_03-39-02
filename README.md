@@ -163,7 +163,7 @@ Tier 1 unlocked by default. Complete **`BalanceConfig.PuzzlesRequiredToAdvanceTi
 ## 8. Word validation
 
 `WordValidator : IWordValidator` accepts a word onto the chain only if **all** hold:
-1. Exists in the 8,399-word curated dictionary (`word_library.json`).
+1. Exists in the 12,183-word curated dictionary (`word_library.json`; 3-letter 534 / 4-letter 2,234 / 5-letter 4,304 / 6-letter 2,535 / 7-letter 2,576).
 2. Differs from the previous chain word by **exactly one letter at the same position** (Hamming-1, via `WordOps.HaveOneLetterDifference`).
 3. Same length as the previous word.
 4. Not already used in the current chain.
@@ -196,7 +196,7 @@ Ads:         InterstitialCooldownSeconds=300  InterstitialPuzzleCap=5
 
 `Constants.cs` forwards its legacy power-up/tier fields to `BalanceConfig` to avoid drift.
 
-**Generation quality filter:** `common_words.json` (≈1,472 verified words = every tier/daily ladder word ∪ a curated common list) restricts generated START/END (and intermediates) to fair words. Fallback chain: strict-common → relaxed-common-endpoints → known-good fallback (`cat→cot→cog→dog`). Curated tier/daily puzzles bypass the generator and are exempt.
+**Generation quality filter:** `common_words.json` (6,582 verified words = every tier/daily ladder word ∪ a curated common list, incl. ~2,500 common 6- and 7-letter words for dense long-ladder generation) restricts generated START/END (and intermediates) to fair words. Fallback chain: strict-common → relaxed-common-endpoints → known-good fallback (`cat→cot→cog→dog`). Curated tier/daily puzzles bypass the generator and are exempt.
 
 ---
 
@@ -225,7 +225,7 @@ Assets/Scripts/
                                            Screens/(MainMenu, Gameplay, PuzzleLibrary, Results,
                                            Settings, TimeAttackSetup)
 
-Assets/Resources/Data/  word_library.json (8,399), tier_definitions.json (90), daily_puzzles.json, common_words.json
+Assets/Resources/Data/  word_library.json (12,183), tier_definitions.json (90), daily_puzzles.json, common_words.json (6,582)
 Assets/Scenes/          GameUI.unity  ← the ONLY live scene. MainMenu/ClassicMode/PuzzleShowMode/
                                         TimeAttackMode/SampleScene are legacy and never LoadScene'd.
 Assets/Tests/           Unit/ + Integration/  (NUnit; TestMocks.cs has Mock* doubles)
