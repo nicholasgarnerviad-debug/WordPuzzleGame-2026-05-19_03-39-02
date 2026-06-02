@@ -28,11 +28,13 @@ namespace WordPuzzle.UI
 
         [Header("Layout constants")]
         [SerializeField] private float labelHeight    = 35f;
-        [SerializeField] private float tileRowHeight  = 120f;
+        // Task 10A: tileRowHeight + the three rung gaps below are overridden at runtime by
+        // SetMetrics() so they track the adaptive tile size; these defaults drive editor preview.
+        [SerializeField] private float tileRowHeight  = 150f;
         [SerializeField] private float gapLabelToRow  = 4f;
-        [SerializeField] private float gapRowToChain  = 12f;
-        [SerializeField] private float gapChainToInput = 12f;
-        [SerializeField] private float gapInputToLabel = 8f;
+        [SerializeField] private float gapRowToChain  = 38f;
+        [SerializeField] private float gapChainToInput = 38f;
+        [SerializeField] private float gapInputToLabel = 38f;
         [SerializeField] private float gapLabelToEnd  = 4f;
 
         // The top of the ladder column in GameplayScreen-local space (anchor y=0.5).
@@ -49,6 +51,19 @@ namespace WordPuzzle.UI
         // For EndWordRow bottom > -388: 720 - 470 - chainMaxH > -388 → chainMaxH < 638.
         // Use 340px as a comfortable cap leaving ~60px clearance above toolbar.
         [SerializeField] private float chainMaxHeight = 340f;
+
+        /// <summary>
+        /// Task 10A — pushed from GameplayScreen.RecomputeTileSize each puzzle so the macro rows
+        /// (start/input/end) match the adaptive tile size and every rung shares ONE uniform gap.
+        /// Fixes "touching rungs" that the fixed tileRowHeight=120 caused vs. tiles up to 150px.
+        /// </summary>
+        public void SetMetrics(float rowHeight, float rungGap)
+        {
+            tileRowHeight   = Mathf.Max(8f, rowHeight);
+            gapRowToChain   = rungGap;
+            gapChainToInput = rungGap;
+            gapInputToLabel = rungGap;
+        }
 
         private void LateUpdate()
         {

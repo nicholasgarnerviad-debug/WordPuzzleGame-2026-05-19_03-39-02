@@ -74,6 +74,11 @@ namespace WordPuzzle.UI
         private static readonly Color C_LABEL_DIM            = HexToColor("#8A8F9C");
         private static readonly Color C_LABEL_REACHED        = HexToColor("#6AAA64");
 
+        // Task 10B — power-up bar (Hint/Undo/Reveal) styling.
+        private static readonly Color C_PU_SURFACE   = HexToColor("#1B1F27"); // bg-surface panel
+        private static readonly Color C_PU_LABEL     = HexToColor("#E7E1C4"); // text-primary (enabled)
+        private static readonly Color C_PU_LABEL_DIM = HexToColor("#5A6270"); // text-dim (0-count/disabled)
+
         // Legacy label palette (kept for FROM/TO + steps subtitle).
         // Task 8A: LBL_TO demoted from gold #C9B458 to text-muted #8A93A1.
         // The TO-row label is secondary info; gold is reserved for focus/hint/win moments.
@@ -91,13 +96,20 @@ namespace WordPuzzle.UI
         private const float TILE_SIZE_DEFAULT = 140f; // cap for short words (3 tiles)
         private const float TILE_SIZE_MAX     = 150f; // absolute cap
         private const float TILE_GAP_H       = 10f;  // §3.2 inter-tile gap
-        private const float ROW_GAP_V        = 10f;  // §3 inter-row gap
+        // Task 10A: single source of truth for vertical spacing between ladder rungs. Used for
+        // chain-history rows (VLG spacing) AND pushed to LadderLayoutDriver for the macro
+        // start/input/end gaps, so every step is separated by the SAME tasteful gap (~⅓ tile).
+        private const float RUNG_GAP         = 38f;
+        private const float ROW_GAP_V        = RUNG_GAP; // §3 inter-row gap (chain history)
         private const float ROW_LABEL_PAD_L  = 0f;   // centre-align tiles, no left padding
         private const float AUTOSCROLL_DURATION = 0.18f; // §3.4 180ms ease-out
 
         // Computed once per puzzle from word length — shared by ALL rows so they stay aligned.
         private float _tileSize = TILE_SIZE_DEFAULT;
         private float _chainRowHeight = TILE_SIZE_DEFAULT + 10f;
+
+        // Task 10A — cached LadderLayoutDriver (same GameObject); fed adaptive metrics per puzzle.
+        private LadderLayoutDriver _ladderDriver;
 
         // Kept for compat; now driven by _chainRowHeight.
         private float CHAIN_ROW_HEIGHT => _chainRowHeight;
@@ -145,13 +157,21 @@ namespace WordPuzzle.UI
             if (backButton != null)
             {
                 backButton.onClick.AddListener(() => OnBackToMenu?.Invoke());
+                // Task 10D — demote HOME: drop the stark white box, mute the label. Keep the full
+                // button rect raycastable so the tap target stays ≥44pt even though the visual shrinks.
+                var homeImg = backButton.GetComponent<Image>();
+                if (homeImg != null)
+                {
+                    homeImg.color = new Color(0f, 0f, 0f, 0f); // no heavy white border/box
+                    homeImg.raycastTarget = true;
+                }
                 var lbl = backButton.GetComponentInChildren<TMP_Text>(true);
                 if (lbl != null)
                 {
                     lbl.text = "HOME";
-                    lbl.fontStyle = FontStyles.Bold;
-                    lbl.fontSize = 28f;
-                    lbl.color = new Color32(0xE7, 0xE1, 0xC4, 0xFF);
+                    lbl.fontStyle = FontStyles.Normal;
+                    lbl.fontSize = 22f;
+                    lbl.color = new Color32(0x8A, 0x93, 0xA1, 0xFF); // text-muted — reachable, not competing
                     lbl.alignment = TextAlignmentOptions.Center;
                 }
             }
@@ -174,10 +194,14 @@ namespace WordPuzzle.UI
             ReparentBadge(revealCountText, revealButton, new Vector2(38f, 32f));
             ReparentBadge(addTimeCountText, addTimeButton, new Vector2(38f, 32f));
 
-            StylePowerUpButton(hintButton);
-            StylePowerUpButton(revealButton);
-            StylePowerUpButton(undoButton);
-            StylePowerUpButton(addTimeButton);
+            StylePowerUpButton(hintButton, hintCountText);
+            StylePowerUpButton(revealButton, revealCountText);
+            StylePowerUpButton(undoButton, null);
+            StylePowerUpButton(addTimeButton, addTimeCountText);
+
+            // Task 10B — seat the power-up bar just above the keyboard (deferred one frame so the
+            // canvas/keyboard rect is laid out before we read its top edge).
+            if (isActiveAndEnabled) StartCoroutine(SeatPowerUpBarDeferred());
 
             ConfigureChainScrollRect();
 
@@ -244,11 +268,12 @@ namespace WordPuzzle.UI
             // Anchor to top-right corner of the button
             rt.anchorMin = rt.anchorMax = new Vector2(1f, 1f);
             rt.pivot = new Vector2(0.5f, 0.5f);
-            // Tight inset: sits just inside the top-right corner
-            rt.anchoredPosition = new Vector2(-16f, -16f);
-            rt.sizeDelta = new Vector2(32f, 32f);
+            // Task 10B — inset fully INSIDE the top-right corner (~5px margin) so the badge
+            // never clips over the button's top edge.
+            rt.anchoredPosition = new Vector2(-20f, -20f);
+            rt.sizeDelta = new Vector2(30f, 30f);
             badge.alignment = TextAlignmentOptions.Center;
-            badge.fontSize = 20f;
+            badge.fontSize = 17f;
             badge.fontStyle = FontStyles.Bold;
             badge.color = new Color32(0xFF, 0xFF, 0xFF, 0xFF);
             badge.raycastTarget = false;
@@ -273,18 +298,98 @@ namespace WordPuzzle.UI
             badge.transform.SetAsLastSibling();
         }
 
-        private static void StylePowerUpButton(Button btn)
+        // Task 10B — base style + enabled/disabled look for a power-up button.
+        // badge is the count TMP (reparented under the button); pass null for Undo (no count).
+        private static void StylePowerUpButton(Button btn, TMP_Text badge)
+        {
+            if (btn == null) return;
+            var label = FindPowerUpLabel(btn, badge);
+            if (label != null) label.fontStyle = FontStyles.Bold;
+            ApplyPowerUpVisual(btn, badge, btn.interactable);
+        }
+
+        // Finds the button's text label (its direct-child TMP that is NOT the count badge).
+        private static TMP_Text FindPowerUpLabel(Button btn, TMP_Text badge)
+        {
+            if (btn == null) return null;
+            foreach (var t in btn.GetComponentsInChildren<TMP_Text>(true))
+            {
+                if (t == badge) continue;
+                if (t.transform.parent != btn.transform) continue; // direct child only
+                return t;
+            }
+            return null;
+        }
+
+        // Task 10B — bg-surface panel + text-primary label when usable; text-dim + dimmed panel
+        // when count is 0 (disabled look). Does NOT change interactivity/dispatch logic.
+        private static void ApplyPowerUpVisual(Button btn, TMP_Text badge, bool enabled)
         {
             if (btn == null) return;
             var img = btn.GetComponent<Image>();
             if (img != null)
-                img.color = new Color(0x24 / 255f, 0x29 / 255f, 0x36 / 255f, 1f); // #242936 surface-2
-            var lbl = btn.GetComponentInChildren<TMP_Text>(true);
-            if (lbl != null)
             {
-                lbl.color = new Color(0xE7 / 255f, 0xE1 / 255f, 0xC4 / 255f, 1f); // #E7E1C4 text-primary
-                lbl.fontStyle = FontStyles.Bold;
+                var c = C_PU_SURFACE;
+                c.a = enabled ? 1f : 0.45f;
+                img.color = c;
             }
+            var label = FindPowerUpLabel(btn, badge);
+            if (label != null) label.color = enabled ? C_PU_LABEL : C_PU_LABEL_DIM;
+            if (badge != null)
+            {
+                var bc = badge.color; bc.a = enabled ? 1f : 0.5f; badge.color = bc;
+                var bgT = badge.transform.Find("__BadgeBg");
+                if (bgT != null)
+                {
+                    var bg = bgT.GetComponent<Image>();
+                    if (bg != null) { var p = bg.color; p.a = enabled ? 0.9f : 0.35f; bg.color = p; }
+                }
+            }
+        }
+
+        // Task 10B — seat the Hint/Undo/Reveal bar just slightly above the VISIBLE keyboard keys.
+        // The KeyboardRoot rect is taller than the keys (keys sit at its bottom), so we measure the
+        // top edge of the highest key button rather than the panel rect. Robust across devices.
+        private void SeatPowerUpBar()
+        {
+            if (keyboard == null) return;
+            var keebRt = keyboard.GetComponent<RectTransform>();
+            var selfRt = transform as RectTransform;
+            if (keebRt == null || selfRt == null) return;
+
+            Canvas.ForceUpdateCanvases();
+            var corners = new Vector3[4];
+
+            // Visible keyboard top = highest top-edge among the key buttons.
+            float keysTopLocalY = float.NegativeInfinity;
+            foreach (var key in keebRt.GetComponentsInChildren<Button>())
+            {
+                if (key == null) continue;
+                var krt = key.transform as RectTransform;
+                if (krt == null) continue;
+                krt.GetWorldCorners(corners); // 0=BL, 1=TL, 2=TR, 3=BR
+                float topLocal = selfRt.InverseTransformPoint(corners[1]).y;
+                if (topLocal > keysTopLocalY) keysTopLocalY = topLocal;
+            }
+            if (float.IsNegativeInfinity(keysTopLocalY)) return; // no keys found — leave as authored
+
+            const float barGap = 14f; // small gap so the bar sits just above the keys
+            var btns = new[] { hintButton, undoButton, revealButton, addTimeButton };
+            foreach (var b in btns)
+            {
+                if (b == null) continue;
+                var rt = b.GetComponent<RectTransform>();
+                if (rt == null) continue;
+                var ap = rt.anchoredPosition;
+                ap.y = keysTopLocalY + barGap + rt.rect.height * 0.5f;
+                rt.anchoredPosition = ap;
+            }
+        }
+
+        private IEnumerator SeatPowerUpBarDeferred()
+        {
+            yield return null;       // let the canvas/keyboard rect settle for one frame
+            SeatPowerUpBar();
         }
 
         private void ConfigureChainScrollRect()
@@ -421,6 +526,11 @@ namespace WordPuzzle.UI
             float adaptive = (USABLE_WIDTH - (wordLen - 1) * TILE_GAP_H) / wordLen;
             _tileSize = Mathf.Clamp(adaptive, 60f, Mathf.Min(TILE_SIZE_DEFAULT, TILE_SIZE_MAX));
             _chainRowHeight = _tileSize + 10f;
+
+            // Task 10A: keep macro rows (start/input/end) the same height as chain rows and share
+            // one uniform rung gap, so steps read as distinct rungs at any word length (3–7).
+            if (_ladderDriver == null) _ladderDriver = GetComponent<LadderLayoutDriver>();
+            if (_ladderDriver != null) _ladderDriver.SetMetrics(_chainRowHeight, RUNG_GAP);
         }
 
         /// <summary>§6: Idempotent. Sets persistent FROM/TO row labels + tile content.</summary>
@@ -554,17 +664,20 @@ namespace WordPuzzle.UI
         {
             if (hintCountText != null) hintCountText.text = remaining.ToString();
             if (hintButton != null) hintButton.interactable = (remaining > 0);
+            ApplyPowerUpVisual(hintButton, hintCountText, remaining > 0); // Task 10B disabled look
         }
 
         public void SetRevealCount(int remaining)
         {
             if (revealCountText != null) revealCountText.text = remaining.ToString();
             if (revealButton != null) revealButton.interactable = (remaining > 0);
+            ApplyPowerUpVisual(revealButton, revealCountText, remaining > 0); // Task 10B disabled look
         }
 
         public void EnableUndoButton(bool enable)
         {
             if (undoButton != null) undoButton.interactable = enable;
+            ApplyPowerUpVisual(undoButton, null, enable); // Task 10B disabled look
         }
 
         // §5.1 — AddTime power-up surface (TimeAttack only).
@@ -572,6 +685,7 @@ namespace WordPuzzle.UI
         {
             if (addTimeCountText != null) addTimeCountText.text = remaining.ToString();
             if (addTimeButton != null) addTimeButton.interactable = (remaining > 0);
+            ApplyPowerUpVisual(addTimeButton, addTimeCountText, remaining > 0); // Task 10B disabled look
         }
 
         public void SetAddTimeVisible(bool visible)
