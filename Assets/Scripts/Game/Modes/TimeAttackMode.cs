@@ -85,6 +85,7 @@ namespace WordPuzzle.Modes
         private int puzzlesCompleted;
         private bool addTimeWired;
         private bool lastPuzzleWasComplete;
+        private bool timerSeeded;   // Task 16 — one-shot timer seed per run (survives ladder advance)
 
         /// <summary>Fired whenever the countdown ticks. Argument is seconds remaining.</summary>
         public event Action<float> TimeChanged;
@@ -131,9 +132,12 @@ namespace WordPuzzle.Modes
             currentPuzzle = puzzle ?? throw new ArgumentNullException(nameof(puzzle));
             stateManager.StartNewPuzzle(puzzle);
 
-            // First puzzle of the run — seed the timer and the AddTime power-up economy.
-            if (puzzlesCompleted == 0)
+            // First puzzle of the run — seed the timer and the AddTime power-up economy ONCE.
+            // Task 16: use a one-shot flag (not puzzlesCompleted, which stays 0 in Timed sub-mode)
+            // so auto-advancing to the next ladder keeps the run's clock running.
+            if (!timerSeeded)
             {
+                timerSeeded = true;
                 timeRemaining = config.baseTimeSeconds;
                 stateManager.ConfigureAddTimePowerUp(config.addTimeCharges, config.addTimeGrantSeconds);
             }
@@ -201,6 +205,7 @@ namespace WordPuzzle.Modes
             currentPuzzle = null;
             puzzlesCompleted = 0;
             lastPuzzleWasComplete = false;
+            timerSeeded = false;
         }
 
         public bool IsGameOver() => timeRemaining <= 0f;

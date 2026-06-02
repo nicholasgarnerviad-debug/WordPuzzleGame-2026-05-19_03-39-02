@@ -43,6 +43,14 @@ namespace WordPuzzle
         private DailyPuzzleService dailyPuzzleService;
         private DailyProgress cachedDailyProgress;
         private bool isDailyRun;                 // true while the active mode is the daily puzzle
+
+        // Task 16 — post-win flow state.
+        private bool awaitingClassicNext;        // compact win panel up; gate CheckGameOver
+        private TimeAttackConfig lastTimeAttackConfig;  // for ResultsScreen "Play Again" → new run
+        private int timeAttackLaddersCompleted;  // ladders solved in the active Time Attack run
+        private enum PostWin { None, TimeAttack, PuzzleShow, Daily }
+        private PostWin lastWinContext = PostWin.None;  // routes ResultsScreen "Play Again"
+        private int pendingPuzzleShowNextTier;          // >0 when a tier just unlocked (offer "Tier N ▸")
         private PuzzleDefinition pendingDailyPuzzle;
         private int pendingDailyIndex = -1;
 
@@ -352,10 +360,15 @@ namespace WordPuzzle
             uiManager.GetGameplay().OnUndoStep += OnUndoStep;
             uiManager.GetGameplay().OnAddTimeUsed += OnAddTimeUsed;
 
+            // Task 16B — compact win-panel actions (endless Classic).
+            uiManager.GetGameplay().OnNextPuzzle += OnWinNextPuzzle;
+            uiManager.GetGameplay().OnWinHome += OnWinHome;
+
             // Wire results
             uiManager.GetResults().OnPlayAgain += PlayAgain;
             uiManager.GetResults().OnMainMenu += ShowMainMenu;
             uiManager.GetResults().OnShareRequested += ShareLastResult;
+            uiManager.GetResults().OnNextTier += OnResultsNextTier;
         }
 
         private void OnDestroy()
@@ -428,10 +441,13 @@ namespace WordPuzzle
             uiManager.GetGameplay().OnRevealUsed -= OnRevealUsed;
             uiManager.GetGameplay().OnUndoStep -= OnUndoStep;
             uiManager.GetGameplay().OnAddTimeUsed -= OnAddTimeUsed;
+            uiManager.GetGameplay().OnNextPuzzle -= OnWinNextPuzzle;
+            uiManager.GetGameplay().OnWinHome -= OnWinHome;
 
             uiManager.GetResults().OnPlayAgain -= PlayAgain;
             uiManager.GetResults().OnMainMenu -= ShowMainMenu;
             uiManager.GetResults().OnShareRequested -= ShareLastResult;
+            uiManager.GetResults().OnNextTier -= OnResultsNextTier;
         }
 
         private void Update()
@@ -450,6 +466,9 @@ namespace WordPuzzle
             isDailyRun = false;
             pendingDailyPuzzle = null;
             pendingDailyIndex = -1;
+            // Task 16 — tear down any compact win panel state.
+            awaitingClassicNext = false;
+            uiManager.GetGameplay()?.HideWinPanel();
             uiManager.ShowMainMenu();
             RefreshDailyButtonState();
             RefreshResumeAffordance();
@@ -659,6 +678,8 @@ namespace WordPuzzle
         // Spec §3.7 — unlock new tier in the in-memory tier cache (do NOT touch JSON).
         private void OnPuzzleShowTierAdvanced(int oldTier, int newTier)
         {
+            // Task 16 — remember the freshly unlocked tier so the results screen can offer "Tier N ▸".
+            if (newTier <= BalanceConfig.MaxTier) pendingPuzzleShowNextTier = newTier;
             if (tierCacheRef == null) return;
             if (tierCacheRef.TryGetValue(newTier, out var tierData) && tierData != null)
             {
@@ -860,6 +881,9 @@ namespace WordPuzzle
         private void StartTimeAttackModeWithConfig(TimeAttackConfig config)
         {
             var cfg = config ?? TimeAttackConfig.Default60();
+            lastTimeAttackConfig = cfg;            // Task 16 — remember for results "Play Again"
+            timeAttackLaddersCompleted = 0;        // fresh run
+            isDailyRun = false;
             var tam = new TimeAttackMode(cfg);
             tam.OnTimeAdded += OnTimeAttackTimeAdded;
             activeMode = tam;
@@ -1219,24 +1243,83 @@ namespace WordPuzzle
         {
             // Tutorial completion is driven by the overlay success beat, not EndGame.
             if (isTutorialRun) return;
+            if (activeMode == null) return;
+            // Task 16 — compact win panel is up (endless Classic); wait for the player's choice.
+            if (awaitingClassicNext) return;
 
-            if (activeMode == null || !activeMode.IsGameOver()) return;
+            // Resolve the active mode family + completion signals, then ask the pure router.
+            ModeKind kind;
+            bool timeUp = false;
+            var tam = activeMode as TimeAttackMode;
+            if (tam != null) { kind = ModeKind.TimeAttack; timeUp = tam.IsGameOver(); }
+            else if (activeMode is PuzzleShowMode) kind = ModeKind.PuzzleShow;
+            else kind = ModeKind.Classic;
 
-            // PuzzleShowMode (Spec §3.3): tier advancement is now driven internally
-            // by the mode when the gate (N completions) is met. Bootstrap just decides
-            // whether to load the next puzzle or end the run.
-            if (activeMode is PuzzleShowMode psm)
+            bool puzzleComplete = IsCurrentPuzzleComplete();
+
+            switch (PostWinRouter.Decide(kind, isDailyRun, puzzleComplete, timeUp))
             {
-                if (psm.AllTiersComplete)
-                {
-                    EndGame();
-                    return;
-                }
-                StartNewGame();
-                return;
+                case PostWinSurface.AdvanceNextLadder:
+                    timeAttackLaddersCompleted++;
+                    uiManager?.GetGameplay()?.OnGameWon();
+                    StartNewGame();         // next ladder, same run (timer preserved via timerSeeded)
+                    break;
+                case PostWinSurface.CompactWinPanel:
+                    ShowClassicWinPanel();  // endless Classic → compact inline panel
+                    break;
+                case PostWinSurface.FullResults:
+                    EndGame();              // Daily / Puzzle Show / Time Attack run-end
+                    break;
+                // PostWinSurface.None: nothing to do this frame.
             }
+        }
 
-            EndGame();
+        private bool IsCurrentPuzzleComplete()
+        {
+            var s = stateManager?.GetCurrentState();
+            return s != null && s.IsPuzzleComplete;
+        }
+
+        // Task 16B — endless Classic: overlay the compact win panel and grant the normal
+        // completion bookkeeping (coins/stats) WITHOUT routing to the full results page.
+        private void ShowClassicWinPanel()
+        {
+            awaitingClassicNext = true;
+
+            int steps = 0;
+            var s = stateManager?.GetCurrentState();
+            if (s?.wordChain != null) steps = Mathf.Max(0, s.wordChain.Count - 1);
+
+            // Completion bookkeeping (mirrors EndGame, minus results/ads): stats, coins, clear resume.
+            IncrementModeStats(true, activeMode);
+            cachedResumeSnapshot = null; cachedResumePuzzle = null; cachedResumeMode = null;
+            GrantPuzzleReward(false);
+            adPolicy?.RecordPuzzleCompleted();
+
+            uiManager.GetGameplay().ShowWinPanel(steps);
+        }
+
+        // Task 16B — compact panel "Next Puzzle": stay in Classic, fresh clean board.
+        private void OnWinNextPuzzle()
+        {
+            awaitingClassicNext = false;
+            uiManager.GetGameplay().HideWinPanel();
+            StartNewGame();   // activeMode is still the live ClassicMode
+        }
+
+        // Task 16B — compact panel "Home".
+        private void OnWinHome()
+        {
+            awaitingClassicNext = false;
+            uiManager.GetGameplay().HideWinPanel();
+            ShowMainMenu();
+        }
+
+        // Task 16 — Puzzle Show results "Tier N ▸": open the library tier-select so the
+        // player can step into the newly unlocked tier (explicit upgrade choice).
+        private void OnResultsNextTier()
+        {
+            ShowLibrary();
         }
 
         private void EndGame()
@@ -1296,7 +1379,34 @@ namespace WordPuzzle
             adPolicy?.RecordPuzzleCompleted();
             adPolicy?.TryShowInterstitial();
 
+            // Task 16 — configure which post-win actions the full results page offers.
+            ConfigureResultsSurface(snapshotMode, wasDailyRun);
+
             uiManager.ShowResults();
+        }
+
+        // Task 16 — context-aware results buttons + remember how "Play Again" should route.
+        private void ConfigureResultsSurface(IGameMode snapshotMode, bool wasDailyRun)
+        {
+            var results = uiManager.GetResults();
+            if (wasDailyRun)
+            {
+                lastWinContext = PostWin.Daily;
+                results.ConfigureForDaily();                 // no "Play Again"; Home only
+            }
+            else if (snapshotMode is PuzzleShowMode)
+            {
+                lastWinContext = PostWin.PuzzleShow;
+                bool hasNextTier = pendingPuzzleShowNextTier > 0
+                    && pendingPuzzleShowNextTier <= BalanceConfig.MaxTier;
+                results.ConfigureForPuzzleShow(hasNextTier, pendingPuzzleShowNextTier);
+                pendingPuzzleShowNextTier = 0; // consumed
+            }
+            else // Time Attack run-end (Classic never reaches EndGame — it uses the panel).
+            {
+                lastWinContext = PostWin.TimeAttack;
+                results.ConfigureForEndless(timeAttackLaddersCompleted); // "Play Again" → new run
+            }
         }
 
         /// <summary>Task 6A — add completion coins (and daily bonus) via the economy manager.</summary>
@@ -1450,9 +1560,29 @@ namespace WordPuzzle
                 alreadyCountedToday);
         }
 
+        // Task 16C — the full results page's primary action now re-routes into the
+        // relevant mode instead of dumping the player at the main menu.
         private void PlayAgain()
         {
-            ShowMainMenu();
+            switch (lastWinContext)
+            {
+                case PostWin.TimeAttack:
+                    // Fresh Time Attack run with the last-chosen config.
+                    StartTimeAttackModeWithConfig(lastTimeAttackConfig);
+                    break;
+                case PostWin.PuzzleShow:
+                    // "Next Puzzle" — another puzzle in the player's current tier.
+                    StartPuzzleShowMode();
+                    break;
+                case PostWin.Daily:
+                    // Daily has no "Play Again" (button hidden); guard routes Home if reached.
+                    ShowMainMenu();
+                    break;
+                default:
+                    // Fallback (e.g. legacy Classic results) — start a fresh Classic puzzle.
+                    StartClassicMode();
+                    break;
+            }
         }
 
         // ─── Task 9F — Statistics screen ─────────────────────────────────────────

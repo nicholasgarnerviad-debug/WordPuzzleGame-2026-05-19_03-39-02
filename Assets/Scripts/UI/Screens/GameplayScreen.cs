@@ -147,6 +147,10 @@ namespace WordPuzzle.UI
         public event Action<char> OnLetterTyped;
         public event Action OnBackspace;
 
+        // Task 16B — compact win panel (endless Classic). Next → fresh puzzle, same mode.
+        public event Action OnNextPuzzle;
+        public event Action OnWinHome;
+
         // ============================================================
         //  Lifecycle
         // ============================================================
@@ -942,6 +946,121 @@ namespace WordPuzzle.UI
             _haptics?.Buzz();
             // Task 8B — celebratory ascent beat on the TO row (after sfx/haptic).
             StartCoroutine(WinAscentBeat());
+        }
+
+        // ================================================================
+        //  Task 16B — compact inline win panel (endless Classic)
+        // ================================================================
+        private GameObject winPanel;
+        private TextMeshProUGUI winStepsText;
+        private static Sprite _roundedWin;
+
+        /// <summary>Overlay a small win card on the finished board. steps = moves taken.</summary>
+        public void ShowWinPanel(int steps)
+        {
+            if (winPanel == null) BuildWinPanel();
+            if (winStepsText != null)
+                winStepsText.text = steps == 1 ? "Solved in 1 step" : $"Solved in {steps} steps";
+            winPanel.transform.SetAsLastSibling();
+            winPanel.SetActive(true);
+            OnGameWon(); // reuse existing win sting/haptic as the panel appears
+            if (!UIAnimations.ReduceMotion) StartCoroutine(FadeInWinPanel());
+        }
+
+        public void HideWinPanel()
+        {
+            if (winPanel != null) winPanel.SetActive(false);
+        }
+
+        private IEnumerator FadeInWinPanel()
+        {
+            var cg = winPanel.GetComponent<CanvasGroup>();
+            if (cg == null) yield break;
+            cg.alpha = 0f;
+            float t = 0f;
+            while (t < 0.18f)
+            {
+                t += Time.unscaledDeltaTime;
+                cg.alpha = Mathf.Clamp01(t / 0.18f);
+                yield return null;
+            }
+            cg.alpha = 1f;
+        }
+
+        private void BuildWinPanel()
+        {
+            if (_roundedWin == null) _roundedWin = Resources.GetBuiltinResource<Sprite>("UI/Skin/UISprite.psd");
+
+            winPanel = new GameObject("WinPanel", typeof(RectTransform));
+            winPanel.transform.SetParent(transform, false);
+            var prt = (RectTransform)winPanel.transform;
+            prt.anchorMin = Vector2.zero; prt.anchorMax = Vector2.one;
+            prt.offsetMin = Vector2.zero; prt.offsetMax = Vector2.zero;
+            winPanel.AddComponent<CanvasGroup>();
+
+            // Dim backdrop (also blocks taps to the board behind).
+            var dim = winPanel.AddComponent<Image>();
+            dim.color = new Color(0f, 0f, 0f, 0.62f);
+            dim.raycastTarget = true;
+
+            // Centered card.
+            var card = new GameObject("Card", typeof(RectTransform));
+            card.transform.SetParent(winPanel.transform, false);
+            var crt = (RectTransform)card.transform;
+            crt.anchorMin = crt.anchorMax = new Vector2(0.5f, 0.5f);
+            crt.pivot = new Vector2(0.5f, 0.5f);
+            crt.sizeDelta = new Vector2(560f, 360f);
+            var cardImg = card.AddComponent<Image>();
+            cardImg.sprite = _roundedWin; cardImg.type = Image.Type.Sliced; cardImg.pixelsPerUnitMultiplier = 2f;
+            cardImg.color = new Color32(0x24, 0x29, 0x36, 0xFF); // surface-2
+
+            MakeWinText(card.transform, "Title", "SOLVED", 54, new Vector2(0f, 1f), new Vector2(1f, 1f),
+                new Vector2(0f, -54f), new Color32(0x6A, 0xAA, 0x64, 0xFF), FontStyles.Bold); // green
+            winStepsText = MakeWinText(card.transform, "Steps", "", 30, new Vector2(0f, 1f), new Vector2(1f, 1f),
+                new Vector2(0f, -120f), new Color32(0x8A, 0x93, 0xA1, 0xFF), FontStyles.Normal); // muted
+
+            MakeWinButton(card.transform, "NextButton", "NEXT PUZZLE",
+                new Vector2(0.5f, 0f), new Vector2(0f, 116f), new Vector2(420f, 76f),
+                new Color32(0xC9, 0xB4, 0x58, 0xFF), new Color32(0x0F, 0x12, 0x17, 0xFF),
+                () => OnNextPuzzle?.Invoke());   // gold primary
+            MakeWinButton(card.transform, "HomeButton", "Home",
+                new Vector2(0.5f, 0f), new Vector2(0f, 36f), new Vector2(420f, 56f),
+                new Color32(0x24, 0x29, 0x36, 0xFF), new Color32(0x8A, 0x93, 0xA1, 0xFF),
+                () => OnWinHome?.Invoke());       // muted secondary
+        }
+
+        private static TextMeshProUGUI MakeWinText(Transform parent, string name, string text, float size,
+            Vector2 aMin, Vector2 aMax, Vector2 pos, Color color, FontStyles style)
+        {
+            var go = new GameObject(name, typeof(RectTransform));
+            go.transform.SetParent(parent, false);
+            var rt = (RectTransform)go.transform;
+            rt.anchorMin = aMin; rt.anchorMax = aMax; rt.pivot = new Vector2(0.5f, 1f);
+            rt.anchoredPosition = pos; rt.sizeDelta = new Vector2(-40f, 56f);
+            var tmp = go.AddComponent<TextMeshProUGUI>();
+            tmp.text = text; tmp.fontSize = size; tmp.color = color; tmp.fontStyle = style;
+            tmp.alignment = TextAlignmentOptions.Center; tmp.raycastTarget = false; tmp.enableWordWrapping = false;
+            return tmp;
+        }
+
+        private void MakeWinButton(Transform parent, string name, string label,
+            Vector2 anchor, Vector2 pos, Vector2 size, Color bg, Color fg, Action onClick)
+        {
+            var go = new GameObject(name, typeof(RectTransform));
+            go.transform.SetParent(parent, false);
+            var rt = (RectTransform)go.transform;
+            rt.anchorMin = rt.anchorMax = anchor; rt.pivot = new Vector2(0.5f, 0f);
+            rt.anchoredPosition = pos; rt.sizeDelta = size;
+            var img = go.AddComponent<Image>();
+            img.sprite = _roundedWin; img.type = Image.Type.Sliced; img.pixelsPerUnitMultiplier = 2f;
+            img.color = bg;
+            var btn = go.AddComponent<Button>();
+            btn.transition = Selectable.Transition.None;
+            btn.onClick.AddListener(() => onClick?.Invoke());
+            var lbl = MakeWinText(go.transform, "Label", label, 28, Vector2.zero, Vector2.one, Vector2.zero, fg, FontStyles.Bold);
+            lbl.rectTransform.anchoredPosition = Vector2.zero;
+            lbl.rectTransform.sizeDelta = Vector2.zero;
+            lbl.alignment = TextAlignmentOptions.Center;
         }
 
         /// <summary>

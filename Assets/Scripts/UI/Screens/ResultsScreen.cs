@@ -31,6 +31,10 @@ namespace WordPuzzle.UI
         public event Action OnPlayAgain;
         public event Action OnMainMenu;
         public event Action OnShareRequested;
+        // Task 16 — Puzzle Show "advance to the next unlocked tier" choice.
+        public event Action OnNextTier;
+
+        private Button nextTierButton; // Task 16 — created on demand for Puzzle Show.
 
         // Style tokens.
         // Task 8A: gold is kept for the primary streak number (focal element in streakText richtext)
@@ -191,6 +195,81 @@ namespace WordPuzzle.UI
                 modeNameText.richText = true;
                 modeNameText.text += $"\n<size=70%>Streak <color=#C9B458>{currentStreak}</color> · Best {longestStreak} · {footerLine}</size>";
             }
+        }
+
+        // ================================================================
+        //  Task 16 — context-aware post-win surface configuration
+        // ================================================================
+
+        /// <summary>Endless run-end (Time Attack timer expired): "Play Again" → new run + Home.</summary>
+        /// <param name="laddersCompleted">If >= 0, headline the run's solved-ladder count.</param>
+        public void ConfigureForEndless(int laddersCompleted = -1)
+        {
+            SetButtonVisible(playAgainButton, true);
+            SetButtonLabel(playAgainButton, "PLAY AGAIN");
+            SetButtonVisible(nextTierButton, false);
+            if (laddersCompleted >= 0 && wordsFoundText != null)
+                wordsFoundText.text = laddersCompleted == 1
+                    ? "1 puzzle solved" : $"{laddersCompleted} puzzles solved";
+        }
+
+        /// <summary>Daily: no "Play Again" (don't re-run the daily). Just Home (+ streak + share).</summary>
+        public void ConfigureForDaily()
+        {
+            SetButtonVisible(playAgainButton, false);
+            SetButtonVisible(nextTierButton, false);
+        }
+
+        /// <summary>
+        /// Puzzle Show: "Next Puzzle" (another in the current tier) + optional "Tier N ▸"
+        /// (when the next tier is unlocked) + Home.
+        /// </summary>
+        public void ConfigureForPuzzleShow(bool hasNextTier, int nextTierNumber)
+        {
+            SetButtonVisible(playAgainButton, true);
+            SetButtonLabel(playAgainButton, "NEXT PUZZLE");
+
+            EnsureNextTierButton();
+            if (nextTierButton != null)
+            {
+                SetButtonVisible(nextTierButton, hasNextTier);
+                if (hasNextTier) SetButtonLabel(nextTierButton, $"TIER {nextTierNumber} ▸");
+            }
+        }
+
+        private void EnsureNextTierButton()
+        {
+            if (nextTierButton != null || playAgainButton == null) return;
+            var parent = playAgainButton.transform.parent;
+            var src = playAgainButton.GetComponent<RectTransform>();
+            if (parent == null || src == null) return;
+
+            var go = UnityEngine.Object.Instantiate(playAgainButton.gameObject, parent);
+            go.name = "NextTierButton";
+            nextTierButton = go.GetComponent<Button>();
+            nextTierButton.onClick.RemoveAllListeners();
+            nextTierButton.onClick.AddListener(() => OnNextTier?.Invoke());
+
+            // Sit just above "Next Puzzle"; if a layout group manages the parent it reorders anyway.
+            var rt = go.GetComponent<RectTransform>();
+            rt.anchoredPosition = src.anchoredPosition + new Vector2(0f, src.sizeDelta.y + 16f);
+            go.transform.SetSiblingIndex(playAgainButton.transform.GetSiblingIndex());
+
+            // Gold emphasis on the tier-up action.
+            var img = nextTierButton.GetComponent<Image>();
+            if (img != null) img.color = C_ACCENT_GOLD;
+        }
+
+        private static void SetButtonVisible(Button b, bool visible)
+        {
+            if (b != null) b.gameObject.SetActive(visible);
+        }
+
+        private static void SetButtonLabel(Button b, string label)
+        {
+            if (b == null) return;
+            var t = b.GetComponentInChildren<TextMeshProUGUI>(true);
+            if (t != null) t.text = label;
         }
 
         public void Show() => gameObject.SetActive(true);
