@@ -126,6 +126,9 @@ namespace WordPuzzle
                 LoadDailyProgressBlocking(dataManager);
                 LoadOnboardingBlocking(dataManager);
                 LoadPlayerProgressBlocking(dataManager);
+                // Task 20B — backfill/self-heal tier unlock from real completion data, in case a
+                // prior save never persisted an earned unlock (both caches are now loaded).
+                BackfillTierUnlockOnLoad();
                 InitializeDailyPuzzleService();
 
                 stateManager = new GameStateManager(wordValidator, dataManager);
@@ -665,13 +668,78 @@ namespace WordPuzzle
         {
             if (dataManagerRef == null || !(activeMode is PuzzleShowMode psm)) return;
             cachedPuzzleProgress = psm.ExportProgress();
+            // Task 20A — reconcile the authoritative unlocked tier from the just-updated completion
+            // set BEFORE saving, so a threshold-crossing completion persists the unlock (the mode
+            // advances currentTier only AFTER firing this event, so we cannot trust its value here).
+            bool playerChanged = RaiseTierUnlockInMemory();
             try
             {
                 await dataManagerRef.SavePuzzleProgressAsync(cachedPuzzleProgress);
+                if (playerChanged && cachedPlayerProgress != null)
+                    await dataManagerRef.UpdatePlayerProgressAsync(cachedPlayerProgress);
             }
             catch (System.Exception ex)
             {
                 Debug.LogError($"Failed to persist puzzle progress: {ex.Message}");
+            }
+        }
+
+        // ── Task 20 — single source of truth for tier unlock (reconciled from completion data) ──
+
+        /// <summary>
+        /// Raise the authoritative unlock state to match earned completions: bumps
+        /// PuzzleProgressData.currentTier (what the Library reads) AND PlayerProgress.highestTierUnlocked
+        /// (kept in sync so the two never drift), and refreshes the in-memory tier cache so a live
+        /// ShowLibrary reflects it. Pure in-memory + idempotent; NEVER lowers an unlocked tier. No I/O.
+        /// Returns true if PlayerProgress.highestTierUnlocked changed (so the caller can persist it).
+        /// </summary>
+        private bool RaiseTierUnlockInMemory()
+        {
+            if (cachedPuzzleProgress == null || tierPuzzleIdLookup == null) return false;
+
+            var done = new System.Collections.Generic.HashSet<int>(
+                cachedPuzzleProgress.completedPuzzleIds ?? new System.Collections.Generic.List<int>());
+            int reconciled = PuzzleShowMode.ReconcileHighestUnlockedTier(done, tierPuzzleIdLookup);
+
+            if (reconciled > cachedPuzzleProgress.currentTier)
+                cachedPuzzleProgress.currentTier = reconciled;   // never lower
+
+            int unlockedThrough = cachedPuzzleProgress.currentTier;
+
+            bool playerChanged = false;
+            if (cachedPlayerProgress != null && unlockedThrough > cachedPlayerProgress.highestTierUnlocked)
+            {
+                cachedPlayerProgress.highestTierUnlocked = unlockedThrough;
+                playerChanged = true;
+            }
+
+            // Refresh the in-memory tier cache (cascade) so the Library reflects the unlock live.
+            if (tierCacheRef != null)
+                foreach (var kvp in tierCacheRef)
+                    if (kvp.Key <= unlockedThrough && kvp.Value != null)
+                        kvp.Value.isUnlocked = true;
+
+            return playerChanged;
+        }
+
+        // Task 20B — on boot, self-heal a save whose earned completions outrank its stored unlock,
+        // then persist the corrected values via the existing seams.
+        private async void BackfillTierUnlockOnLoad()
+        {
+            int beforeTier = cachedPuzzleProgress?.currentTier ?? 1;
+            bool playerChanged = RaiseTierUnlockInMemory();
+            bool puzzleChanged = (cachedPuzzleProgress?.currentTier ?? 1) != beforeTier;
+            if (!puzzleChanged && !playerChanged) return;
+            try
+            {
+                if (puzzleChanged && cachedPuzzleProgress != null)
+                    await dataManagerRef.SavePuzzleProgressAsync(cachedPuzzleProgress);
+                if (playerChanged && cachedPlayerProgress != null)
+                    await dataManagerRef.UpdatePlayerProgressAsync(cachedPlayerProgress);
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogWarning($"Tier-unlock backfill persist failed: {ex.Message}");
             }
         }
 

@@ -74,4 +74,70 @@ public class TierUnlockTests
         }
         Assert.AreEqual(10, PuzzleShowMode.PuzzlesRequiredToAdvance(1));
     }
+
+    // ── Task 20 — reconciliation from completion data (persist-on-unlock + backfill source) ──
+
+    // tier t owns ids (t-1)*PuzzlesPerTier+1 .. t*PuzzlesPerTier.
+    private static Dictionary<int, HashSet<int>> BuildFullLookup()
+    {
+        var d = new Dictionary<int, HashSet<int>>();
+        int id = 1;
+        for (int t = 1; t <= BalanceConfig.MaxTier; t++)
+        {
+            var set = new HashSet<int>();
+            for (int i = 0; i < BalanceConfig.PuzzlesPerTier; i++) set.Add(id++);
+            d[t] = set;
+        }
+        return d;
+    }
+
+    private static int TierFirstId(int tier) => (tier - 1) * BalanceConfig.PuzzlesPerTier + 1;
+
+    [Test]
+    public void Reconcile_BelowFirstThreshold_StaysTier1()
+    {
+        var done = new HashSet<int>(Range(TierFirstId(1), PuzzleShowMode.PuzzlesRequiredToAdvance(1) - 1));
+        Assert.AreEqual(1, PuzzleShowMode.ReconcileHighestUnlockedTier(done, BuildFullLookup()));
+    }
+
+    [Test]
+    public void Reconcile_Tier1ThresholdMet_UnlocksTier2()
+    {
+        var done = new HashSet<int>(Range(TierFirstId(1), PuzzleShowMode.PuzzlesRequiredToAdvance(1)));
+        Assert.AreEqual(2, PuzzleShowMode.ReconcileHighestUnlockedTier(done, BuildFullLookup()));
+    }
+
+    [Test]
+    public void Reconcile_Tier1And2Met_UnlocksTier3()
+    {
+        var done = new HashSet<int>(Range(TierFirstId(1), PuzzleShowMode.PuzzlesRequiredToAdvance(1)));
+        done.UnionWith(Range(TierFirstId(2), PuzzleShowMode.PuzzlesRequiredToAdvance(2)));
+        Assert.AreEqual(3, PuzzleShowMode.ReconcileHighestUnlockedTier(done, BuildFullLookup()));
+    }
+
+    [Test]
+    public void Reconcile_NonContiguous_StopsAtFirstUnmetGate()
+    {
+        // Tier 1 met, Tier 2 NOT met, Tier 3 fully done — but Tier 3 is gated behind Tier 2.
+        var done = new HashSet<int>(Range(TierFirstId(1), PuzzleShowMode.PuzzlesRequiredToAdvance(1)));
+        done.UnionWith(Range(TierFirstId(2), PuzzleShowMode.PuzzlesRequiredToAdvance(2) - 5));
+        done.UnionWith(Range(TierFirstId(3), BalanceConfig.PuzzlesPerTier));
+        Assert.AreEqual(2, PuzzleShowMode.ReconcileHighestUnlockedTier(done, BuildFullLookup()));
+    }
+
+    [Test]
+    public void Reconcile_AllTiersComplete_CapsAtMaxTier_NoTier8()
+    {
+        var lookup = BuildFullLookup();
+        var done = new HashSet<int>();
+        foreach (var kv in lookup) done.UnionWith(kv.Value);
+        Assert.AreEqual(BalanceConfig.MaxTier, PuzzleShowMode.ReconcileHighestUnlockedTier(done, lookup));
+    }
+
+    [Test]
+    public void Reconcile_NullSafe_ReturnsOne()
+    {
+        Assert.AreEqual(1, PuzzleShowMode.ReconcileHighestUnlockedTier(null, BuildFullLookup()));
+        Assert.AreEqual(1, PuzzleShowMode.ReconcileHighestUnlockedTier(new HashSet<int>(), null));
+    }
 }

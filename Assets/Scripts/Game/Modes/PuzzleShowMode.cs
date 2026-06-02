@@ -41,6 +41,31 @@ namespace WordPuzzle.Modes
         /// </summary>
         public static int PuzzlesRequiredToAdvance(int tier) => BalanceConfig.PuzzlesRequiredToAdvance(tier);
 
+        /// <summary>
+        /// Task 20 — derive the highest unlocked tier purely from completion data (the ground truth),
+        /// independent of any cached currentTier. For each tier in order, if the player has completed
+        /// &gt;= PuzzlesRequiredToAdvance(tier) of its puzzles, the next tier is unlocked; stop at the
+        /// first gate not met. Capped at MaxTier. Idempotent — used both to persist on unlock and to
+        /// backfill/​self-heal stuck saves on load. Never produces a value below 1.
+        /// </summary>
+        public static int ReconcileHighestUnlockedTier(ICollection<int> completed,
+            Dictionary<int, HashSet<int>> tierLookup)
+        {
+            int unlocked = 1;
+            if (tierLookup == null || completed == null) return unlocked;
+
+            for (int t = 1; t < MaxTier; t++)
+            {
+                if (!tierLookup.TryGetValue(t, out var ids) || ids == null) break;
+                int count = 0;
+                foreach (var id in ids)
+                    if (completed.Contains(id)) count++;
+                if (count >= BalanceConfig.PuzzlesRequiredToAdvance(t)) unlocked = t + 1;
+                else break;
+            }
+            return unlocked > MaxTier ? MaxTier : unlocked;
+        }
+
         private GameStateManager stateManager;
         private WordPuzzle.Puzzle.WordPuzzle currentPuzzle;
         private int currentTier = 1;
