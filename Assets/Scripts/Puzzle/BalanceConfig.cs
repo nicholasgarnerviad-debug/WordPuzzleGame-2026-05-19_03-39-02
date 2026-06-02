@@ -78,13 +78,32 @@ public static class BalanceConfig
     /// <summary>Target ladder distance for Hard puzzles.</summary>
     public const int HardTargetDistance = 6;
 
-    // ─── Tier pacing (Task 5A) ────────────────────────────────────────────────
+    // ─── Tier pacing (Task 5A; Task 15: 7 tiers × 50) ─────────────────────────
 
     /// <summary>Total number of tiers in the game (Puzzle Show mode).</summary>
-    public const int MaxTier = 6;
+    public const int MaxTier = 7;
 
-    /// <summary>Puzzles a player must complete in a tier before advancing.</summary>
+    /// <summary>Curated puzzles authored per tier (Task 15).</summary>
+    public const int PuzzlesPerTier = 50;
+
+    /// <summary>
+    /// Base gate (Tier 1) — puzzles a player must complete to advance to the next tier.
+    /// Tier-1 value; deeper tiers require progressively more, see PuzzlesRequiredToAdvance.
+    /// </summary>
     public const int PuzzlesRequiredToAdvanceTier = 10;
+
+    /// <summary>
+    /// Task 15 — progressive unlock: how many puzzles to clear in <paramref name="tier"/>
+    /// to unlock the next tier. Rises with depth (10/15/20/25/30/35), capped at PuzzlesPerTier.
+    /// Already-unlocked tiers stay open, so players can return to complete the rest.
+    /// </summary>
+    public static int PuzzlesRequiredToAdvance(int tier)
+    {
+        if (tier < 1) tier = 1;
+        int required = PuzzlesRequiredToAdvanceTier + (tier - 1) * 5;
+        if (required > PuzzlesPerTier) required = PuzzlesPerTier;
+        return required;
+    }
 
     // ─── Economy faucets (Task 6A) ────────────────────────────────────────────
 

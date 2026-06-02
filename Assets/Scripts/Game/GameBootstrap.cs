@@ -471,6 +471,16 @@ namespace WordPuzzle
 
         private void ShowLibrary()
         {
+            // Task 15C — inject saved Puzzle Show progress so the library colours cards by
+            // real completion state and shows accurate tier unlock/progress.
+            var lib = uiManager.GetLibrary();
+            if (lib != null && cachedPuzzleProgress != null)
+            {
+                lib.SetProgress(
+                    cachedPuzzleProgress.completedPuzzleIds,
+                    cachedPuzzleProgress.inProgressPuzzleIds,
+                    cachedPuzzleProgress.currentTier);
+            }
             uiManager.ShowLibrary();
         }
 

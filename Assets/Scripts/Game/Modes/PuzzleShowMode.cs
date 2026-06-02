@@ -32,9 +32,14 @@ namespace WordPuzzle.Modes
         // without a compile-time const embedding. Value: 6.
         public static readonly int MaxTier = BalanceConfig.MaxTier;
 
-        /// <summary>Spec §3.1 — fixed gate of 10 completed puzzles per tier.</summary>
-        // Value: 10.
+        /// <summary>Spec §3.1 — base (Tier 1) gate. Value: 10.</summary>
         public static readonly int PuzzlesRequiredToAdvanceTier = BalanceConfig.PuzzlesRequiredToAdvanceTier;
+
+        /// <summary>
+        /// Task 15 passthrough so UI (which references Modes, not Puzzle) can read the
+        /// progressive per-tier unlock requirement without a direct BalanceConfig dependency.
+        /// </summary>
+        public static int PuzzlesRequiredToAdvance(int tier) => BalanceConfig.PuzzlesRequiredToAdvance(tier);
 
         private GameStateManager stateManager;
         private WordPuzzle.Puzzle.WordPuzzle currentPuzzle;
@@ -55,8 +60,9 @@ namespace WordPuzzle.Modes
         public bool AllTiersComplete => currentTier > MaxTier;
 
         public int PuzzlesCompletedInCurrentTier { get; private set; }
-        public int PuzzlesRequiredThisTier => PuzzlesRequiredToAdvanceTier;
-        public bool IsTierComplete() => PuzzlesCompletedInCurrentTier >= PuzzlesRequiredToAdvanceTier;
+        // Task 15 — progressive gate: deeper tiers require more completions to advance.
+        public int PuzzlesRequiredThisTier => BalanceConfig.PuzzlesRequiredToAdvance(currentTier);
+        public bool IsTierComplete() => PuzzlesCompletedInCurrentTier >= PuzzlesRequiredThisTier;
 
         public IReadOnlyCollection<int> CompletedPuzzleIds => completedPuzzleIds;
         public IReadOnlyCollection<int> InProgressPuzzleIds => inProgressPuzzleIds;
@@ -65,10 +71,18 @@ namespace WordPuzzle.Modes
 
         /// <summary>Spec §3.6 puzzle-state resolution.</summary>
         public PuzzleState GetPuzzleState(int puzzleId, bool tierUnlocked)
+            => ResolveState(puzzleId, tierUnlocked, completedPuzzleIds, inProgressPuzzleIds);
+
+        /// <summary>
+        /// Pure §3.6 state resolver — shared by the live mode and the Puzzle Library UI
+        /// (Task 15C) so card colouring matches gameplay state exactly. No instance state.
+        /// </summary>
+        public static PuzzleState ResolveState(int puzzleId, bool tierUnlocked,
+            ICollection<int> completed, ICollection<int> inProgress)
         {
             if (!tierUnlocked) return PuzzleState.Locked;
-            if (completedPuzzleIds.Contains(puzzleId)) return PuzzleState.Completed;
-            if (inProgressPuzzleIds.Contains(puzzleId)) return PuzzleState.InProgress;
+            if (completed != null && completed.Contains(puzzleId)) return PuzzleState.Completed;
+            if (inProgress != null && inProgress.Contains(puzzleId)) return PuzzleState.InProgress;
             return PuzzleState.UnlockedUnplayed;
         }
 

@@ -3,8 +3,8 @@
   <Project Path="Game.State.csproj" />
   <Project Path="Assembly-CSharp.csproj" />
   <Project Path="Game.Puzzle.csproj" />
-  <Project Path="Game.UI.csproj" />
   <Project Path="Unit.Tests.csproj" />
+  <Project Path="Game.UI.csproj" />
   <Project Path="GoogleMobileAds.Editor.csproj" />
   <Project Path="Game.Bootstrap.csproj" />
   <Project Path="Game.Modes.csproj" />

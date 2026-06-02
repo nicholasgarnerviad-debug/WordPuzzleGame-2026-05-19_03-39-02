@@ -1,15 +1,20 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using WordPuzzle.Modes;
 
 namespace WordPuzzle.UI
 {
     /// <summary>
-    /// Puzzle Library screen rewrite per UI Spec §2 — level cards grid.
-    /// Renders tier headers ("Tier N — X/Y completed") and a 3-column grid of
-    /// styled level cards (locked / unlocked-unplayed / in-progress / completed).
-    /// Each card is a Button → OnPuzzleSelected(puzzleId).
+    /// Puzzle Library (Task 15) — two-level Puzzle Show navigation.
+    ///   Level 1 (Tier Select): 7 tier cards with theme, progress (X/50) and lock state.
+    ///   Level 2 (Puzzle Grid):  the selected tier's 50 puzzle cards + a Back to tier-select.
+    /// Card colour reflects real saved progress (completed = green + check, in-progress = gold,
+    /// unlocked = surface grey, locked = padlock), resolved via PuzzleShowMode.ResolveState so
+    /// it matches gameplay state exactly. Only the active tier's cards are rendered (perf).
+    /// Tapping a puzzle fires OnPuzzleSelected(puzzleId) — the existing launch path, unchanged.
     /// </summary>
     public class PuzzleLibraryScreen : MonoBehaviour
     {
@@ -17,62 +22,66 @@ namespace WordPuzzle.UI
         [SerializeField] private Button backButton;
 
         public event Action OnBackToMenu;
-
-        // §2.1 New event: fires when a level card is tapped.
         public event Action<int> OnPuzzleSelected;
 
-        // --- §2.3 Palette ---
+        // --- Design tokens (README §14) ---
         private static readonly Color C_LOCKED_BG       = HexC("#1B1F27");
         private static readonly Color C_LOCKED_BORDER   = HexC("#2A2F3A");
         private static readonly Color C_LOCKED_TEXT     = HexC("#5A6270");
 
-        private static readonly Color C_UNPLAYED_BG     = HexC("#252A33");
+        private static readonly Color C_UNPLAYED_BG     = HexC("#242936"); // surface-2
         private static readonly Color C_UNPLAYED_BORDER = HexC("#3A4150");
-        private static readonly Color C_UNPLAYED_TEXT   = HexC("#E8EAF0");
+        private static readonly Color C_UNPLAYED_TEXT   = HexC("#E7E1C4");
         private static readonly Color C_UNPLAYED_ICON   = HexC("#7A828F");
 
-        private static readonly Color C_INPROGRESS_BG     = HexC("#252A33");
-        private static readonly Color C_INPROGRESS_BORDER = HexC("#C9B458");
-        private static readonly Color C_INPROGRESS_TEXT   = HexC("#E8EAF0");
+        private static readonly Color C_INPROGRESS_BG     = HexC("#242936");
+        private static readonly Color C_INPROGRESS_BORDER = HexC("#C9B458"); // gold
+        private static readonly Color C_INPROGRESS_TEXT   = HexC("#F5F7FA");
         private static readonly Color C_INPROGRESS_ICON   = HexC("#C9B458");
 
         private static readonly Color C_COMPLETED_BG     = HexC("#1F2A1F");
-        private static readonly Color C_COMPLETED_BORDER = HexC("#6AAA64");
-        private static readonly Color C_COMPLETED_TEXT   = HexC("#FFFFFF");
+        private static readonly Color C_COMPLETED_BORDER = HexC("#6AAA64"); // green
+        private static readonly Color C_COMPLETED_TEXT   = HexC("#F5F7FA");
         private static readonly Color C_COMPLETED_ICON   = HexC("#6AAA64");
 
-        private static readonly Color C_HEADER_BG       = HexC("#1B1F27");
-        private static readonly Color C_HEADER_TIER     = HexC("#FFFFFF");
+        private static readonly Color C_HEADER_TIER     = HexC("#F5F7FA");
         private static readonly Color C_HEADER_TIER_LK  = HexC("#5A6270");
-        // Task 8A: demoted from gold #C9B458 to text-muted #8A93A1. The tier count is
-        // secondary info; gold is reserved for the in-progress current-item indicator.
         private static readonly Color C_HEADER_COUNT    = HexC("#8A93A1");
-        private static readonly Color C_HEADER_COUNT_LK = HexC("#5A6270");
+        private static readonly Color C_SUBTITLE        = HexC("#8A93A1");
+        private static readonly Color C_PUZZLE_ID       = HexC("#7A828F");
+        private static readonly Color C_GOLD            = HexC("#C9B458"); // current/next tier accent
 
-        private static readonly Color C_BADGE_OPTIMAL_BG = HexC("#2A2F3A");
-        // Task 8A: optimal-steps badge FG demoted from gold #C9B458 to text-muted #8A93A1.
-        // Badge is informational, not the focal element; in-progress border/icon keep gold.
-        private static readonly Color C_BADGE_OPTIMAL_FG = HexC("#8A93A1");
-        private static readonly Color C_PROGRESS_BG      = HexC("#2A2F3A");
-        private static readonly Color C_SUBTITLE         = HexC("#8A93A1");
-        private static readonly Color C_PUZZLE_ID        = HexC("#7A828F");
+        // --- View state ---
+        private enum ViewMode { TierSelect, PuzzleGrid }
+        private ViewMode viewMode = ViewMode.TierSelect;
+        private int selectedTierId = 1;
 
-        // §2.3 Level state — local mirror of mode-coder's pending PuzzleState enum.
-        // TODO: switch to WordPuzzle.Puzzle.PuzzleState once merged.
-        private enum LocalPuzzleState
+        // --- Injected progress (set by GameBootstrap before Show; read-only here) ---
+        private readonly HashSet<int> completedIds = new HashSet<int>();
+        private readonly HashSet<int> inProgressIds = new HashSet<int>();
+        private int highestUnlockedTier = 1;
+
+        private TierDefinitionsWrapper tierData;
+
+        /// <summary>
+        /// Task 15C — orchestrator injects the saved Puzzle Show progress before Show().
+        /// Reads the existing PuzzleProgressData store (no new store invented).
+        /// </summary>
+        public void SetProgress(IEnumerable<int> completed, IEnumerable<int> inProgress, int highestUnlocked)
         {
-            Locked,
-            UnlockedUnplayed,
-            InProgress,
-            Completed
+            completedIds.Clear();
+            inProgressIds.Clear();
+            if (completed != null) foreach (var id in completed) completedIds.Add(id);
+            if (inProgress != null) foreach (var id in inProgress) inProgressIds.Add(id);
+            highestUnlockedTier = Mathf.Max(1, highestUnlocked);
         }
 
         private void OnEnable()
         {
             if (backButton != null)
             {
-                backButton.onClick.AddListener(() => OnBackToMenu?.Invoke());
-                // §2 Back → Home conversion: keep serialized name, update visual label only.
+                backButton.onClick.AddListener(HandleTopBack);
+                // Preserve the existing HOME pill look (label styled in-code as before).
                 var label = backButton.GetComponentInChildren<TMP_Text>(true);
                 if (label != null)
                 {
@@ -91,61 +100,290 @@ namespace WordPuzzle.UI
                 backButton.onClick.RemoveAllListeners();
         }
 
+        // Top HOME pill always returns to the main menu (both levels).
+        private void HandleTopBack() => OnBackToMenu?.Invoke();
+
         public void Show()
         {
             gameObject.SetActive(true);
+            viewMode = ViewMode.TierSelect;   // always enter at the tier-select level
+            tierData = LoadTierDefinitions();
             PopulateContent();
         }
 
         public void Hide() => gameObject.SetActive(false);
 
         // ================================================================
-        //  Population
+        //  Population — branches on the active view
         // ================================================================
         private void PopulateContent()
         {
             if (contentRoot == null) return;
-
             ClearContent();
             EnsureRootVerticalLayout();
 
-            var tierData = LoadTierDefinitions();
             if (tierData == null || tierData.tiers == null) return;
+
+            if (viewMode == ViewMode.TierSelect) PopulateTierSelect();
+            else PopulatePuzzleGrid(selectedTierId);
+        }
+
+        // ---------------- Level 1: Tier Select ----------------
+        private void PopulateTierSelect()
+        {
+            CreateScreenTitle("PUZZLE SHOW", "Pick a tier");
 
             foreach (var tier in tierData.tiers)
             {
                 if (tier == null) continue;
+                bool unlocked = tier.tierId <= highestUnlockedTier;
+                bool isCurrent = tier.tierId == highestUnlockedTier;
                 int total = tier.puzzles != null ? tier.puzzles.Length : 0;
                 int completed = CountCompleted(tier);
-                CreateTierHeader(tier, completed, total);
-
-                var grid = CreateTierGridContainer(tier.tierId);
-                if (tier.puzzles == null) continue;
-                foreach (var puzzle in tier.puzzles)
-                {
-                    if (puzzle == null) continue;
-                    var state = GetPuzzleState(puzzle.puzzleId, tier.isUnlocked);
-                    CreateLevelCard(grid.transform, puzzle, state);
-                }
+                CreateTierSelectCard(tier, unlocked, isCurrent, completed, total);
             }
         }
 
-        /// <summary>
-        /// Stub for mode-coder's GetPuzzleState API. Until merged, assume all unlocked
-        /// puzzles are UnlockedUnplayed and all locked tiers' puzzles are Locked.
-        /// </summary>
-        private LocalPuzzleState GetPuzzleState(int puzzleId, bool tierUnlocked)
+        private void CreateTierSelectCard(TierData tier, bool unlocked, bool isCurrent, int completed, int total)
         {
-            if (!tierUnlocked) return LocalPuzzleState.Locked;
-            return LocalPuzzleState.UnlockedUnplayed;
+            var go = new GameObject($"TierCard_{tier.tierId}", typeof(RectTransform));
+            go.transform.SetParent(contentRoot, false);
+            var le = go.AddComponent<LayoutElement>();
+            le.minHeight = 104f; le.preferredHeight = 104f; le.flexibleWidth = 1f;
+
+            var border = go.AddComponent<Image>();
+            ApplyRounded(border);
+            border.color = !unlocked ? C_LOCKED_BORDER : (isCurrent ? C_GOLD : C_UNPLAYED_BORDER);
+
+            if (unlocked)
+            {
+                var btn = go.AddComponent<Button>();
+                btn.transition = Selectable.Transition.None;
+                int captured = tier.tierId;
+                btn.onClick.AddListener(() => OpenTier(captured));
+            }
+
+            var fill = MakeFill(go.transform, 2f);
+            ApplyRounded(fill.GetComponent<Image>());
+            fill.GetComponent<Image>().color = unlocked ? C_UNPLAYED_BG : C_LOCKED_BG;
+
+            // Title row: "Tier N"  +  progress / lock on the right
+            CreateAnchored(fill.transform, "TierName", $"Tier {tier.tierId}", 30,
+                TextAlignmentOptions.TopLeft, unlocked ? C_HEADER_TIER : C_HEADER_TIER_LK,
+                FontStyles.Bold, new Vector2(0f, 1f), new Vector2(0f, 1f),
+                new Vector2(24f, -16f), new Vector2(300f, 38f));
+
+            CreateAnchored(fill.transform, "TierTheme", TierTheme(tier.tierId), 18,
+                TextAlignmentOptions.BottomLeft, C_SUBTITLE, FontStyles.Normal,
+                new Vector2(0f, 0f), new Vector2(0f, 0f),
+                new Vector2(24f, 18f), new Vector2(360f, 26f));
+
+            if (unlocked)
+            {
+                CreateAnchored(fill.transform, "TierProgress", $"{completed}/{total}", 24,
+                    TextAlignmentOptions.Right, isCurrent ? C_GOLD : C_HEADER_COUNT, FontStyles.Bold,
+                    new Vector2(1f, 0.5f), new Vector2(1f, 0.5f),
+                    new Vector2(-24f, 0f), new Vector2(160f, 40f));
+            }
+            else
+            {
+                int need = PuzzleShowMode.PuzzlesRequiredToAdvance(tier.tierId - 1);
+                CreateAnchored(fill.transform, "LockLabel", "□", 26,
+                    TextAlignmentOptions.Right, C_LOCKED_TEXT, FontStyles.Bold,
+                    new Vector2(1f, 1f), new Vector2(1f, 1f),
+                    new Vector2(-24f, -16f), new Vector2(40f, 32f));
+                CreateAnchored(fill.transform, "UnlockHint",
+                    $"Clear {need} in Tier {tier.tierId - 1}", 16,
+                    TextAlignmentOptions.BottomRight, C_LOCKED_TEXT, FontStyles.Normal,
+                    new Vector2(1f, 0f), new Vector2(1f, 0f),
+                    new Vector2(-24f, 18f), new Vector2(280f, 26f));
+            }
         }
 
-        /// <summary>Count completed puzzles in tier (placeholder — returns 0 until persistence wires it).</summary>
+        private void OpenTier(int tierId)
+        {
+            selectedTierId = tierId;
+            viewMode = ViewMode.PuzzleGrid;
+            PopulateContent();
+        }
+
+        // ---------------- Level 2: Puzzle Grid ----------------
+        private void PopulatePuzzleGrid(int tierId)
+        {
+            TierData tier = null;
+            foreach (var t in tierData.tiers)
+                if (t != null && t.tierId == tierId) { tier = t; break; }
+            if (tier == null) { viewMode = ViewMode.TierSelect; PopulateTierSelect(); return; }
+
+            bool unlocked = tier.tierId <= highestUnlockedTier;
+            int total = tier.puzzles != null ? tier.puzzles.Length : 0;
+            int completed = CountCompleted(tier);
+
+            CreateGridHeader(tier, completed, total);
+
+            var grid = CreateTierGridContainer(tier.tierId);
+            if (tier.puzzles == null) return;
+            foreach (var puzzle in tier.puzzles)
+            {
+                if (puzzle == null) continue;
+                var state = PuzzleShowMode.ResolveState(puzzle.puzzleId, unlocked, completedIds, inProgressIds);
+                CreateLevelCard(grid.transform, puzzle, state);
+            }
+        }
+
+        // Header for the grid view: a Back chip (→ tier select) + tier title/theme/progress.
+        private void CreateGridHeader(TierData tier, int completed, int total)
+        {
+            var go = new GameObject("GridHeader", typeof(RectTransform));
+            go.transform.SetParent(contentRoot, false);
+            var le = go.AddComponent<LayoutElement>();
+            le.minHeight = 84f; le.preferredHeight = 84f; le.flexibleWidth = 1f;
+
+            // Back chip
+            var backGo = new GameObject("BackToTiers", typeof(RectTransform));
+            backGo.transform.SetParent(go.transform, false);
+            var brt = (RectTransform)backGo.transform;
+            brt.anchorMin = new Vector2(0f, 0.5f); brt.anchorMax = new Vector2(0f, 0.5f);
+            brt.pivot = new Vector2(0f, 0.5f);
+            brt.anchoredPosition = new Vector2(16f, 0f);
+            brt.sizeDelta = new Vector2(96f, 52f);
+            var backImg = backGo.AddComponent<Image>(); ApplyRounded(backImg); backImg.color = C_UNPLAYED_BG;
+            var backBtn = backGo.AddComponent<Button>(); backBtn.transition = Selectable.Transition.None;
+            backBtn.onClick.AddListener(BackToTierSelect);
+            CreateText(backGo.transform, "BackLabel", "‹ Back", 20,
+                TextAlignmentOptions.Center, C_UNPLAYED_TEXT, FontStyles.Bold);
+
+            CreateAnchored(go.transform, "GridTitle", $"Tier {tier.tierId}", 28,
+                TextAlignmentOptions.Top, C_HEADER_TIER, FontStyles.Bold,
+                new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
+                new Vector2(0f, -8f), new Vector2(360f, 34f));
+            CreateAnchored(go.transform, "GridTheme", $"{TierTheme(tier.tierId)}   ·   {completed}/{total}", 16,
+                TextAlignmentOptions.Bottom, C_SUBTITLE, FontStyles.Normal,
+                new Vector2(0.5f, 0f), new Vector2(0.5f, 0f),
+                new Vector2(0f, 12f), new Vector2(420f, 24f));
+        }
+
+        private void BackToTierSelect()
+        {
+            viewMode = ViewMode.TierSelect;
+            PopulateContent();
+        }
+
+        private GameObject CreateTierGridContainer(int tierId)
+        {
+            var go = new GameObject($"TierGrid_{tierId}", typeof(RectTransform));
+            go.transform.SetParent(contentRoot, false);
+
+            var grid = go.AddComponent<GridLayoutGroup>();
+            grid.cellSize = new Vector2(210f, 150f);
+            grid.spacing = new Vector2(16f, 16f);
+            grid.padding = new RectOffset(24, 24, 16, 32);
+            grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
+            grid.constraintCount = 3;
+            grid.childAlignment = TextAnchor.UpperCenter;
+
+            var csf = go.AddComponent<ContentSizeFitter>();
+            csf.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            csf.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
+            return go;
+        }
+
+        // ---------------- Puzzle card ----------------
+        private void CreateLevelCard(Transform parent, PuzzleDefinition puzzle, PuzzleState state)
+        {
+            var go = new GameObject($"Card_{puzzle.puzzleId}", typeof(RectTransform));
+            go.transform.SetParent(parent, false);
+            var rt = (RectTransform)go.transform;
+            rt.sizeDelta = new Vector2(210f, 150f);
+
+            var border = go.AddComponent<Image>();
+            ApplyRounded(border);
+            border.color = StateBorder(state);
+
+            var btn = go.AddComponent<Button>();
+            btn.transition = Selectable.Transition.None;
+            int capturedId = puzzle.puzzleId;
+            btn.interactable = (state != PuzzleState.Locked);
+            btn.onClick.AddListener(() => OnPuzzleSelected?.Invoke(capturedId));
+
+            var fillGo = MakeFill(go.transform, state == PuzzleState.Locked ? 1f : 2f);
+            var fillImg = fillGo.GetComponent<Image>();
+            ApplyRounded(fillImg);
+            fillImg.color = StateBg(state);
+
+            // Row 1 — id + state icon (shape-coded, legible in grayscale / colorblind).
+            CreateAnchored(fillGo.transform, "PuzzleId", $"#{puzzle.puzzleId:000}", 14,
+                TextAlignmentOptions.TopLeft,
+                state == PuzzleState.Locked ? C_LOCKED_TEXT : C_PUZZLE_ID,
+                FontStyles.Bold | FontStyles.Italic,
+                new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(10f, -8f), new Vector2(60f, 18f));
+
+            string icon = state switch
+            {
+                PuzzleState.Locked            => "□", // □ padlock-ish
+                PuzzleState.UnlockedUnplayed  => "○", // ○ not started
+                PuzzleState.InProgress        => "◑", // ◑ in progress
+                PuzzleState.Completed         => "✓", // ✓ done (non-color cue)
+                _                             => string.Empty
+            };
+            CreateAnchored(fillGo.transform, "StateIcon", icon, 18,
+                TextAlignmentOptions.TopRight, StateIconColor(state), FontStyles.Bold,
+                new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-10f, -8f), new Vector2(30f, 22f));
+
+            // Row 2 — word pair.
+            string pair = state == PuzzleState.Locked
+                ? "??? → ???"
+                : $"{(puzzle.startWord ?? "").ToUpper()} → {(puzzle.endWord ?? "").ToUpper()}";
+            CreateAnchored(fillGo.transform, "WordPair", pair, 24,
+                TextAlignmentOptions.Center, StateLetterColor(state), FontStyles.Bold,
+                new Vector2(0f, 0.5f), new Vector2(1f, 0.5f), new Vector2(0f, 6f), Vector2.zero,
+                fillSize: true, fillHeight: 52f);
+
+            // Row 3 — steps subtitle.
+            CreateAnchored(fillGo.transform, "Subtitle",
+                state == PuzzleState.Locked ? "" : $"{puzzle.optimalSteps} steps", 14,
+                TextAlignmentOptions.Center, C_SUBTITLE, FontStyles.Normal,
+                new Vector2(0f, 0f), new Vector2(1f, 0f), new Vector2(0f, 14f), Vector2.zero,
+                fillSize: true, fillHeight: 22f);
+        }
+
+        // ================================================================
+        //  Helpers
+        // ================================================================
+        private void CreateScreenTitle(string title, string subtitle)
+        {
+            var go = new GameObject("ScreenTitle", typeof(RectTransform));
+            go.transform.SetParent(contentRoot, false);
+            var le = go.AddComponent<LayoutElement>();
+            le.minHeight = 70f; le.preferredHeight = 70f; le.flexibleWidth = 1f;
+            CreateAnchored(go.transform, "Title", title, 26, TextAlignmentOptions.Top,
+                C_GOLD, FontStyles.Bold, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
+                new Vector2(0f, -2f), new Vector2(420f, 34f));
+            CreateAnchored(go.transform, "Sub", subtitle, 16, TextAlignmentOptions.Bottom,
+                C_SUBTITLE, FontStyles.Normal, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f),
+                new Vector2(0f, 6f), new Vector2(420f, 24f));
+        }
+
         private int CountCompleted(TierData tier)
         {
-            // TODO: pull from PlayerProgress.tierProgress[tier.tierId].completedPuzzles once available here.
-            return 0;
+            if (tier?.puzzles == null) return 0;
+            int n = 0;
+            foreach (var p in tier.puzzles)
+                if (p != null && completedIds.Contains(p.puzzleId)) n++;
+            return n;
         }
+
+        private static string TierTheme(int tierId) => tierId switch
+        {
+            1 => "3-letter words",
+            2 => "4-letter words",
+            3 => "5-letter words",
+            4 => "5–6 letter words",
+            5 => "6-letter words",
+            6 => "6–7 letter words",
+            7 => "7-letter words",
+            _ => ""
+        };
 
         private void ClearContent()
         {
@@ -153,15 +391,14 @@ namespace WordPuzzle.UI
                 Destroy(contentRoot.GetChild(i).gameObject);
         }
 
-        // §2.6 contentRoot VerticalLayoutGroup config.
         private void EnsureRootVerticalLayout()
         {
             var rt = contentRoot as RectTransform;
             if (rt == null) return;
             var vlg = rt.GetComponent<VerticalLayoutGroup>();
             if (vlg == null) vlg = rt.gameObject.AddComponent<VerticalLayoutGroup>();
-            vlg.spacing = 8f;
-            vlg.padding = new RectOffset(0, 0, 0, 32);
+            vlg.spacing = 12f;
+            vlg.padding = new RectOffset(16, 16, 8, 32);
             vlg.childAlignment = TextAnchor.UpperCenter;
             vlg.childControlWidth = true;
             vlg.childControlHeight = false;
@@ -185,388 +422,107 @@ namespace WordPuzzle.UI
             return JsonUtility.FromJson<TierDefinitionsWrapper>(asset.text);
         }
 
-        // ================================================================
-        //  §2.2 Tier header bar
-        // ================================================================
-        private void CreateTierHeader(TierData tier, int completed, int total)
+        // Inset child Image that fills its parent, leaving a `border` px ring.
+        private static GameObject MakeFill(Transform parent, float border)
         {
-            var go = new GameObject($"TierHeader_{tier.tierId}", typeof(RectTransform));
-            go.transform.SetParent(contentRoot, false);
-
-            var rt = (RectTransform)go.transform;
-            rt.sizeDelta = new Vector2(0f, 72f);
-
-            var le = go.AddComponent<LayoutElement>();
-            le.minHeight = 72f;
-            le.preferredHeight = 72f;
-            le.flexibleWidth = 1f;
-
-            var img = go.AddComponent<Image>();
-            img.color = C_HEADER_BG;
-
-            // 24px padding L/R via HorizontalLayoutGroup
-            var hlg = go.AddComponent<HorizontalLayoutGroup>();
-            hlg.childAlignment = TextAnchor.MiddleLeft;
-            hlg.childControlWidth = true;
-            hlg.childControlHeight = true;
-            hlg.childForceExpandWidth = true;
-            hlg.childForceExpandHeight = true;
-            hlg.padding = new RectOffset(24, 24, 0, 0);
-            hlg.spacing = 12f;
-
-            // Left: Tier {n}
-            var leftText = CreateText(go.transform, "TierName",
-                $"Tier {tier.tierId}", 30, TextAlignmentOptions.MidlineLeft,
-                tier.isUnlocked ? C_HEADER_TIER : C_HEADER_TIER_LK,
-                FontStyles.Bold);
-            var leftLE = leftText.gameObject.AddComponent<LayoutElement>();
-            leftLE.flexibleWidth = 1f;
-
-            // Right: {completed}/{total}
-            var rightText = CreateText(go.transform, "TierCount",
-                $"{completed}/{total}", 22, TextAlignmentOptions.MidlineRight,
-                tier.isUnlocked ? C_HEADER_COUNT : C_HEADER_COUNT_LK,
-                FontStyles.Bold);
-            var rightLE = rightText.gameObject.AddComponent<LayoutElement>();
-            rightLE.minWidth = 80f;
-            rightLE.preferredWidth = 100f;
-
-            // Locked chip
-            if (!tier.isUnlocked)
-            {
-                var chipGo = new GameObject("LockedChip", typeof(RectTransform));
-                chipGo.transform.SetParent(go.transform, false);
-                var chipImg = chipGo.AddComponent<Image>();
-                chipImg.color = HexC("#2A2F3A");
-                var chipLE = chipGo.AddComponent<LayoutElement>();
-                chipLE.minWidth = 80f;
-                chipLE.preferredWidth = 80f;
-                chipLE.minHeight = 28f;
-                chipLE.preferredHeight = 28f;
-
-                CreateText(chipGo.transform, "ChipLabel", "LOCKED", 14,
-                    TextAlignmentOptions.Center, C_LOCKED_TEXT, FontStyles.Bold);
-            }
-        }
-
-        // §2.2 Grid container under header.
-        private GameObject CreateTierGridContainer(int tierId)
-        {
-            var go = new GameObject($"TierGrid_{tierId}", typeof(RectTransform));
-            go.transform.SetParent(contentRoot, false);
-
-            var grid = go.AddComponent<GridLayoutGroup>();
-            grid.cellSize = new Vector2(210f, 160f);
-            grid.spacing = new Vector2(16f, 16f);
-            grid.padding = new RectOffset(24, 24, 16, 24);
-            grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
-            grid.constraintCount = 3;
-            grid.childAlignment = TextAnchor.UpperCenter;
-
-            var csf = go.AddComponent<ContentSizeFitter>();
-            csf.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-            csf.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
-
-            return go;
-        }
-
-        // ================================================================
-        //  §2.3/§2.4/§2.5 Level card
-        // ================================================================
-        private void CreateLevelCard(Transform parent, PuzzleDefinition puzzle, LocalPuzzleState state)
-        {
-            var go = new GameObject($"Card_{puzzle.puzzleId}", typeof(RectTransform));
-            go.transform.SetParent(parent, false);
-
-            var rt = (RectTransform)go.transform;
-            rt.sizeDelta = new Vector2(210f, 160f);
-
-            // Border layer (full bleed)
-            var borderImg = go.AddComponent<Image>();
-            borderImg.color = StateBorder(state);
-
-            // §2.5 Button covers full card
-            var btn = go.AddComponent<Button>();
-            btn.transition = Selectable.Transition.None;
-            int capturedId = puzzle.puzzleId;
-            btn.interactable = (state != LocalPuzzleState.Locked);
-            btn.onClick.AddListener(() => OnPuzzleSelected?.Invoke(capturedId));
-
-            // Inner fill (inset 1 or 2px from border per state)
             var fillGo = new GameObject("Fill", typeof(RectTransform));
-            fillGo.transform.SetParent(go.transform, false);
-            var fillRt = (RectTransform)fillGo.transform;
-            fillRt.anchorMin = Vector2.zero;
-            fillRt.anchorMax = Vector2.one;
-            float borderPx = (state == LocalPuzzleState.Locked || state == LocalPuzzleState.UnlockedUnplayed) ? 1f : 2f;
-            fillRt.offsetMin = new Vector2(borderPx, borderPx);
-            fillRt.offsetMax = new Vector2(-borderPx, -borderPx);
-            var fillImg = fillGo.AddComponent<Image>();
-            fillImg.color = StateBg(state);
-            fillImg.raycastTarget = false;
-
-            BuildRow1(fillGo.transform, puzzle, state);
-            BuildRow2(fillGo.transform, puzzle, state);
-            BuildRow3(fillGo.transform, puzzle);
-
-            if (state == LocalPuzzleState.InProgress || state == LocalPuzzleState.Completed)
-                BuildRow4ProgressBar(fillGo.transform, state);
+            fillGo.transform.SetParent(parent, false);
+            var rt = (RectTransform)fillGo.transform;
+            rt.anchorMin = Vector2.zero; rt.anchorMax = Vector2.one;
+            rt.offsetMin = new Vector2(border, border);
+            rt.offsetMax = new Vector2(-border, -border);
+            var img = fillGo.AddComponent<Image>();
+            img.raycastTarget = false;
+            return fillGo;
         }
 
-        private void BuildRow1(Transform fill, PuzzleDefinition puzzle, LocalPuzzleState state)
+        // §15D — rounded corners via Unity's built-in sliced UISprite (matches the app's soft radius).
+        private static Sprite _rounded;
+        private static void ApplyRounded(Image img)
         {
-            // PuzzleId label "#03" top-left at (+8,-8), 14pt BoldItalic, #7A828F.
-            CreateAnchored(fill, "PuzzleId",
-                $"#{puzzle.puzzleId:00}", 14,
-                TextAlignmentOptions.TopLeft,
-                state == LocalPuzzleState.Locked ? C_LOCKED_TEXT : C_PUZZLE_ID,
-                FontStyles.Bold | FontStyles.Italic,
-                new Vector2(0f, 1f), new Vector2(0f, 1f),
-                new Vector2(8f, -8f), new Vector2(48f, 18f));
-
-            // Optimal badge pill next to id.
-            var badgeGo = new GameObject("OptimalBadge", typeof(RectTransform));
-            badgeGo.transform.SetParent(fill, false);
-            var badgeRt = (RectTransform)badgeGo.transform;
-            badgeRt.anchorMin = new Vector2(0f, 1f);
-            badgeRt.anchorMax = new Vector2(0f, 1f);
-            badgeRt.pivot = new Vector2(0f, 1f);
-            badgeRt.anchoredPosition = new Vector2(54f, -8f);
-            badgeRt.sizeDelta = new Vector2(36f, 20f);
-            var badgeImg = badgeGo.AddComponent<Image>();
-            badgeImg.color = state == LocalPuzzleState.Locked ? HexC("#1F2330") : C_BADGE_OPTIMAL_BG;
-            badgeImg.raycastTarget = false;
-
-            CreateText(badgeGo.transform, "BadgeText",
-                puzzle.optimalSteps.ToString(), 12,
-                TextAlignmentOptions.Center,
-                state == LocalPuzzleState.Locked ? C_LOCKED_TEXT : C_BADGE_OPTIMAL_FG,
-                FontStyles.Bold);
-
-            // State icon top-right — shape-coded, legible in grayscale (Task 9E non-color cue).
-            // Locked:           🔒-style  "[ ]"  padlock shape (bracket + gap)
-            // UnlockedUnplayed: "○"        hollow circle — not started
-            // InProgress:       "◑"        half-filled circle — in progress
-            // Completed:        "✓"        checkmark — done
-            string iconText = state switch
+            if (img == null) return;
+            if (_rounded == null) _rounded = Resources.GetBuiltinResource<Sprite>("UI/Skin/UISprite.psd");
+            if (_rounded != null)
             {
-                LocalPuzzleState.Locked          => "[ ]",
-                LocalPuzzleState.UnlockedUnplayed => "○",
-                LocalPuzzleState.InProgress       => "◑",
-                LocalPuzzleState.Completed        => "✓",
-                _                                 => string.Empty
-            };
-            int iconSize = 18;
-            FontStyles iconStyle = FontStyles.Bold;
-            float iconWidth = 30f;
-
-            CreateAnchored(fill, "StateIcon",
-                iconText, iconSize,
-                TextAlignmentOptions.TopRight,
-                StateIconColor(state), iconStyle,
-                new Vector2(1f, 1f), new Vector2(1f, 1f),
-                new Vector2(-8f, -6f),
-                new Vector2(iconWidth, 22f));
-        }
-
-        private void BuildRow2(Transform fill, PuzzleDefinition puzzle, LocalPuzzleState state)
-        {
-            Color letterColor = StateLetterColor(state);
-            string text = state == LocalPuzzleState.Locked
-                ? "??? -> ???"
-                : $"{(puzzle.startWord ?? string.Empty).ToUpper()} -> {(puzzle.endWord ?? string.Empty).ToUpper()}";
-
-            CreateAnchored(fill, "WordPair",
-                text, 28,
-                TextAlignmentOptions.Center,
-                letterColor, FontStyles.Bold,
-                new Vector2(0f, 0.5f), new Vector2(1f, 0.5f),
-                new Vector2(0f, 8f), Vector2.zero,
-                fillSize: true, fillHeight: 60f);
-        }
-
-        private void BuildRow3(Transform fill, PuzzleDefinition puzzle)
-        {
-            CreateAnchored(fill, "Subtitle",
-                $"{puzzle.optimalSteps} steps", 14,
-                TextAlignmentOptions.Center,
-                C_SUBTITLE, FontStyles.Normal,
-                new Vector2(0f, 0f), new Vector2(1f, 0f),
-                new Vector2(0f, 24f), Vector2.zero,
-                fillSize: true, fillHeight: 22f);
-        }
-
-        // §2.4 Row 4 progress bar (height 6).
-        private void BuildRow4ProgressBar(Transform fill, LocalPuzzleState state)
-        {
-            var bgGo = new GameObject("ProgressBg", typeof(RectTransform));
-            bgGo.transform.SetParent(fill, false);
-            var bgRt = (RectTransform)bgGo.transform;
-            bgRt.anchorMin = new Vector2(0f, 0f);
-            bgRt.anchorMax = new Vector2(1f, 0f);
-            bgRt.pivot = new Vector2(0.5f, 0f);
-            bgRt.anchoredPosition = new Vector2(0f, 8f);
-            bgRt.sizeDelta = new Vector2(-16f, 6f);
-            var bgImg = bgGo.AddComponent<Image>();
-            bgImg.color = C_PROGRESS_BG;
-            bgImg.raycastTarget = false;
-
-            float fillFrac = state == LocalPuzzleState.Completed ? 1f : 0.5f;
-            var fillGo = new GameObject("ProgressFill", typeof(RectTransform));
-            fillGo.transform.SetParent(bgGo.transform, false);
-            var fillRt = (RectTransform)fillGo.transform;
-            fillRt.anchorMin = new Vector2(0f, 0f);
-            fillRt.anchorMax = new Vector2(fillFrac, 1f);
-            fillRt.offsetMin = Vector2.zero;
-            fillRt.offsetMax = Vector2.zero;
-            var fillImg = fillGo.AddComponent<Image>();
-            fillImg.color = state == LocalPuzzleState.Completed ? C_COMPLETED_ICON : C_INPROGRESS_ICON;
-            fillImg.raycastTarget = false;
-        }
-
-        // ================================================================
-        //  State → palette helpers
-        // ================================================================
-        private static Color StateBg(LocalPuzzleState s)
-        {
-            switch (s)
-            {
-                case LocalPuzzleState.Locked: return C_LOCKED_BG;
-                case LocalPuzzleState.UnlockedUnplayed: return C_UNPLAYED_BG;
-                case LocalPuzzleState.InProgress: return C_INPROGRESS_BG;
-                case LocalPuzzleState.Completed: return C_COMPLETED_BG;
-                default: return C_UNPLAYED_BG;
+                img.sprite = _rounded;
+                img.type = Image.Type.Sliced;
+                img.pixelsPerUnitMultiplier = 2f; // tightens the corner radius for a calm, modern look
             }
         }
 
-        private static Color StateBorder(LocalPuzzleState s)
+        private static Color StateBg(PuzzleState s) => s switch
         {
-            switch (s)
-            {
-                case LocalPuzzleState.Locked: return C_LOCKED_BORDER;
-                case LocalPuzzleState.UnlockedUnplayed: return C_UNPLAYED_BORDER;
-                case LocalPuzzleState.InProgress: return C_INPROGRESS_BORDER;
-                case LocalPuzzleState.Completed: return C_COMPLETED_BORDER;
-                default: return C_UNPLAYED_BORDER;
-            }
-        }
-
-        private static Color StateLetterColor(LocalPuzzleState s)
+            PuzzleState.Locked => C_LOCKED_BG,
+            PuzzleState.InProgress => C_INPROGRESS_BG,
+            PuzzleState.Completed => C_COMPLETED_BG,
+            _ => C_UNPLAYED_BG
+        };
+        private static Color StateBorder(PuzzleState s) => s switch
         {
-            switch (s)
-            {
-                case LocalPuzzleState.Locked: return C_LOCKED_TEXT;
-                case LocalPuzzleState.UnlockedUnplayed: return C_UNPLAYED_TEXT;
-                case LocalPuzzleState.InProgress: return C_INPROGRESS_TEXT;
-                case LocalPuzzleState.Completed: return C_COMPLETED_TEXT;
-                default: return C_UNPLAYED_TEXT;
-            }
-        }
-
-        private static Color StateIconColor(LocalPuzzleState s)
+            PuzzleState.Locked => C_LOCKED_BORDER,
+            PuzzleState.InProgress => C_INPROGRESS_BORDER,
+            PuzzleState.Completed => C_COMPLETED_BORDER,
+            _ => C_UNPLAYED_BORDER
+        };
+        private static Color StateLetterColor(PuzzleState s) => s switch
         {
-            switch (s)
-            {
-                case LocalPuzzleState.Locked: return C_LOCKED_TEXT;
-                case LocalPuzzleState.UnlockedUnplayed: return C_UNPLAYED_ICON;
-                case LocalPuzzleState.InProgress: return C_INPROGRESS_ICON;
-                case LocalPuzzleState.Completed: return C_COMPLETED_ICON;
-                default: return C_UNPLAYED_ICON;
-            }
-        }
+            PuzzleState.Locked => C_LOCKED_TEXT,
+            PuzzleState.InProgress => C_INPROGRESS_TEXT,
+            PuzzleState.Completed => C_COMPLETED_TEXT,
+            _ => C_UNPLAYED_TEXT
+        };
+        private static Color StateIconColor(PuzzleState s) => s switch
+        {
+            PuzzleState.Locked => C_LOCKED_TEXT,
+            PuzzleState.InProgress => C_INPROGRESS_ICON,
+            PuzzleState.Completed => C_COMPLETED_ICON,
+            _ => C_UNPLAYED_ICON
+        };
 
-        // ================================================================
-        //  Text helpers
-        // ================================================================
         private static TextMeshProUGUI CreateText(Transform parent, string name,
-            string text, float fontSize, TextAlignmentOptions align,
-            Color color, FontStyles style)
+            string text, float fontSize, TextAlignmentOptions align, Color color, FontStyles style)
         {
             var go = new GameObject(name, typeof(RectTransform));
             go.transform.SetParent(parent, false);
             var rt = (RectTransform)go.transform;
-            rt.anchorMin = Vector2.zero;
-            rt.anchorMax = Vector2.one;
-            rt.offsetMin = Vector2.zero;
-            rt.offsetMax = Vector2.zero;
-
+            rt.anchorMin = Vector2.zero; rt.anchorMax = Vector2.one;
+            rt.offsetMin = Vector2.zero; rt.offsetMax = Vector2.zero;
             var tmp = go.AddComponent<TextMeshProUGUI>();
-            tmp.text = text;
-            tmp.fontSize = fontSize;
-            tmp.color = color;
-            tmp.alignment = align;
-            tmp.fontStyle = style;
-            tmp.raycastTarget = false;
-            tmp.enableWordWrapping = false;
+            tmp.text = text; tmp.fontSize = fontSize; tmp.color = color;
+            tmp.alignment = align; tmp.fontStyle = style;
+            tmp.raycastTarget = false; tmp.enableWordWrapping = false;
             return tmp;
         }
 
         private static TextMeshProUGUI CreateAnchored(Transform parent, string name,
-            string text, float fontSize, TextAlignmentOptions align,
-            Color color, FontStyles style,
-            Vector2 anchorMin, Vector2 anchorMax,
-            Vector2 anchoredPos, Vector2 sizeDelta,
+            string text, float fontSize, TextAlignmentOptions align, Color color, FontStyles style,
+            Vector2 anchorMin, Vector2 anchorMax, Vector2 anchoredPos, Vector2 sizeDelta,
             bool fillSize = false, float fillHeight = 0f)
         {
             var go = new GameObject(name, typeof(RectTransform));
             go.transform.SetParent(parent, false);
             var rt = (RectTransform)go.transform;
-            rt.anchorMin = anchorMin;
-            rt.anchorMax = anchorMax;
+            rt.anchorMin = anchorMin; rt.anchorMax = anchorMax;
             rt.pivot = new Vector2(
                 Mathf.Approximately(anchorMin.x, anchorMax.x) ? anchorMin.x : 0.5f,
                 Mathf.Approximately(anchorMin.y, anchorMax.y) ? anchorMin.y : 0.5f);
             rt.anchoredPosition = anchoredPos;
-            if (fillSize)
-            {
-                rt.sizeDelta = new Vector2(0f, fillHeight);
-            }
-            else
-            {
-                rt.sizeDelta = sizeDelta;
-            }
-
+            rt.sizeDelta = fillSize ? new Vector2(0f, fillHeight) : sizeDelta;
             var tmp = go.AddComponent<TextMeshProUGUI>();
-            tmp.text = text;
-            tmp.fontSize = fontSize;
-            tmp.color = color;
-            tmp.alignment = align;
-            tmp.fontStyle = style;
-            tmp.raycastTarget = false;
-            tmp.enableWordWrapping = false;
+            tmp.text = text; tmp.fontSize = fontSize; tmp.color = color;
+            tmp.alignment = align; tmp.fontStyle = style;
+            tmp.raycastTarget = false; tmp.enableWordWrapping = false;
             return tmp;
         }
 
         private static Color HexC(string hex)
-        {
-            if (ColorUtility.TryParseHtmlString(hex, out var c)) return c;
-            return Color.magenta;
-        }
+            => ColorUtility.TryParseHtmlString(hex, out var c) ? c : Color.magenta;
 
         // ================================================================
-        //  JSON wrapper types (mirrors GameBootstrap private types)
+        //  JSON wrapper types (mirror GameBootstrap's tier types)
         // ================================================================
-        [Serializable]
-        private class TierDefinitionsWrapper
-        {
-            public TierData[] tiers;
-        }
-
-        [Serializable]
-        private class TierData
-        {
-            public int tierId;
-            public bool isUnlocked;
-            public PuzzleDefinition[] puzzles;
-        }
-
-        [Serializable]
-        private class PuzzleDefinition
-        {
-            public int puzzleId;
-            public string startWord;
-            public string endWord;
-            public int optimalSteps;
-        }
+        [Serializable] private class TierDefinitionsWrapper { public TierData[] tiers; }
+        [Serializable] private class TierData { public int tierId; public bool isUnlocked; public PuzzleDefinition[] puzzles; }
+        [Serializable] private class PuzzleDefinition { public int puzzleId; public string startWord; public string endWord; public int optimalSteps; }
     }
 }
