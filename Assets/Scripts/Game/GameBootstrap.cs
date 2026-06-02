@@ -1044,11 +1044,11 @@ namespace WordPuzzle
             bool wordAdded = state.wordChain.Count > 1;
             if (wordAdded)
             {
-                uiManager.GetGameplay().ShowFeedback("✓", Color.green);
+                uiManager.GetGameplay().ShowFeedback("", Color.green);
             }
             else
             {
-                uiManager.GetGameplay().ShowFeedback("✗", Color.red);
+                uiManager.GetGameplay().ShowFeedback("", Color.red);
             }
         }
 
@@ -1061,7 +1061,7 @@ namespace WordPuzzle
 
             if (result.accepted)
             {
-                gameplay.ShowFeedback(string.IsNullOrEmpty(result.reason) ? "✓" : result.reason, Color.green);
+                gameplay.ShowFeedback(string.IsNullOrEmpty(result.reason) ? "" : result.reason, Color.green);
                 // Task 7 — acceptance juice (sfx + haptics + glow settle).
                 gameplay.OnWordAccepted();
             }

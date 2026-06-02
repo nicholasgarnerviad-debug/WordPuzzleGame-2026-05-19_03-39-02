@@ -157,23 +157,7 @@ namespace WordPuzzle.UI
             if (backButton != null)
             {
                 backButton.onClick.AddListener(() => OnBackToMenu?.Invoke());
-                // Task 10D — demote HOME: drop the stark white box, mute the label. Keep the full
-                // button rect raycastable so the tap target stays ≥44pt even though the visual shrinks.
-                var homeImg = backButton.GetComponent<Image>();
-                if (homeImg != null)
-                {
-                    homeImg.color = new Color(0f, 0f, 0f, 0f); // no heavy white border/box
-                    homeImg.raycastTarget = true;
-                }
-                var lbl = backButton.GetComponentInChildren<TMP_Text>(true);
-                if (lbl != null)
-                {
-                    lbl.text = "HOME";
-                    lbl.fontStyle = FontStyles.Normal;
-                    lbl.fontSize = 22f;
-                    lbl.color = new Color32(0x8A, 0x93, 0xA1, 0xFF); // text-muted — reachable, not competing
-                    lbl.alignment = TextAlignmentOptions.Center;
-                }
+                StyleHomeButton();
             }
 
             if (hintButton != null) hintButton.onClick.AddListener(() => OnHintUsed?.Invoke());
@@ -189,6 +173,9 @@ namespace WordPuzzle.UI
             }
 
             HideLegacyText();
+
+            // Display-only text must never swallow taps meant for buttons (e.g. HOME).
+            DisableDecorativeRaycasts();
 
             ReparentBadge(hintCountText, hintButton, new Vector2(38f, 32f));
             ReparentBadge(revealCountText, revealButton, new Vector2(38f, 32f));
@@ -239,6 +226,76 @@ namespace WordPuzzle.UI
                 tierIndicatorText.alignment = TextAlignmentOptions.Center;
                 tierIndicatorText.gameObject.SetActive(true);
             }
+
+            // Fix Score/Tier overlap — lay the header out deterministically (see LayoutHeader).
+            LayoutHeader();
+        }
+
+        // Header layout — score centered just below the notch, tier as a small subtitle directly
+        // below it. Deterministic so the two never collide (both previously rendered at centre).
+        private void LayoutHeader()
+        {
+            PlaceHeaderText(scoreText,         topY: -130f, width: 620f, height: 64f);
+            PlaceHeaderText(tierIndicatorText, topY: -202f, width: 620f, height: 34f);
+        }
+
+        private static void PlaceHeaderText(TMP_Text t, float topY, float width, float height)
+        {
+            if (t == null) return;
+            var rt = t.rectTransform;
+            rt.anchorMin = new Vector2(0.5f, 1f);   // top-centre of the screen
+            rt.anchorMax = new Vector2(0.5f, 1f);
+            rt.pivot     = new Vector2(0.5f, 1f);
+            rt.anchoredPosition = new Vector2(0f, topY);
+            rt.sizeDelta = new Vector2(width, height);
+            t.alignment = TextAlignmentOptions.Center;
+        }
+
+        // HOME button: modest but clearly visible & reliably tappable. The fully-transparent
+        // demote (Task 10D) was hard to see and hard to hit; this keeps it understated (a subtle
+        // surface pill, top-left) while guaranteeing a comfortable tap target.
+        private void StyleHomeButton()
+        {
+            if (backButton == null) return;
+
+            var rt = backButton.GetComponent<RectTransform>();
+            if (rt != null)
+            {
+                var sd = rt.sizeDelta;
+                sd.x = Mathf.Max(sd.x, 150f);   // comfortable tap target (>=44pt after canvas scale)
+                sd.y = Mathf.Max(sd.y, 76f);
+                rt.sizeDelta = sd;
+            }
+
+            var img = backButton.GetComponent<Image>();
+            if (img != null)
+            {
+                img.color = C_TILE_DEFAULT_FILL;  // subtle surface pill — visible, not a heavy box
+                img.raycastTarget = true;
+            }
+
+            var lbl = backButton.GetComponentInChildren<TMP_Text>(true);
+            if (lbl != null)
+            {
+                lbl.text = "HOME";
+                lbl.fontStyle = FontStyles.Bold;
+                lbl.fontSize = 26f;
+                lbl.color = new Color32(0xE7, 0xE1, 0xC4, 0xFF); // text-primary — readable
+                lbl.alignment = TextAlignmentOptions.Center;
+                lbl.raycastTarget = false;        // label must not intercept the tap
+            }
+        }
+
+        // Display-only text must never swallow taps meant for buttons (e.g. HOME).
+        private void DisableDecorativeRaycasts()
+        {
+            TMP_Text[] decorative =
+            {
+                scoreText, feedbackText, timerText, tierIndicatorText, stepsRemainingText,
+                puzzleDisplayText, wordChainText, currentInputText
+            };
+            foreach (var t in decorative)
+                if (t != null) t.raycastTarget = false;
         }
 
         private void HideLegacyText()
@@ -404,6 +461,25 @@ namespace WordPuzzle.UI
             chainScrollRect.inertia = true;
             chainScrollRect.decelerationRate = 0.135f;
             chainScrollRect.scrollSensitivity = 30f;
+
+            // Task 12A — THE root-cause fix. The chain Content has a ContentSizeFitter, so it grows to
+            // full height; with no clipping mask it overflowed the capped scroll region and overlapped
+            // the input/target rows below. Wire viewport/content and add a RectMask2D so long chains
+            // CLIP + SCROLL instead of colliding.
+            var viewportRT = chainScrollRect.GetComponent<RectTransform>();
+            if (chainScrollRect.viewport == null) chainScrollRect.viewport = viewportRT;
+            if (chainScrollRect.content == null)  chainScrollRect.content  = chainScrollContent;
+            if (chainScrollRect.GetComponent<RectMask2D>() == null)
+                chainScrollRect.gameObject.AddComponent<RectMask2D>();
+
+            // Content grows downward from the top so the newest row appends at the bottom and
+            // verticalNormalizedPosition = 0 reveals the latest played word (the auto-scroll target).
+            if (chainScrollContent != null)
+            {
+                chainScrollContent.anchorMin = new Vector2(0f, 1f);
+                chainScrollContent.anchorMax = new Vector2(1f, 1f);
+                chainScrollContent.pivot     = new Vector2(0.5f, 1f);
+            }
         }
 
         private static void StyleRowLabel(TextMeshProUGUI label, string fallback, Color color)

@@ -411,7 +411,7 @@ namespace WordPuzzle.UI.Components
                     hasBorder = false;
                     textC = C_TEXT;
                     // Non-color cue: checkmark glyph survives grayscale.
-                    glyph = "✓"; // ✓
+                    glyph = string.Empty; // ✓ (U+2713) not in LiberationSans SDF — green fill is the cue
                     glyphC = new Color(1f, 1f, 1f, 0.85f);
                     break;
 
@@ -421,7 +421,7 @@ namespace WordPuzzle.UI.Components
                     hasBorder = false;
                     textC = C_TEXT;
                     // Non-color cue: X glyph survives grayscale.
-                    glyph = "✗"; // ✗
+                    glyph = string.Empty; // ✗ not in LiberationSans SDF — red flash + shake are the cue
                     glyphC = new Color(1f, 1f, 1f, 0.85f);
                     if (invalidFlashCoroutine != null) StopCoroutine(invalidFlashCoroutine);
                     if (isActiveAndEnabled)

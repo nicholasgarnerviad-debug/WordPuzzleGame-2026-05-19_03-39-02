@@ -49,8 +49,10 @@ namespace WordPuzzle.UI
         //   ladder bottom from centre = ladderTopY - (labelH+gap + tileH+gap + chainMaxH+gap + tileH+gap + labelH+gap + tileH)
         //   ≈ 720 - (35+4+120+12 + chainMaxH + 12+120+8+35+4+120) = 720 - 470 - chainMaxH
         // For EndWordRow bottom > -388: 720 - 470 - chainMaxH > -388 → chainMaxH < 638.
-        // Use 340px as a comfortable cap leaving ~60px clearance above toolbar.
-        [SerializeField] private float chainMaxHeight = 340f;
+        // Task 12A: raised so long chains use the runway (more words visible before scrolling).
+        // EndWordRow bottom ≈ 156 - chainMaxHeight (local units); 560 keeps it well above the
+        // power-up bar. Short chains are unaffected — ResolvedChainHeight = min(content, cap).
+        [SerializeField] private float chainMaxHeight = 560f;
 
         /// <summary>
         /// Task 10A — pushed from GameplayScreen.RecomputeTileSize each puzzle so the macro rows
