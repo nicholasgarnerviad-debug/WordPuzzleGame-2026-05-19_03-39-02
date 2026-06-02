@@ -236,7 +236,10 @@ namespace WordPuzzle.UI
         private void LayoutHeader()
         {
             PlaceHeaderText(scoreText,         topY: -130f, width: 620f, height: 64f);
+            // Tier (Puzzle Show) and Timer (Time Attack) are mutually exclusive — share the slot just
+            // below the score, keeping the top-right corner clear for the global Settings gear.
             PlaceHeaderText(tierIndicatorText, topY: -202f, width: 620f, height: 34f);
+            PlaceHeaderText(timerText,         topY: -202f, width: 620f, height: 34f);
         }
 
         private static void PlaceHeaderText(TMP_Text t, float topY, float width, float height)
@@ -251,39 +254,82 @@ namespace WordPuzzle.UI
             t.alignment = TextAlignmentOptions.Center;
         }
 
-        // HOME button: modest but clearly visible & reliably tappable. The fully-transparent
-        // demote (Task 10D) was hard to see and hard to hit; this keeps it understated (a subtle
-        // surface pill, top-left) while guaranteeing a comfortable tap target.
+        // HOME button: a house icon (Lucide) in a subtle surface pill — clearly visible and a
+        // comfortable tap target. Falls back to a "HOME" text label if the icon asset is missing,
+        // so the button never breaks.
+        private static readonly Color C_HOME_TINT = new Color32(0xE7, 0xE1, 0xC4, 0xFF); // text-primary
+
+        private static Sprite _homeIconSprite;
+        private static Sprite GetHomeIconSprite()
+        {
+            if (_homeIconSprite != null) return _homeIconSprite;
+            var tex = Resources.Load<Texture2D>("Icons/home");
+            if (tex == null) return null;
+            _homeIconSprite = Sprite.Create(tex, new Rect(0f, 0f, tex.width, tex.height),
+                new Vector2(0.5f, 0.5f), 100f);
+            return _homeIconSprite;
+        }
+
         private void StyleHomeButton()
         {
             if (backButton == null) return;
+
+            var icon = GetHomeIconSprite();
 
             var rt = backButton.GetComponent<RectTransform>();
             if (rt != null)
             {
                 var sd = rt.sizeDelta;
-                sd.x = Mathf.Max(sd.x, 150f);   // comfortable tap target (>=44pt after canvas scale)
-                sd.y = Mathf.Max(sd.y, 76f);
+                // Square-ish icon button (or wider for the HOME-text fallback); comfortable tap target.
+                sd.x = Mathf.Max(sd.x, icon != null ? 88f : 150f);
+                sd.y = Mathf.Max(sd.y, 80f);
                 rt.sizeDelta = sd;
             }
 
             var img = backButton.GetComponent<Image>();
             if (img != null)
             {
-                img.color = C_TILE_DEFAULT_FILL;  // subtle surface pill — visible, not a heavy box
-                img.raycastTarget = true;
+                img.color = new Color(0f, 0f, 0f, 0f); // transparent — icon only, no grey box
+                img.raycastTarget = true;              // keep the full rect tappable (≥44px)
             }
 
             var lbl = backButton.GetComponentInChildren<TMP_Text>(true);
             if (lbl != null)
             {
-                lbl.text = "HOME";
-                lbl.fontStyle = FontStyles.Bold;
-                lbl.fontSize = 26f;
-                lbl.color = new Color32(0xE7, 0xE1, 0xC4, 0xFF); // text-primary — readable
-                lbl.alignment = TextAlignmentOptions.Center;
                 lbl.raycastTarget = false;        // label must not intercept the tap
+                if (icon != null)
+                {
+                    lbl.text = string.Empty;      // the icon replaces the text
+                }
+                else
+                {
+                    lbl.text = "HOME";            // fallback when the icon asset is unavailable
+                    lbl.fontStyle = FontStyles.Bold;
+                    lbl.fontSize = 26f;
+                    lbl.color = C_HOME_TINT;
+                    lbl.alignment = TextAlignmentOptions.Center;
+                }
             }
+
+            // House icon as a centered child Image.
+            var iconTf = backButton.transform.Find("HomeIcon");
+            Image iconImg = iconTf != null ? iconTf.GetComponent<Image>() : null;
+            if (iconImg == null)
+            {
+                var go = new GameObject("HomeIcon", typeof(RectTransform));
+                go.transform.SetParent(backButton.transform, false);
+                var irt = go.GetComponent<RectTransform>();
+                irt.anchorMin = irt.anchorMax = new Vector2(0.5f, 0.5f);
+                irt.pivot = new Vector2(0.5f, 0.5f);
+                irt.anchoredPosition = Vector2.zero;
+                irt.sizeDelta = new Vector2(52f, 52f);
+                iconImg = go.AddComponent<Image>();
+            }
+            iconImg.enabled = icon != null;
+            iconImg.sprite = icon;
+            iconImg.color = C_HOME_TINT;          // tint the white glyph to text-primary
+            iconImg.raycastTarget = false;
+            iconImg.preserveAspect = true;
         }
 
         // Display-only text must never swallow taps meant for buttons (e.g. HOME).

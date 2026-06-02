@@ -13,6 +13,8 @@ namespace WordPuzzle.UI
         [SerializeField] private Button timeAttackButton;
         [SerializeField] private Button libraryButton;
         [SerializeField] private Button settingsButton;
+        // Solo icon test — Lucide settings gear (SVG via Vector Graphics) shown in place of the SETTINGS label.
+        [SerializeField] private Sprite settingsIcon;
 
         // Task 1C — Daily puzzle entry point.
         [SerializeField] private Button dailyButton;
@@ -119,8 +121,10 @@ namespace WordPuzzle.UI
             StyleTierButton(statsButton,       MenuTier.Tertiary);
             StyleTierButton(settingsButton,    MenuTier.Tertiary);
 
-            // Task 11C — drop the gear glyph (U+2699 not in LiberationSans SDF) for a clean label.
-            SetButtonLabel(settingsButton, "SETTINGS");
+            // Settings now lives in the shared top-right gear (UIManager.CreateGlobalSettingsButton),
+            // so remove the bottom-row Settings from the menu — the tertiary row is Library + Stats.
+            // (ArrangeMenu skips inactive children, so deactivating drops it from the layout.)
+            if (settingsButton != null) settingsButton.gameObject.SetActive(false);
 
             ArrangeMenu();
         }
@@ -181,6 +185,33 @@ namespace WordPuzzle.UI
             if (btn == null) return;
             var label = btn.GetComponentInChildren<TMP_Text>(true);
             if (label != null) label.text = text;
+        }
+
+        // Solo icon test — replace a button's text label with a centered, tinted sprite icon.
+        private static void ShowButtonIcon(Button btn, Sprite icon, Color tint, float size)
+        {
+            if (btn == null || icon == null) return;
+
+            var label = btn.GetComponentInChildren<TMP_Text>(true);
+            if (label != null) { label.text = string.Empty; label.raycastTarget = false; }
+
+            var iconTf = btn.transform.Find("Icon");
+            Image iconImg = iconTf != null ? iconTf.GetComponent<Image>() : null;
+            if (iconImg == null)
+            {
+                var go = new GameObject("Icon", typeof(RectTransform));
+                go.transform.SetParent(btn.transform, false);
+                var irt = go.GetComponent<RectTransform>();
+                irt.anchorMin = irt.anchorMax = new Vector2(0.5f, 0.5f);
+                irt.pivot = new Vector2(0.5f, 0.5f);
+                irt.anchoredPosition = Vector2.zero;
+                irt.sizeDelta = new Vector2(size, size);
+                iconImg = go.AddComponent<Image>();
+            }
+            iconImg.sprite = icon;
+            iconImg.color = tint;             // menu muted token (#8A93A1)
+            iconImg.raycastTarget = false;
+            iconImg.preserveAspect = true;
         }
 
         /// <summary>

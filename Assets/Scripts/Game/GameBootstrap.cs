@@ -321,6 +321,9 @@ namespace WordPuzzle
                 uiManager.GetTimeAttackSetup().OnConfigConfirmed += StartTimeAttackModeWithConfig;
             }
 
+            // Global top-right settings gear (shown on every screen by UIManager) → open Settings.
+            uiManager.OnGlobalSettingsRequested += ShowSettings;
+
             // Wire settings screen
             if (uiManager.GetSettings() != null)
             {
@@ -394,6 +397,8 @@ namespace WordPuzzle
                 uiManager.GetTimeAttackSetup().OnBackToMenu -= ShowMainMenu;
                 uiManager.GetTimeAttackSetup().OnConfigConfirmed -= StartTimeAttackModeWithConfig;
             }
+
+            uiManager.OnGlobalSettingsRequested -= ShowSettings;
 
             if (uiManager.GetSettings() != null)
             {
