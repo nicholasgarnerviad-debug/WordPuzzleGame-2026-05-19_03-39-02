@@ -36,12 +36,19 @@ namespace WordPuzzle.UI
         [SerializeField] private float gapLabelToEnd  = 4f;
 
         // The top of the ladder column in GameplayScreen-local space (anchor y=0.5).
-        // StartWordLabel top pivot sits at this y. Adjust to vertically center the
-        // compact empty-state ladder in the content band (between header and toolbar).
-        [SerializeField] private float ladderTopY = 490f;
+        // Canvas height=1920, centre=960. Header takes ~130px below top → header bottom ~210px.
+        // Ladder top starts ~30px below header bottom → ladderTopY = 960 - 240 = 720 (from centre, positive=up).
+        [SerializeField] private float ladderTopY = 720f;
 
-        // Cap chain area so long ladders don't overflow off-screen.
-        [SerializeField] private float chainMaxHeight = 440f;
+        // Cap chain area so fully-grown ladder's bottom (EndWordRow) clears the toolbar top.
+        // Toolbar sits ~30px above keyboard top edge at 457px from screen bottom.
+        // Toolbar top ≈ 572px from screen bottom = 960-572 = 388px from centre (downward = -388).
+        // EndWordRow bottom must stay above toolbar top:
+        //   ladder bottom from centre = ladderTopY - (labelH+gap + tileH+gap + chainMaxH+gap + tileH+gap + labelH+gap + tileH)
+        //   ≈ 720 - (35+4+120+12 + chainMaxH + 12+120+8+35+4+120) = 720 - 470 - chainMaxH
+        // For EndWordRow bottom > -388: 720 - 470 - chainMaxH > -388 → chainMaxH < 638.
+        // Use 340px as a comfortable cap leaving ~60px clearance above toolbar.
+        [SerializeField] private float chainMaxHeight = 340f;
 
         private void LateUpdate()
         {

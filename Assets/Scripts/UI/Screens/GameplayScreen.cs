@@ -85,12 +85,22 @@ namespace WordPuzzle.UI
         private static readonly Color C_LABEL_SECONDARY = HexToColor("#8A93A1");
 
         // ---------- Spec §3 layout constants — sized for iPhone 13 Pro Max portrait ----------
-        private const float TILE_SIZE_LADDER = 110f; // larger tiles, ~5 fit 1080px wide with gaps
-        private const float TILE_GAP_H       = 8f;   // §3.2 inter-tile gap
+        // Tile sizing is now ADAPTIVE: computed per-puzzle word length so 3-7 tiles
+        // always fit within USABLE_WIDTH with inter-tile gaps.
+        private const float USABLE_WIDTH      = 960f; // available px after left/right margin on 1080 canvas
+        private const float TILE_SIZE_DEFAULT = 140f; // cap for short words (3 tiles)
+        private const float TILE_SIZE_MAX     = 150f; // absolute cap
+        private const float TILE_GAP_H       = 10f;  // §3.2 inter-tile gap
         private const float ROW_GAP_V        = 10f;  // §3 inter-row gap
         private const float ROW_LABEL_PAD_L  = 0f;   // centre-align tiles, no left padding
         private const float AUTOSCROLL_DURATION = 0.18f; // §3.4 180ms ease-out
-        private const float CHAIN_ROW_HEIGHT  = TILE_SIZE_LADDER + 10f;
+
+        // Computed once per puzzle from word length — shared by ALL rows so they stay aligned.
+        private float _tileSize = TILE_SIZE_DEFAULT;
+        private float _chainRowHeight = TILE_SIZE_DEFAULT + 10f;
+
+        // Kept for compat; now driven by _chainRowHeight.
+        private float CHAIN_ROW_HEIGHT => _chainRowHeight;
 
         // Task 7B/7C — juice hooks (null-safe; no-op when unset).
         private IHaptics _haptics;
@@ -186,6 +196,12 @@ namespace WordPuzzle.UI
 
             EnsureRevealPreviewRow();
             HideRevealPreviewRow();
+
+            // Issue 5: Disable HighlightFrame when TutorialOverlay is inactive (prevents stray green square).
+            DisableStrayHighlightFrame();
+
+            // Issue 6: Reposition header elements below the notch safe area.
+            RepositionHeaderBelowNotch();
 
             // Task 8A — tier indicator demoted: secondary info must not compete with gold focal elements.
             // Changed from Bold+gold(#C9B458)+28pt to Normal+text-muted(#8A93A1)+20pt, still centered.
@@ -392,11 +408,30 @@ namespace WordPuzzle.UI
         //  Public UI API — §6 (architect5 spec)
         // ============================================================
 
+        /// <summary>
+        /// Computes adaptive tile size so N tiles + gaps fit within USABLE_WIDTH.
+        /// Formula: min(TILE_SIZE_DEFAULT, (USABLE_WIDTH - (N-1)*TILE_GAP_H) / N), capped at TILE_SIZE_MAX.
+        /// All rows in a puzzle share this size so their tiles stay column-aligned.
+        /// </summary>
+        private void RecomputeTileSize(int wordLen)
+        {
+            if (wordLen <= 0) wordLen = 1;
+            float adaptive = (USABLE_WIDTH - (wordLen - 1) * TILE_GAP_H) / wordLen;
+            _tileSize = Mathf.Clamp(adaptive, 60f, Mathf.Min(TILE_SIZE_DEFAULT, TILE_SIZE_MAX));
+            _chainRowHeight = _tileSize + 10f;
+        }
+
         /// <summary>§6: Idempotent. Sets persistent FROM/TO row labels + tile content.</summary>
         public void SetStartAndEndWords(string startWord, string endWord)
         {
             currentStartWord = startWord ?? string.Empty;
             currentEndWord = endWord ?? string.Empty;
+
+            // Recompute tile size based on word length (3-7 letters adaptive).
+            int wordLen = Mathf.Max(
+                string.IsNullOrEmpty(currentStartWord) ? 0 : currentStartWord.Length,
+                string.IsNullOrEmpty(currentEndWord)   ? 0 : currentEndWord.Length);
+            RecomputeTileSize(wordLen);
 
             if (puzzleDisplayText != null) puzzleDisplayText.text = $"{startWord} → {endWord}";
             HideLegacyText();
@@ -794,8 +829,8 @@ namespace WordPuzzle.UI
             EnsureHorizontalLayout(rowRT, TILE_GAP_H, leftPad: (int)ROW_LABEL_PAD_L);
 
             var le = rowGO.AddComponent<LayoutElement>();
-            le.minHeight = CHAIN_ROW_HEIGHT;
-            le.preferredHeight = CHAIN_ROW_HEIGHT;
+            le.minHeight = _chainRowHeight;
+            le.preferredHeight = _chainRowHeight;
             le.flexibleWidth = 1f;
 
             if (string.IsNullOrEmpty(curr)) return;
@@ -804,7 +839,7 @@ namespace WordPuzzle.UI
             {
                 var t = InstantiateTile(rowRT);
                 if (t == null) continue;
-                t.SetSize(TILE_SIZE_LADDER);
+                t.SetSize(_tileSize);
                 t.SetLetter(char.ToUpper(curr[k]));
 
                 bool changed = IsChangedPosition(prev, curr, k);
@@ -844,7 +879,7 @@ namespace WordPuzzle.UI
             {
                 var t = InstantiateTile(row);
                 if (t == null) continue;
-                t.SetSize(TILE_SIZE_LADDER);
+                t.SetSize(_tileSize);
                 t.SetLetter(char.ToUpper(word[k]));
 
                 LadderTileStyle style;
@@ -876,7 +911,7 @@ namespace WordPuzzle.UI
             {
                 var t = InstantiateTile(currentInputRow);
                 if (t == null) continue;
-                t.SetSize(TILE_SIZE_LADDER);
+                t.SetSize(_tileSize);
 
                 bool isHintHighlight = (hintLetterIndex == k);
                 bool hasLetter = k < input.Length;
@@ -935,7 +970,7 @@ namespace WordPuzzle.UI
             {
                 var t = InstantiateTile(revealPreviewRow);
                 if (t == null) continue;
-                t.SetSize(TILE_SIZE_LADDER);
+                t.SetSize(_tileSize);
                 t.SetLetter(char.ToUpper(revealedNextWord[k]));
 
                 ApplyTileStyle(t, (k == revealedChangedIndex)
@@ -962,8 +997,8 @@ namespace WordPuzzle.UI
             EnsureHorizontalLayout(revealPreviewRow, TILE_GAP_H, leftPad: (int)ROW_LABEL_PAD_L);
 
             var le = go.AddComponent<LayoutElement>();
-            le.minHeight = CHAIN_ROW_HEIGHT;
-            le.preferredHeight = CHAIN_ROW_HEIGHT;
+            le.minHeight = _chainRowHeight;
+            le.preferredHeight = _chainRowHeight;
             le.flexibleWidth = 1f;
             go.SetActive(false);
         }
@@ -1239,6 +1274,72 @@ namespace WordPuzzle.UI
         {
             if (ColorUtility.TryParseHtmlString(hex, out var c)) return c;
             return Color.magenta;
+        }
+
+        // ============================================================
+        //  Issue 5: Disable stray HighlightFrame when TutorialOverlay inactive
+        // ============================================================
+        private void DisableStrayHighlightFrame()
+        {
+            // TutorialOverlay lives as a sibling of GameplayScreen under Canvas.
+            // Its HighlightFrame child is disabled in the scene (m_IsActive=0) so it
+            // won't render. As a runtime guard, also ensure it stays off when the
+            // overlay itself is not active.
+            var canvas = transform.parent;
+            if (canvas == null) return;
+
+            var overlay = canvas.GetComponentInChildren<TutorialOverlay>(true);
+            if (overlay == null || overlay.gameObject.activeSelf) return;
+
+            // Overlay is inactive — ensure every Image child is also inactive.
+            var imgs = overlay.GetComponentsInChildren<Image>(true);
+            foreach (var img in imgs)
+                if (img != null && img.gameObject.activeSelf)
+                    img.gameObject.SetActive(false);
+        }
+
+        // ============================================================
+        //  Issue 6: Header reposition below notch (no SafeArea script)
+        // ============================================================
+        // Moves BackButton, ScoreText, TierIndicatorText so their top edges
+        // sit ~130px below the canvas top (well below the iPhone 13 Pro Max notch).
+        // Safe-area offset is baked in as a constant — avoids [ExecuteAlways] scripts
+        // that caused the black-screen regression.
+        private void RepositionHeaderBelowNotch()
+        {
+            const float notchClearance = 130f; // px below canvas top edge
+            // Canvas height = 1920; from anchor=(0,1) top, anchoredPosition.y is negative downward.
+            // Target top-edge offset from canvas top = notchClearance → anchoredPosition.y = -notchClearance.
+
+            RepositionHeaderElement(backButton?.GetComponent<RectTransform>(), notchClearance);
+            RepositionHeaderElement(scoreText?.GetComponent<RectTransform>(),  notchClearance);
+            RepositionHeaderElement(tierIndicatorText?.GetComponent<RectTransform>(), notchClearance);
+            RepositionHeaderElement(timerText?.GetComponent<RectTransform>(), notchClearance);
+        }
+
+        private static void RepositionHeaderElement(RectTransform rt, float notchClearance)
+        {
+            if (rt == null) return;
+            // Only act on top-anchored elements (anchorMin.y == anchorMax.y == 1)
+            // to avoid moving elements that live in a different layout band.
+            if (!Mathf.Approximately(rt.anchorMin.y, 1f) || !Mathf.Approximately(rt.anchorMax.y, 1f)) return;
+
+            var ap = rt.anchoredPosition;
+            // anchoredPosition.y is measured upward from anchor; for top-anchor it's negative downward.
+            // We want the top of the element at notchClearance from canvas top.
+            // With pivot.y=1: top-edge = |anchoredPosition.y|, so set it to -notchClearance.
+            // With pivot.y=0.5: centre at notchClearance + height/2 from top → anchoredPosition.y = -(notchClearance + height/2).
+            float targetY;
+            if (Mathf.Approximately(rt.pivot.y, 1f))
+                targetY = -notchClearance;
+            else
+                targetY = -(notchClearance + rt.rect.height * 0.5f);
+
+            if (ap.y > targetY) // already below notch — don't move further down
+            {
+                ap.y = targetY;
+                rt.anchoredPosition = ap;
+            }
         }
 
         // ============================================================
