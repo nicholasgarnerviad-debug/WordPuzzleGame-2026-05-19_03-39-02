@@ -20,8 +20,14 @@ namespace WordPuzzle.UI.Components
         // Key sizing for 1080px-wide canvas: 10 keys + 9 gaps = 10*88+9*6 = 934px (fits 1080)
         private const float KeyWidth = 88f;
         private const float KeyHeight = 82f;
-        private const float KeySpacing = 6f;
+        private const float KeySpacing = 8f;   // slightly more gap so keys read as dark panel
         private const float RowSpacing = 10f;
+
+        // Dark premium palette — matches design tokens
+        private static readonly Color C_KEY_FILL    = new Color(0x24 / 255f, 0x29 / 255f, 0x36 / 255f, 1f); // #242936 surface-2
+        private static readonly Color C_KEY_TEXT    = new Color(0xE7 / 255f, 0xE1 / 255f, 0xC4 / 255f, 1f); // #E7E1C4 text-primary
+        private static readonly Color C_DEL_FILL    = new Color(0xC9 / 255f, 0x21 / 255f, 0x5C / 255f, 1f); // #C9215C accent-red
+        private static readonly Color C_GO_FILL     = new Color(0x6A / 255f, 0xAA / 255f, 0x64 / 255f, 1f); // #6AAA64 accent-green
 
         private readonly Dictionary<char, Button> _letterButtons = new Dictionary<char, Button>();
         private bool _built;
@@ -40,9 +46,15 @@ namespace WordPuzzle.UI.Components
                 selfRT.anchorMin        = new Vector2(0f, 0f);
                 selfRT.anchorMax        = new Vector2(1f, 0f);
                 selfRT.pivot            = new Vector2(0.5f, 0f);
-                selfRT.sizeDelta        = new Vector2(0f, 305f);
+                selfRT.sizeDelta        = new Vector2(0f, 320f);  // slightly taller to breathe
                 selfRT.anchoredPosition = new Vector2(0f, 0f);
             }
+
+            // Dark panel behind keys so the keyboard blends with bg-surface (#1B1F27)
+            var bgImg = GetComponent<UnityEngine.UI.Image>();
+            if (bgImg == null) bgImg = gameObject.AddComponent<UnityEngine.UI.Image>();
+            bgImg.color = new Color(0x1B / 255f, 0x1F / 255f, 0x27 / 255f, 1f); // #1B1F27 bg-surface
+            bgImg.raycastTarget = false;
 
             BuildKeyboard();
         }
@@ -77,7 +89,7 @@ namespace WordPuzzle.UI.Components
             if (addSpecialKeys)
             {
                 CreateSpecialButton(root, "DEL", xStart + keyIndex * (KeyWidth + KeySpacing), y,
-                    new Color(0.85f, 0.2f, 0.2f), 120f, () => OnBackspacePressed?.Invoke());
+                    C_DEL_FILL, 120f, () => OnBackspacePressed?.Invoke());
                 keyIndex++;
             }
 
@@ -92,14 +104,14 @@ namespace WordPuzzle.UI.Components
             if (addSpecialKeys)
             {
                 CreateSpecialButton(root, "GO", xStart + keyIndex * (KeyWidth + KeySpacing), y,
-                    new Color(0.2f, 0.75f, 0.3f), 120f, () => OnEnterPressed?.Invoke());
+                    C_GO_FILL, 120f, () => OnEnterPressed?.Invoke());
             }
         }
 
         private void CreateLetterButton(Transform root, char letter, float x, float y)
         {
             GameObject obj = CreateButtonObject(root, letter.ToString(), x, y, KeyWidth, KeyHeight,
-                Color.white, Color.black, 32f);
+                C_KEY_FILL, C_KEY_TEXT, 32f);
             Button btn = obj.GetComponent<Button>();
             char captured = letter;
             btn.onClick.AddListener(() => OnLetterPressed?.Invoke(captured));
@@ -168,10 +180,9 @@ namespace WordPuzzle.UI.Components
         private IEnumerator FlashButton(Button btn)
         {
             var image = btn.GetComponent<Image>();
-            Color original = image.color;
-            image.color = new Color(1f, 0.9f, 0.2f);
+            image.color = new Color(0xC9 / 255f, 0xB4 / 255f, 0x58 / 255f, 1f); // #C9B458 accent-gold flash
             yield return new WaitForSeconds(0.3f);
-            image.color = original;
+            image.color = C_KEY_FILL; // restore dark key fill
         }
     }
 }

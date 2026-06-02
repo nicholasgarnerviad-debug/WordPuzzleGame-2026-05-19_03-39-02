@@ -164,6 +164,11 @@ namespace WordPuzzle.UI
             ReparentBadge(revealCountText, revealButton, new Vector2(38f, 32f));
             ReparentBadge(addTimeCountText, addTimeButton, new Vector2(38f, 32f));
 
+            StylePowerUpButton(hintButton);
+            StylePowerUpButton(revealButton);
+            StylePowerUpButton(undoButton);
+            StylePowerUpButton(addTimeButton);
+
             ConfigureChainScrollRect();
 
             StyleRowLabel(startWordLabel, "FROM", LBL_FROM);
@@ -218,16 +223,50 @@ namespace WordPuzzle.UI
             if (badge == null || host == null) return;
             var rt = badge.rectTransform;
             rt.SetParent(host.transform, false);
+            // Anchor to top-right corner of the button
             rt.anchorMin = rt.anchorMax = new Vector2(1f, 1f);
             rt.pivot = new Vector2(0.5f, 0.5f);
-            rt.anchoredPosition = localOffset;
-            rt.sizeDelta = new Vector2(64f, 36f);
+            // Tight inset: sits just inside the top-right corner
+            rt.anchoredPosition = new Vector2(-16f, -16f);
+            rt.sizeDelta = new Vector2(32f, 32f);
             badge.alignment = TextAlignmentOptions.Center;
-            badge.fontSize = 22f;
+            badge.fontSize = 20f;
             badge.fontStyle = FontStyles.Bold;
-            badge.color = new Color32(0xE7, 0xE1, 0xC4, 0xFF);
+            badge.color = new Color32(0xFF, 0xFF, 0xFF, 0xFF);
             badge.raycastTarget = false;
+
+            // Add a dark circular bg pill behind the count digit
+            var imgGO = badge.transform.Find("__BadgeBg");
+            if (imgGO == null)
+            {
+                var go = new GameObject("__BadgeBg", typeof(RectTransform));
+                go.transform.SetParent(badge.transform, false);
+                var brt = go.GetComponent<RectTransform>();
+                brt.anchorMin = Vector2.zero;
+                brt.anchorMax = Vector2.one;
+                brt.offsetMin = Vector2.zero;
+                brt.offsetMax = Vector2.zero;
+                var img = go.AddComponent<Image>();
+                img.color = new Color(0xC9 / 255f, 0x21 / 255f, 0x5C / 255f, 0.9f); // #C9215C pill
+                img.raycastTarget = false;
+                go.transform.SetAsFirstSibling();
+            }
+
             badge.transform.SetAsLastSibling();
+        }
+
+        private static void StylePowerUpButton(Button btn)
+        {
+            if (btn == null) return;
+            var img = btn.GetComponent<Image>();
+            if (img != null)
+                img.color = new Color(0x24 / 255f, 0x29 / 255f, 0x36 / 255f, 1f); // #242936 surface-2
+            var lbl = btn.GetComponentInChildren<TMP_Text>(true);
+            if (lbl != null)
+            {
+                lbl.color = new Color(0xE7 / 255f, 0xE1 / 255f, 0xC4 / 255f, 1f); // #E7E1C4 text-primary
+                lbl.fontStyle = FontStyles.Bold;
+            }
         }
 
         private void ConfigureChainScrollRect()
@@ -476,13 +515,13 @@ namespace WordPuzzle.UI
 
         public void SetHintCount(int remaining)
         {
-            if (hintCountText != null) hintCountText.text = $"Hints: {remaining}";
+            if (hintCountText != null) hintCountText.text = remaining.ToString();
             if (hintButton != null) hintButton.interactable = (remaining > 0);
         }
 
         public void SetRevealCount(int remaining)
         {
-            if (revealCountText != null) revealCountText.text = $"Reveal: {remaining}";
+            if (revealCountText != null) revealCountText.text = remaining.ToString();
             if (revealButton != null) revealButton.interactable = (remaining > 0);
         }
 
@@ -494,7 +533,7 @@ namespace WordPuzzle.UI
         // §5.1 — AddTime power-up surface (TimeAttack only).
         public void SetAddTimeCount(int remaining)
         {
-            if (addTimeCountText != null) addTimeCountText.text = $"+Time: {remaining}";
+            if (addTimeCountText != null) addTimeCountText.text = remaining.ToString();
             if (addTimeButton != null) addTimeButton.interactable = (remaining > 0);
         }
 
