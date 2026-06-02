@@ -181,8 +181,10 @@ namespace WordPuzzle.UI
 
             ConfigureChainScrollRect();
 
-            StyleRowLabel(startWordLabel, "FROM", LBL_FROM);
-            StyleRowLabel(endWordLabel, "TO", LBL_TO);
+            // Issue 3: Hide FROM/TO labels — cleaner look; tutorial teaches the concept.
+            // Keep SerializeField refs intact; just disable the GameObjects.
+            if (startWordLabel != null) startWordLabel.gameObject.SetActive(false);
+            if (endWordLabel != null) endWordLabel.gameObject.SetActive(false);
 
             if (stepsRemainingText != null)
             {
@@ -197,7 +199,7 @@ namespace WordPuzzle.UI
             EnsureRevealPreviewRow();
             HideRevealPreviewRow();
 
-            // Issue 5: Disable HighlightFrame when TutorialOverlay is inactive (prevents stray green square).
+            // Issue 4: Disable HighlightFrame when TutorialOverlay is inactive (prevents stray box).
             DisableStrayHighlightFrame();
 
             // Issue 6: Reposition header elements below the notch safe area.
@@ -826,12 +828,12 @@ namespace WordPuzzle.UI
             var rowRT = (RectTransform)rowGO.transform;
             rowRT.SetParent(chainScrollContent, false);
             rowRT.SetAsLastSibling();
-            EnsureHorizontalLayout(rowRT, TILE_GAP_H, leftPad: (int)ROW_LABEL_PAD_L);
+            EnsureHorizontalLayout(rowRT, TILE_GAP_H, leftPad: 0);
 
             var le = rowGO.AddComponent<LayoutElement>();
             le.minHeight = _chainRowHeight;
             le.preferredHeight = _chainRowHeight;
-            le.flexibleWidth = 1f;
+            // flexibleWidth not needed: VLG childForceExpandWidth stretches the row to Content width.
 
             if (string.IsNullOrEmpty(curr)) return;
 
@@ -1154,9 +1156,13 @@ namespace WordPuzzle.UI
             var vlg = t.GetComponent<VerticalLayoutGroup>();
             if (vlg == null) vlg = t.gameObject.AddComponent<VerticalLayoutGroup>();
             vlg.childAlignment = TextAnchor.UpperCenter;
-            vlg.childControlWidth = false;
+            // Issue 2 fix: childControlWidth+childForceExpandWidth=true so each chain row
+            // stretches to the full Content width. This makes every rung's HLG (MiddleCenter)
+            // center tiles across the same pixel X-range as the full-width FROM/input/TO rows.
+            // Without this, rows were only as wide as their tile content, shifting them right.
+            vlg.childControlWidth = true;
             vlg.childControlHeight = false;
-            vlg.childForceExpandWidth = false;
+            vlg.childForceExpandWidth = true;
             vlg.childForceExpandHeight = false;
             // Task 8C: ROW_GAP_V (8px) between chain rows; tight top/bottom pad so chain
             // doesn't crowd the FROM/TO rows on small portrait devices (1080x1920 and smaller).

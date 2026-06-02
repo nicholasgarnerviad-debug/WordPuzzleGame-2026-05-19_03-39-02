@@ -75,18 +75,22 @@ namespace WordPuzzle.UI
 
         /// <summary>
         /// Lays out all rows top-down from ladderTopY.
+        /// Labels (startWordLabel, endWordLabel) are skipped when their GameObject is inactive
+        /// so the rows sit cleanly without a label gap.
         /// All RectTransforms use anchor = (0, 0.5)/(1, 0.5) (stretch-X, centre-Y).
-        /// We write anchoredPosition.y and sizeDelta.y; pivot must be (0.5, 1) for
-        /// top-referenced rows (labels, startRow) and (0.5, 1) or (0.5, 0) depending
-        /// on the original setup — we normalise to pivot.y=1 (top) for predictability.
+        /// We write anchoredPosition.y and sizeDelta.y; pivot must be (0.5, 1) for top-referenced rows.
         /// </summary>
         private void PositionLadder(float chainH)
         {
             float cursor = ladderTopY; // top of next element, positive = up from center
 
-            // --- StartWordLabel (pivot top) ---
-            SetRow(startWordLabel, cursor, labelHeight, pivotTop: true);
-            cursor -= labelHeight + gapLabelToRow;
+            // --- StartWordLabel (skip when inactive — Issue 3: FROM label hidden) ---
+            bool startLabelActive = startWordLabel != null && startWordLabel.gameObject.activeInHierarchy;
+            if (startLabelActive)
+            {
+                SetRow(startWordLabel, cursor, labelHeight, pivotTop: true);
+                cursor -= labelHeight + gapLabelToRow;
+            }
 
             // --- StartWordRow (pivot top) ---
             SetRow(startWordRow, cursor, tileRowHeight, pivotTop: true);
@@ -102,9 +106,13 @@ namespace WordPuzzle.UI
             SetRow(currentInputRow, cursor, tileRowHeight, pivotTop: true);
             cursor -= tileRowHeight + gapInputToLabel;
 
-            // --- EndWordLabel (pivot top) ---
-            SetRow(endWordLabel, cursor, labelHeight, pivotTop: true);
-            cursor -= labelHeight + gapLabelToEnd;
+            // --- EndWordLabel (skip when inactive — Issue 3: TO label hidden) ---
+            bool endLabelActive = endWordLabel != null && endWordLabel.gameObject.activeInHierarchy;
+            if (endLabelActive)
+            {
+                SetRow(endWordLabel, cursor, labelHeight, pivotTop: true);
+                cursor -= labelHeight + gapLabelToEnd;
+            }
 
             // --- EndWordRow (pivot top) ---
             SetRow(endWordRow, cursor, tileRowHeight, pivotTop: true);
