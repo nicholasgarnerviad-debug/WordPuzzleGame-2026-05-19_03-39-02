@@ -15,6 +15,8 @@ FROM  C  A  T            FROM  S  T  O  N  E
 ---
 
 ## Table of contents
+**📱 [Screens](#screens)** — a visual tour of every screen
+
 1. [Game modes](#1-game-modes)
 2. [Power-ups](#2-power-ups)
 3. [Economy & monetization](#3-economy--monetization)
@@ -32,6 +34,22 @@ FROM  C  A  T            FROM  S  T  O  N  E
 15. [Design tokens](#15-design-tokens)
 16. [Building & running](#16-building--running)
 17. [Notes for AI agents working in this repo](#17-notes-for-ai-agents-working-in-this-repo)
+
+---
+
+## Screens
+
+> Live captures (iPhone 13 Pro Max portrait). The UI follows the dark, gold-accented "premium puzzle" identity in [§5](#5-visual-identity) / [§15](#15-design-tokens) — `accent-gold` reserved for the current focus/target.
+
+| Screen | |
+|---|---|
+| **Main Menu** — gold `WORD LADDER` masthead. **DAILY** is the gold hero (primary call-to-action; shows the streak once today is solved). The three modes — **Classic Mode / Puzzle Show / Time Attack** — are the surface-tier group; **Puzzle Library / Stats / Settings** are demoted tertiary chrome. **Resume** appears only when an in-progress save exists. | <img src="docs/screenshots/main-menu.png" width="250"> |
+| **Classic Mode** — the core word ladder. Anchored **start** word up top, the played **chain** (each rung a one-letter change), the **gold-edged active input row**, the anchored **target** word, then the Hint / Undo / Reveal **power-up bar** seated just above the QWERTY keyboard (red `DEL`, green `GO`). Demoted **HOME** pill + calm score header. Random 3–7-letter puzzles. | <img src="docs/screenshots/classic-mode.png" width="250"> |
+| **Puzzle Show** — tier-progression play on the same gameplay screen, with a `Tier X / Y` indicator under the score. Curated ladders; clear 10 in a tier to unlock the next ([§7](#7-puzzle-show-tiers)). | <img src="docs/screenshots/puzzle-show.png" width="250"> |
+| **Time Attack** — a countdown timer + the **+Time** power-up; chosen as 60s/120s × Timed/Survival on a setup screen. Solve as many ladders as possible before the clock runs out. | <img src="docs/screenshots/time-attack.png" width="250"> |
+| **Puzzle Library** — browsable tier cards: **Locked** (padlock), **Unlocked**, **In Progress** (gold border), **Completed** (green check). Tap an unlocked card to play that exact puzzle. | <img src="docs/screenshots/puzzle-library.png" width="250"> |
+| **Stats** — current & longest daily **streak**, dailies completed, total **coins**, total puzzles, and per-mode played/won (Classic, Time Attack best round). | <img src="docs/screenshots/stats.png" width="250"> |
+| **Settings** — audio sliders (master / SFX / music), accessibility toggles (mute, reduce-motion, haptics, colorblind mode, high-contrast, large-text), **Reset Progress** (confirm-gated; preserves settings + tutorial flag), **Replay Tutorial**, and the build version. | <img src="docs/screenshots/settings.png" width="250"> |
 
 ---
 
@@ -345,6 +363,7 @@ Hard constraints (ALL prompts):
 Environment quirks learned the hard way — relevant when an agent verifies its own work:
 - **The unityMCP `run_tests` runner is unreliable for pass/fail.** It reports `summary.total=0`, collapses results to a single root node, and has reported `"Passed"` for a suite containing a must-fail test. Treat `"Passed"` as *compiles + discovered*, **not** runtime-green — verify by reading test-source assertions against the implementation. EditMode runs require the editor **not** in Play Mode (`manage_editor stop` first).
 - **`execute_code` (in-editor C#) is broken here** (mono "filename or extension is too long"; Roslyn not installed). You cannot script Play-mode drives or screenshots — visual/feel acceptance is a human-in-Editor check.
+- **`manage_camera` screenshots can't see the portrait game.** The capture returns a blank ~2:1 landscape Game-view rendered via the Main Camera (which **excludes** the Screen Space - Overlay UI canvas); the real frame is the portrait Device Simulator on display 0, which MCP can't read (`scene_view` capture needs an open Scene View). Verify UI **numerically** instead — `manage_scene get_hierarchy` with `include_transform` for positions, `ReadMcpResourceTool` on `mcpforunity://scene/gameobject/{id}/component/{name}` for rects/colors/refs — and hand the portrait eyeball to a human. Also: Play mode boots straight to **MainMenu** (you can't script into a specific mode), `manage_gameobject`/`set_property` edits are **blocked during Play**, and **instance IDs churn on every domain reload** — re-query, never cache them.
 - **Confirm scene context before/after agent work.** Loading a scene in the editor replaces the open one; agents have left the editor on a non-`GameUI` scene and/or in Play mode. Re-open `GameUI.unity` and stop Play mode to restore the expected view.
 - **`git status` before planning/committing.** Background agents occasionally drop shell-misfire junk files at repo root (e.g. `nul`, `{`, `0`) and can even pick up a *later* task autonomously — clean junk and check the tree before each commit.
 - Untracked tooling dirs (`.claude/`, `.swarm/`, `.claude-flow/`, `agentdb.*`, `_Recovery/`) are not part of the game — never commit them.
@@ -353,4 +372,4 @@ Environment quirks learned the hard way — relevant when an agent verifies its 
 
 ## Project history
 
-Built iteratively through AI-orchestrated swarms, one concern each: word library & ladder semantics → modern tile/keyboard polish → library cards & tier gate → HOME/settings → hint/reveal semantics → per-mode behaviors & AddTime → TimeAttack UI → share result → daily + streak → **balance config & common-words generation** → **economy & rewarded ads** → **tactile juice (motion/haptics/sound)** → **premium visual identity (gold focus, ascent, motion vocabulary)**. The git log captures the progression.
+Built iteratively through AI-orchestrated swarms, one concern each: word library & ladder semantics → modern tile/keyboard polish → library cards & tier gate → HOME/settings → hint/reveal semantics → per-mode behaviors & AddTime → TimeAttack UI → share result → daily + streak → **balance config & common-words generation** → **economy & rewarded ads** → **tactile juice (motion/haptics/sound)** → **premium visual identity (gold focus, ascent, motion vocabulary)** → **UI polish pass** (main-menu hierarchy with a gold DAILY hero, gameplay spacing, a keyboard-anchored power-up bar, a reliable visible HOME, and a properly clipping/scrolling word-chain). The git log captures the progression.
