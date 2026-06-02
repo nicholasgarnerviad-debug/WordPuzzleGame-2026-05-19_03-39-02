@@ -44,10 +44,11 @@ FROM  C  A  T            FROM  S  T  O  N  E
 | Screen | |
 |---|---|
 | **Main Menu** — gold `WORD LADDER` masthead. **DAILY** is the gold hero (primary call-to-action; shows the streak once today is solved). The three modes — **Classic Mode / Puzzle Show / Time Attack** — are the surface-tier group; **Puzzle Library / Stats** are demoted tertiary chrome (Settings now lives in the shared top-right gear). **Resume** appears only when an in-progress save exists. | <img src="docs/screenshots/main-menu.png" width="250"> |
-| **Classic Mode** — the core word ladder. Anchored **start** word up top, the played **chain** (each rung a one-letter change), the **gold-edged active input row**, the anchored **target** word, then the Hint / Undo / Reveal **power-up bar** seated just above the QWERTY keyboard (red `DEL`, green `GO`). An icon **HOME** (house, top-left) and the shared **Settings** gear (top-right) flank a calm score header — both icon-only. Random 3–7-letter puzzles. | <img src="docs/screenshots/classic-mode.png" width="250"> |
-| **Puzzle Show** — tier-progression play on the same gameplay screen, with a `Tier X / Y` indicator under the score. Curated ladders; clear 10 in a tier to unlock the next ([§7](#7-puzzle-show-tiers)). | <img src="docs/screenshots/puzzle-show.png" width="250"> |
-| **Time Attack** — a countdown timer + the **+Time** power-up; chosen as 60s/120s × Timed/Survival on a setup screen. Solve as many ladders as possible before the clock runs out. | <img src="docs/screenshots/time-attack.png" width="250"> |
-| **Puzzle Library** — browsable tier cards: **Locked** (padlock), **Unlocked**, **In Progress** (gold border), **Completed** (green check). Tap an unlocked card to play that exact puzzle. | <img src="docs/screenshots/puzzle-library.png" width="250"> |
+| **Classic Mode** — the core word ladder. Anchored **start** word up top, the played **chain** (each rung a one-letter change), the **gold-edged active input row**, the anchored **target** word, then the Hint / Undo / Reveal **power-up bar** seated just above the QWERTY keyboard (red `DEL`, green `GO`). An icon **HOME** (house, top-left) and the shared **Settings** gear (top-right) flank a calm score header — both icon-only. Random 3–7-letter puzzles; on a solve a **compact win panel** ("Next Puzzle" / "Home") keeps you in the loop ([§1](#1-game-modes)). | <img src="docs/screenshots/classic-mode.png" width="250"> |
+| **Puzzle Show** — tier-progression play on the same gameplay screen, with a `Tier X / Y` indicator under the score. **350 curated ladders (7 tiers × 50)** on a length/difficulty curve (Tier 1 easy 3-letter → Tier 7 hard 7-letter, up to 8-step ladders). Solving shows a stat screen offering **Next Puzzle / Tier N ▸ / Home** ([§7](#7-puzzle-show-tiers)). | <img src="docs/screenshots/puzzle-show.png" width="250"> |
+| **Time Attack** — a countdown timer + the **+Time** power-up; chosen as 60s/120s × Timed/Survival on a setup screen. Ladders **auto-advance** as you solve them; the full results screen (puzzles solved + **Play Again** → new run) appears only when the **timer hits 0**. | <img src="docs/screenshots/time-attack.png" width="250"> |
+| **Puzzle Library → Tier Select** (level 1) — the entry to Puzzle Show: a list of **7 tiers**, each with its theme (e.g. "3-letter words"), progress (`X/50`) and lock state (**gold** = current tier; **padlock + "Clear N in Tier M"** = locked). Tap an unlocked tier to open its grid. | <img src="docs/screenshots/puzzle-library.png" width="250"> |
+| **Puzzle Library → Tier Grid** (level 2) — the selected tier's **50** puzzle cards with a **Back** to tier-select (only the active tier renders, for performance). Cards reflect saved progress: **Completed** (green + ✓), **Unplayed** (surface grey), **Locked** (padlock). Tapping a card launches that exact puzzle. | <img src="docs/screenshots/puzzle-library-tier.png" width="250"> |
 | **Stats** — current & longest daily **streak**, dailies completed, total **coins**, total puzzles, and per-mode played/won (Classic, Time Attack best round). | <img src="docs/screenshots/stats.png" width="250"> |
 | **Settings** — audio sliders (master / SFX / music), accessibility toggles (mute, reduce-motion, haptics, colorblind mode, high-contrast, large-text), **Reset Progress** (confirm-gated; preserves settings + tutorial flag), **Replay Tutorial**, and the build version. | <img src="docs/screenshots/settings.png" width="250"> |
 
@@ -59,14 +60,21 @@ FROM  C  A  T            FROM  S  T  O  N  E
 
 | Mode | Timer | Puzzles | Win condition |
 |---|---|---|---|
-| **Classic** | None | Random, BFS-generated; start/end restricted to a common-words subset | Reach the end word; next puzzle auto-loads. First-ever launch routes into the tutorial. |
-| **Daily** | None | One puzzle per day, identical for every player (no server) | Reach the end word; counts toward your streak |
-| **Puzzle Show** | None | Curated tier library (15 puzzles × 6 tiers = 90) | Reach end word; tap any unlocked card to play it |
-| **Time Attack** | 60s or 120s, Timed or Survival | Random words back-to-back | Solve as many as possible before time runs out |
+| **Classic** | None | Random, BFS-generated; start/end restricted to a common-words subset | Reach the end word → **compact win panel** ("Next Puzzle" stays in Classic). First-ever launch routes into the tutorial. |
+| **Daily** | None | One puzzle per day, identical for every player (no server) | Reach the end word → full results (streak + share, **Home** only) |
+| **Puzzle Show** | None | **350 curated ladders (50 × 7 tiers)**, two-level library | Reach end word → stat screen (Next Puzzle / Tier N ▸ / Home); tap any unlocked card to play it |
+| **Time Attack** | 60s or 120s, Timed or Survival | Random words back-to-back | Solve as many as possible before time runs out → full results + **Play Again** (new run) |
 
 **Daily puzzle + streak** — Today's puzzle is derived from the player's **local date** with no network call: `index = (Today − 2025-01-01).Days mod N`, where `N` = pool size in `Assets/Resources/Data/daily_puzzles.json` (all entries pre-validated Hamming-1 + dictionary). Streak rules (`DailyStreakRules`, pure/testable): completing today increments `currentStreak` iff yesterday was completed; a missed day resets to 1; same-day re-completion never double-counts; `longestStreak = max(longestStreak, currentStreak)`. Persisted under `daily_v1`.
 
 **Time Attack sub-modes** — **Timed**: fixed countdown (60s/120s), no rewards. **Survival**: each solve grants `BalanceConfig.SurvivalRewardSeconds` (15s) so a skilled player can sustain. Configured via `TimeAttackConfig` (factories `Default60`/`Default120`/`DefaultSurvival`, all read `BalanceConfig`).
+
+**Post-win flow** (which surface shows on a solve) is decided by one pure function, `PostWinRouter.Decide(ModeKind, isDaily, puzzleComplete, timeUp)`, called by `GameBootstrap.CheckGameOver` — the single source of truth:
+- **Classic** → a **compact inline win panel** overlaid on the board (`GameplayScreen.ShowWinPanel`); "Next Puzzle" starts a fresh Classic puzzle in the same mode, "Home" exits.
+- **Time Attack** → solving a ladder **auto-advances** to the next (the run's clock keeps running via a one-shot `timerSeeded`); the full `ResultsScreen` (ladders solved + "Play Again" → new run) shows only when the timer expires.
+- **Puzzle Show** → the full `ResultsScreen` configured with **Next Puzzle** (another in the current tier), an optional **Tier N ▸** (when the next tier just unlocked → opens the library), and **Home**.
+- **Daily** → the full `ResultsScreen` (stats + streak + share) with **no "Play Again"** (never re-run the daily as a scored game) — just **Home**.
+"Play Again" / "Next Puzzle" always **re-route into the active mode**, never the main menu (the old bug). `ResultsScreen.ConfigureForDaily/ForEndless/ForPuzzleShow` set button visibility/labels per context.
 
 **Share result** — `ResultsScreen` "Share" copies a Wordle-style emoji grid to the clipboard (`ClipboardShareService`, zero third-party deps). One row per accepted step, `🟩` at the changed position, `⬛` elsewhere; mode-specific label/footer. Native image share is seam-ready (`IShareService` + `ShareCardBuilder`) but requires an approved plugin.
 
@@ -147,16 +155,25 @@ On first launch (flag `onboarding_v1` absent/incomplete), tapping **Classic** ro
 
 ## 7. Puzzle Show tiers
 
-| Tier | Word length | Optimal steps | Count |
-|---|---|---|---|
-| 1 | 3 | 2 | 15 |
-| 2 | 3 | 3 | 15 |
-| 3 | 4 | 2–3 | 15 |
-| 4 | 4 | 4 | 15 |
-| 5 | 5 | 2–3 | 15 |
-| 6 | 5 | 3–4 | 15 |
+**7 tiers × 50 = 350 curated ladders** (`MaxTier = 7`, `PuzzlesPerTier = 50`), on a length/difficulty curve. Every puzzle clears the [§8](#8-word-validation) **minimum-move floor** (true full-dictionary shortest ≥ 2) and rises across tiers:
 
-Tier 1 unlocked by default. Complete **`BalanceConfig.PuzzlesRequiredToAdvanceTier` (10)** puzzles in the current tier to unlock the next; `MaxTier = 6`. Progress (`PuzzleProgressData`: completed IDs, in-progress IDs, current tier) persists under `puzzle_progress_v1`. The library renders cards as **Locked** (grey/padlock), **Unlocked/Unplayed** (neutral, FROM→TO preview), **In Progress** (gold border), **Completed** (green border + check). The authoritative tier→puzzleId map comes from `tier_definitions.json` (never hardcoded math).
+| Tier | Word length | Moves (steps) |
+|---|---|---|
+| 1 | 3 | 2–3 |
+| 2 | 4 | 2–3 |
+| 3 | 5 | 3–4 |
+| 4 | 5–6 | 3–4 |
+| 5 | 6 | 4–5 |
+| 6 | 6–7 | 4–6 |
+| 7 | 7 | 4–8 (hardest) |
+
+**Two-level navigation** (`PuzzleLibraryScreen`): **Tier Select** (7 tiers with theme + `X/50` + lock state) → tap an unlocked tier → **Tier Grid** (that tier's 50 cards + Back). Only the active tier's cards render (performance).
+
+**Progressive unlock:** Tier 1 is unlocked by default; clearing `BalanceConfig.PuzzlesRequiredToAdvance(tier)` puzzles unlocks the next — **10 / 15 / 20 / 25 / 30 / 35** out of tiers 1–6 (rises with depth; Tier-1 stays 10 for the wiring test). Unlocked tiers stay open, so a player can return to any tier for completion.
+
+**Completion coloring** is driven by saved progress, resolved by the pure `PuzzleShowMode.ResolveState(puzzleId, tierUnlocked, completed, inProgress)` (shared by the live mode and the library so card state matches gameplay exactly): **Completed** → green + ✓ (the ✓ is a non-color cue for colorblind mode), **In Progress** → gold border, **Unlocked/Unplayed** → surface grey, **Locked** → padlock. `GameBootstrap.ShowLibrary` injects the saved `PuzzleProgressData` into the screen via `PuzzleLibraryScreen.SetProgress(completed, inProgress, highestUnlockedTier)` before it populates.
+
+Progress (`PuzzleProgressData`: completed IDs, in-progress IDs, current tier) persists under `puzzle_progress_v1`. The authoritative tier→puzzleId map comes from `tier_definitions.json` (never hardcoded math). **`tier_definitions.json` is machine-generated** by `Tools/puzzleshow_build.py` — see [§12](#12-testing--tooling). Tapping a card → `OnLibraryPuzzleSelected(int puzzleId)` → `StartSpecificPuzzle`.
 
 ---
 
@@ -169,6 +186,8 @@ Tier 1 unlocked by default. Complete **`BalanceConfig.PuzzlesRequiredToAdvanceTi
 4. Not already used in the current chain.
 
 Distances are computed **once per puzzle**: `WordValidator.Initialize` caches `WordGraph.ComputeDistancesFrom(target)` so `ValidateWord` does **zero BFS per submission**. `isProgress` = strictly closer to the target than the previous word.
+
+**Minimum-move floor (no 1-move puzzles).** Every puzzle — generated *and* curated — must require at least **2 moves**, scaled by word length via `BalanceConfig.MinMovesForLength(len)` (**3→2, 4→2, 5→3, 6→3, 7→4**; hard floor `AbsoluteMinMoves = 2`). The floor is measured by **true full-dictionary BFS shortest distance**, not the length of the common-word path a generator happened to walk — a pair that *looks* like 4 moves but is solvable in 1 via a non-common word is rejected. `PuzzleGenerator.MeetsFloor` enforces this at every generation stage (strict-common → relaxed → fallback), and the curated `tier_definitions.json`/`daily_puzzles.json` are validated the same way (`MinMovesFloorTests` + the build tools). The hardcoded ultimate fallback (`cat→cot→cog→dog`, 3 moves) also satisfies it.
 
 On rejection, `GameStateManager` surfaces a user-facing reason via the `OnWordSubmissionResult` event (consumed by `GameBootstrap` → `GameplayScreen`). User strings: `"Not a real word"`, `"Already used"`, `"Change exactly one letter"`, `"Word must be N letters"`, `"Type a word"`. Rejected submissions never end the puzzle — there are **no lives**; players keep typing until they reach the end word or quit.
 
@@ -189,7 +208,9 @@ Time Attack: TimeAttackBaseSecondsShort=60  TimeAttackBaseSecondsLong=120
 Generation:  MaxBfsDepth=10  MaxGenerationAttempts=20
              Easy/Medium/HardWordLength=3/4/5
              Easy/Medium/HardTargetDistance=2/4/6
-Tiers:       MaxTier=6  PuzzlesRequiredToAdvanceTier=10
+             AbsoluteMinMoves=2   MinMovesForLength(len): 3→2 4→2 5→3 6→3 7→4
+Tiers:       MaxTier=7  PuzzlesPerTier=50  PuzzlesRequiredToAdvanceTier=10 (base)
+             PuzzlesRequiredToAdvance(tier): 10/15/20/25/30/35/40 (rises with depth)
 Economy:     PuzzleCompletionReward=10  DailyBonusReward=25  RewardedAdHintGrant=1
 Ads:         InterstitialCooldownSeconds=300  InterstitialPuzzleCap=5
 ```
@@ -225,7 +246,7 @@ Assets/Scripts/
                                            Screens/(MainMenu, Gameplay, PuzzleLibrary, Results,
                                            Settings, TimeAttackSetup)
 
-Assets/Resources/Data/  word_library.json (12,183), tier_definitions.json (90), daily_puzzles.json, common_words.json (6,582)
+Assets/Resources/Data/  word_library.json (12,183), tier_definitions.json (350 = 7×50), daily_puzzles.json (450), common_words.json (6,582)
 Assets/Scenes/          GameUI.unity  ← the ONLY live scene. MainMenu/ClassicMode/PuzzleShowMode/
                                         TimeAttackMode/SampleScene are legacy and never LoadScene'd.
 Assets/Tests/           Unit/ + Integration/  (NUnit; TestMocks.cs has Mock* doubles)
@@ -272,6 +293,14 @@ All via `PlayerPrefs` (JSON values). `DataManager` owns them.
 - **Conventions:** pure-logic classes (e.g. `DailyStreakRules`, `OnboardingRules`, `WordOps`, `BalanceConfig`, `SfxManager.EffectiveSfxVolume`) are tested standalone; `GameStateManager` tests build it with the mocks; persistence tests use `new DataManager()` against PlayerPrefs with `[SetUp]/[TearDown]` key cleanup.
 - **Run:** Window → General → Test Runner → EditMode → Run All. (See [§17](#17-notes-for-ai-agents-working-in-this-repo) for the MCP test-runner caveat.)
 - **Editor tools** (`Tools/` menu): `Verify*` probes (library/ladder/polish), `SceneBuilder*` idempotent scene builders.
+- **Key data-integrity tests:** `MinMovesFloorTests` (no sub-2-move puzzle anywhere; generated puzzles meet the length curve, by *true* BFS distance), `PuzzleShowTierTests` (7×50 structure, Hamming-1 ladders, non-decreasing min steps, `ResolveState` mapping, progressive unlock), `GenerationQualityTests` (junk-blocklist absence, curated-word presence, min long-word counts), `PostWinRouterTests` (per-mode surface routing), `BalanceConfigWiringTests`.
+
+### Reproducible data pipeline (`Tools/` — Python, NOT shipped in the build)
+The word data is **machine-generated and validated**, not hand-edited — re-run the tool, never edit the JSON by hand (it would drift and can silently break solvability/floors). All live outside `Assets/`, fetch/cache reference lists in the OS temp dir (never committed), and **fail loudly** on any violation:
+- **`dictionary_build.py`** → rebuilds `word_library.json` + `common_words.json` from **ENABLE** (validity/cleanliness — excludes abbreviations/acronyms/proper nouns) ∩ **Norvig `count_1w.txt`** frequency (commonness). Drops junk, adds ~2,500 common 6- and 7-letter words each, re-validates all 540 curated puzzles stay solvable.
+- **`puzzleshow_build.py`** → regenerates `tier_definitions.json` (7×50) on the difficulty curve; every ladder is a BFS shortest path drawn from the common subset, validated for the min-move floor by **true full-dictionary** distance, unique within tier, in-band.
+- **`daily_floor_fix.py`** → replaces only the Daily puzzles whose true shortest path < 2 moves with fresh same-length ladders, **preserving puzzleId + array order** (so `DailyPuzzleService` indexing is unchanged).
+> These use Python `set` iteration, so re-runs produce *valid, floor-compliant but not byte-identical* data. They are run via the Bash tool (`python Tools/<tool>.py`, `--dry-run` supported); their output is the committed JSON.
 
 ---
 
@@ -313,7 +342,15 @@ Repo: Unity 6000.4.6f1 mobile word-ladder game ("Word Ladder"). Portrait 1080x19
 Single live scene: Assets/Scenes/GameUI.unity. Architecture: immutable GameState + Dispatch
 (GameStateManager; handlers HandlePressLetter/HandleDeleteLetter/HandleSubmitWord/HandleUseHint/
 HandleUseReveal/HandleUseAddTime/HandleUndo; events OnWordSubmissionResult, OnTimeAdded).
-Tunable numbers live in Assets/Scripts/Puzzle/BalanceConfig.cs (single source of truth).
+Tunable numbers live in Assets/Scripts/Puzzle/BalanceConfig.cs (single source of truth;
+incl. MinMovesForLength curve 3->2 4->2 5->3 6->3 7->4, AbsoluteMinMoves=2, MaxTier=7,
+PuzzlesPerTier=50, progressive PuzzlesRequiredToAdvance(tier) 10..40).
+Word data (Assets/Resources/Data/, all MACHINE-GENERATED by Tools/*.py — re-run, never hand-edit):
+  word_library.json (12,183) + common_words.json (6,582) <- dictionary_build.py;
+  tier_definitions.json (7 tiers x 50 = 350) <- puzzleshow_build.py;
+  daily_puzzles.json (450, hand-curated origin, floor-fixed) <- daily_floor_fix.py.
+  Every puzzle's TRUE full-dictionary shortest path is >= MinMovesForLength (no 1-move puzzles).
+Post-win surface routing: pure PostWinRouter.Decide(...) called by GameBootstrap.CheckGameOver.
 Persistence: PlayerPrefs JSON via DataManager (keys: puzzle_progress_v1, wordpuzzle_progress,
 wordpuzzle_save, daily_v1, settings_v1, onboarding_v1).
 Assemblies (dep direction): Puzzle (lowest; BalanceConfig, WordGraph, WordValidator, IAdService) <-
@@ -375,4 +412,4 @@ Environment quirks learned the hard way — relevant when an agent verifies its 
 
 ## Project history
 
-Built iteratively through AI-orchestrated swarms, one concern each: word library & ladder semantics → modern tile/keyboard polish → library cards & tier gate → HOME/settings → hint/reveal semantics → per-mode behaviors & AddTime → TimeAttack UI → share result → daily + streak → **balance config & common-words generation** → **economy & rewarded ads** → **tactile juice (motion/haptics/sound)** → **premium visual identity (gold focus, ascent, motion vocabulary)** → **UI polish pass** (main-menu hierarchy with a gold DAILY hero, gameplay spacing, a keyboard-anchored power-up bar, a reliable visible HOME, and a properly clipping/scrolling word-chain) → **icon chrome** (SVG-via-Vector-Graphics + PNG icons: a house HOME and one shared, icon-only top-right Settings gear on every screen). The git log captures the progression.
+Built iteratively through AI-orchestrated swarms, one concern each: word library & ladder semantics → modern tile/keyboard polish → library cards & tier gate → HOME/settings → hint/reveal semantics → per-mode behaviors & AddTime → TimeAttack UI → share result → daily + streak → **balance config & common-words generation** → **economy & rewarded ads** → **tactile juice (motion/haptics/sound)** → **premium visual identity (gold focus, ascent, motion vocabulary)** → **UI polish pass** (main-menu hierarchy with a gold DAILY hero, gameplay spacing, a keyboard-anchored power-up bar, a reliable visible HOME, and a properly clipping/scrolling word-chain) → **icon chrome** (SVG-via-Vector-Graphics + PNG icons: a house HOME and one shared, icon-only top-right Settings gear on every screen) → **Time Attack setup polish** (fit/styling/header, HOME aligned to the shared gear) → **dictionary expansion & cleanup** (reproducible ENABLE+Norvig tool: junk removed, 8,626→12,183 words, dense common 6/7-letter coverage) → **Puzzle Show 7×50** (350 curated ladders, two-level tier-select→grid navigation, completion coloring, progressive unlock) → **post-win flow** (compact win panel for endless Classic, auto-advancing Time Attack with results on timeout, Puzzle Show stat screen, Daily Home-only; "Play Again" re-routes into the mode) → **minimum-move floor** (no 1-move puzzles anywhere; min scales with word length, enforced by true full-dictionary shortest path in the generator and across all curated data). The git log captures the progression.
