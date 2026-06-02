@@ -73,6 +73,38 @@ namespace WordPuzzle.UI
             return Color.magenta;
         }
     }
+
+    // ============================================================
+    //  MenuPalette — Task 23
+    //  Main-menu button palette. NO gold on the menu; each primary button gets its own distinct,
+    //  bright on-brand fill (tuned for contrast on bg-base #0F1217), paired with a per-fill label
+    //  colour chosen for legibility. Library/Stats stay a muted slate (secondary chrome). Button
+    //  MEANING is carried by the text LABELS, so these fills are decorative and colorblind-safe
+    //  (e.g. green Classic vs red Time Attack are still distinguished by their words).
+    //  Centralized here so the menu has one source of truth — no scattered inline hex.
+    //  NOTE: gold (#C9B458) is still the IN-GAME accent; this set intentionally only governs the menu.
+    // ============================================================
+    public static class MenuPalette
+    {
+        // Task 24 — ONE cohesive jewel-tone family: medium-deep fills at similar saturation/lightness,
+        // evenly-spaced hues, so the buttons read as a designed set (not random). Every fill is deep
+        // enough that a LIGHT label (#F5F7FA) sits on it with strong contrast — no dark-on-dark.
+        public static readonly Color ResumeFill      = Hex("#1B9E8F"); // teal — "continue"
+        public static readonly Color ResumeLabel     = Hex("#F5F7FA");
+        public static readonly Color DailyFill       = Hex("#DD7E2A"); // amber — warm hero (also larger font)
+        public static readonly Color DailyLabel      = Hex("#F5F7FA");
+        public static readonly Color ClassicFill     = Hex("#3D9E54"); // green
+        public static readonly Color ClassicLabel    = Hex("#F5F7FA");
+        public static readonly Color PuzzleShowFill  = Hex("#7B5FD4"); // violet
+        public static readonly Color PuzzleShowLabel = Hex("#F5F7FA");
+        public static readonly Color TimeAttackFill  = Hex("#D23F58"); // rose-red — urgency suits the timer
+        public static readonly Color TimeAttackLabel = Hex("#F5F7FA");
+        public static readonly Color SecondaryFill   = Hex("#39435A"); // calm slate family member — Library/Stats
+        public static readonly Color SecondaryLabel  = Hex("#E7E1C4"); // cream — legible, slightly calmer
+        public static readonly Color TitleColor      = Hex("#F5F7FA"); // flat, bright, non-gold title
+
+        private static Color Hex(string h) => ColorUtility.TryParseHtmlString(h, out var c) ? c : Color.magenta;
+    }
 }
 
 /// <summary>

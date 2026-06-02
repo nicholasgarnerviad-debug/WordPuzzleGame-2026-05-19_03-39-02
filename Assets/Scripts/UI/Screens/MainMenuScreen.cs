@@ -84,26 +84,26 @@ namespace WordPuzzle.UI
         //  GameplayScreen drives its own layout (SeatPowerUpBar/StylePowerUpButton).
         //  Design tokens are centralized here — no scattered inline hex.
         // ============================================================
-        private static readonly Color C_BG_BASE      = Hex("#0F1217"); // screen background (matches gameplay)
-        private static readonly Color C_BG_SURFACE    = Hex("#1B1F27"); // tertiary fill
-        private static readonly Color C_SURFACE_2     = Hex("#242936"); // mode + hero fill
-        private static readonly Color C_GOLD          = Hex("#C9B458"); // hero edge/label + title
-        private static readonly Color C_TEXT_PRIMARY  = Hex("#E7E1C4"); // mode labels
-        private static readonly Color C_TEXT_MUTED    = Hex("#8A93A1"); // tertiary labels
+        private static readonly Color C_BG_BASE = Hex("#0F1217"); // screen background (matches gameplay)
 
-        // Layout constants (named — no magic numbers).
-        private const float MENU_TITLE_H   = 180f;
-        private const float MENU_HERO_H    = 150f;
-        private const float MENU_MODE_H    = 128f;
-        private const float MENU_TERT_H    = 84f;
-        private const float MENU_GAP       = 30f;   // gap between rows
-        private const float MENU_GROUP_GAP = 54f;   // extra gap before the tertiary group
+        // Task 23A — per-button menu colours now live in WordPuzzle.UI.MenuPalette (UITheme.cs);
+        // no gold on this screen. Font sizes per tier (named — no magic numbers).
+        private const float FONT_HERO = 46f;  // Daily — slightly larger to read as the hero
+        private const float FONT_MODE = 40f;  // Resume + game modes
+        private const float FONT_TERT = 30f;  // Library / Stats (bumped — fix tiny Stats text)
+
+        // Layout constants (named — no magic numbers). Task 23B — even composed rhythm:
+        // uniform primary height, uniform gap, a tighter title row to close the void under it.
+        private const float MENU_TITLE_H   = 130f;  // was 180 — close the gap under the title
+        private const float MENU_HERO_H    = 130f;  // uniform primary height
+        private const float MENU_MODE_H    = 130f;  // uniform primary height
+        private const float MENU_TERT_H    = 80f;
+        private const float MENU_GAP       = 26f;   // uniform gap between rows
+        private const float MENU_GROUP_GAP = 44f;   // modest extra gap before the tertiary group
         private const float MENU_TITLE_W   = 940f;
         private const float MENU_BTN_W     = 720f;
-        private const float MENU_TERT_W    = 600f;
-        private const float MENU_UP_BIAS   = 40f;   // slight upper-weighting
-
-        private enum MenuTier { Hero, Mode, Tertiary }
+        private const float MENU_PAIR_GAP  = 24f;   // gap between Library & Stats in the two-up row
+        private const float MENU_UP_BIAS   = 30f;   // slight upper-weighting
 
         /// <summary>Style + arrange the whole menu. Called from OnEnable.</summary>
         private void ApplyMenuPolish()
@@ -112,14 +112,16 @@ namespace WordPuzzle.UI
             if (bg != null) bg.color = C_BG_BASE;
 
             StyleTitle();
-            StyleTierButton(dailyButton,      MenuTier.Hero);
-            StyleTierButton(classicModeButton, MenuTier.Mode);
-            StyleTierButton(puzzleShowButton,  MenuTier.Mode);
-            StyleTierButton(timeAttackButton,  MenuTier.Mode);
-            StyleTierButton(resumeButton,      MenuTier.Mode);
-            StyleTierButton(libraryButton,     MenuTier.Tertiary);
-            StyleTierButton(statsButton,       MenuTier.Tertiary);
-            StyleTierButton(settingsButton,    MenuTier.Tertiary);
+            // Task 23A — each primary button gets its own distinct bright fill (no gold).
+            // Daily = coral hero; Library/Stats stay muted slate (secondary chrome).
+            StyleMenuButton(resumeButton,      MenuPalette.ResumeFill,     MenuPalette.ResumeLabel,     FONT_MODE, bold: true);
+            StyleMenuButton(dailyButton,       MenuPalette.DailyFill,      MenuPalette.DailyLabel,      FONT_HERO, bold: true);
+            StyleMenuButton(classicModeButton, MenuPalette.ClassicFill,    MenuPalette.ClassicLabel,    FONT_MODE, bold: true);
+            StyleMenuButton(puzzleShowButton,  MenuPalette.PuzzleShowFill, MenuPalette.PuzzleShowLabel, FONT_MODE, bold: true);
+            StyleMenuButton(timeAttackButton,  MenuPalette.TimeAttackFill, MenuPalette.TimeAttackLabel, FONT_MODE, bold: true);
+            StyleMenuButton(libraryButton,     MenuPalette.SecondaryFill,  MenuPalette.SecondaryLabel,  FONT_TERT, bold: false);
+            StyleMenuButton(statsButton,       MenuPalette.SecondaryFill,  MenuPalette.SecondaryLabel,  FONT_TERT, bold: false);
+            StyleMenuButton(settingsButton,    MenuPalette.SecondaryFill,  MenuPalette.SecondaryLabel,  FONT_TERT, bold: false);
 
             // Settings now lives in the shared top-right gear (UIManager.CreateGlobalSettingsButton),
             // so remove the bottom-row Settings from the menu — the tertiary row is Library + Stats.
@@ -135,50 +137,47 @@ namespace WordPuzzle.UI
             var title = t != null ? t.GetComponent<TextMeshProUGUI>() : null;
             if (title == null) return;
             title.text = "WORD LADDER";
-            title.color = C_GOLD;
+            title.color = MenuPalette.TitleColor; // Task 23C — clean flat title, bright + non-gold
             title.fontStyle = FontStyles.Bold;
-            title.fontSize = 96f;
-            title.characterSpacing = 6f;
+            title.fontSize = 92f;
+            title.characterSpacing = 8f;
             title.alignment = TextAlignmentOptions.Center;
             title.enableWordWrapping = false;
         }
 
-        private static void StyleTierButton(Button btn, MenuTier tier)
+        // Task 23A — apply a button's distinct fill + legible label colour. Visual only; never
+        // touches onClick/routing. Preserves the Task 22 bubbly rounded background. Disables any
+        // leftover Outline from the previous gold-hero treatment so no gold edge survives.
+        private static void StyleMenuButton(Button btn, Color fill, Color labelColor, float fontSize, bool bold)
         {
             if (btn == null) return;
             var img = btn.GetComponent<Image>();
-            UIThemeManager.ApplyRoundedButton(img); // Task 21B — consistent rounded corners
+            UIThemeManager.ApplyRoundedButton(img); // keep Task 22 bubbly corners
+            if (img != null) img.color = fill;
+
+            // Task 24 — neutralise the scene's inconsistent per-button ColorBlock. Some menu buttons
+            // were authored with a DARK normalColor which (via ColorTint) multiplied the fill down to
+            // near-black — that's why Daily/Resume rendered maroon/teal-black and illegible. Force a
+            // white base so the true fill shows; keep a subtle press-dim for tactile feedback.
+            var cb = btn.colors;
+            cb.normalColor      = Color.white;
+            cb.highlightedColor = new Color(0.92f, 0.92f, 0.92f, 1f);
+            cb.pressedColor     = new Color(0.82f, 0.82f, 0.82f, 1f);
+            cb.selectedColor    = Color.white;
+            cb.disabledColor    = new Color(0.5f, 0.5f, 0.5f, 0.5f);
+            cb.colorMultiplier  = 1f;
+            btn.colors = cb;
+
             var outline = btn.GetComponent<Outline>();
+            if (outline != null) outline.enabled = false;
+
             var label = btn.GetComponentInChildren<TMP_Text>(true);
-
-            switch (tier)
+            if (label != null)
             {
-                case MenuTier.Hero: // DAILY — gold-edged primary CTA
-                    if (img != null) img.color = C_SURFACE_2;
-                    EnsureOutline(btn, C_GOLD, 4f);
-                    if (label != null) { label.color = C_GOLD; label.fontStyle = FontStyles.Bold; label.fontSize = 46f; }
-                    break;
-                case MenuTier.Mode: // game modes — raised surface, primary text
-                    if (img != null) img.color = C_SURFACE_2;
-                    if (outline != null) outline.enabled = false;
-                    if (label != null) { label.color = C_TEXT_PRIMARY; label.fontStyle = FontStyles.Bold; label.fontSize = 38f; }
-                    break;
-                case MenuTier.Tertiary: // library/stats/settings — demoted chrome
-                    if (img != null) img.color = C_BG_SURFACE;
-                    if (outline != null) outline.enabled = false;
-                    if (label != null) { label.color = C_TEXT_MUTED; label.fontStyle = FontStyles.Normal; label.fontSize = 30f; }
-                    break;
+                label.color = labelColor;
+                label.fontStyle = bold ? FontStyles.Bold : FontStyles.Normal;
+                label.fontSize = fontSize;
             }
-        }
-
-        private static void EnsureOutline(Button btn, Color color, float distance)
-        {
-            if (btn == null) return;
-            var o = btn.GetComponent<Outline>();
-            if (o == null) o = btn.gameObject.AddComponent<Outline>();
-            o.enabled = true;
-            o.effectColor = color;
-            o.effectDistance = new Vector2(distance, distance);
         }
 
         private static void SetButtonLabel(Button btn, string text)
@@ -223,51 +222,87 @@ namespace WordPuzzle.UI
         /// </summary>
         private void ArrangeMenu()
         {
-            var items = new List<(RectTransform rt, float h, float w, bool brk)>();
-            void Add(Component c, float h, float w, bool brk = false)
+            // Primary stack — full-width rows, top-down. Skips inactive (e.g. a hidden Resume).
+            var rows = new List<(RectTransform rt, float h, float w)>();
+            void AddRow(Component c, float h, float w)
             {
                 if (c == null) return;
                 var rt = c.transform as RectTransform;
                 if (rt == null || !rt.gameObject.activeSelf) return;
-                items.Add((rt, h, w, brk));
+                rows.Add((rt, h, w));
             }
 
-            Add(transform.Find("TitleText"), MENU_TITLE_H, MENU_TITLE_W);
-            Add(resumeButton,      MENU_MODE_H, MENU_BTN_W);
-            Add(dailyButton,       MENU_HERO_H, MENU_BTN_W);
-            Add(classicModeButton, MENU_MODE_H, MENU_BTN_W);
-            Add(puzzleShowButton,  MENU_MODE_H, MENU_BTN_W);
-            Add(timeAttackButton,  MENU_MODE_H, MENU_BTN_W);
-            Add(libraryButton,     MENU_TERT_H, MENU_TERT_W, brk: true); // group break before tertiary
-            Add(statsButton,       MENU_TERT_H, MENU_TERT_W);
-            Add(settingsButton,    MENU_TERT_H, MENU_TERT_W);
+            AddRow(transform.Find("TitleText"), MENU_TITLE_H, MENU_TITLE_W);
+            AddRow(resumeButton,      MENU_MODE_H, MENU_BTN_W);
+            AddRow(dailyButton,       MENU_HERO_H, MENU_BTN_W);
+            AddRow(classicModeButton, MENU_MODE_H, MENU_BTN_W);
+            AddRow(puzzleShowButton,  MENU_MODE_H, MENU_BTN_W);
+            AddRow(timeAttackButton,  MENU_MODE_H, MENU_BTN_W);
 
-            if (items.Count == 0) return;
+            // Task 24B — Puzzle Library + Stats SIDE BY SIDE in one two-up row beneath the stack.
+            // settingsButton is deactivated in ApplyMenuPolish, so it never joins the pair.
+            var pair = new List<RectTransform>();
+            void AddPair(Button b)
+            {
+                if (b == null) return;
+                var rt = b.transform as RectTransform;
+                if (rt == null || !rt.gameObject.activeSelf) return;
+                pair.Add(rt);
+            }
+            AddPair(libraryButton);
+            AddPair(statsButton);
+            bool hasPair = pair.Count > 0;
 
+            if (rows.Count == 0 && !hasPair) return;
+
+            // Total block height: primary rows + uniform gaps, then a group gap + one tertiary row.
             float total = 0f;
-            for (int i = 0; i < items.Count; i++)
+            for (int i = 0; i < rows.Count; i++)
             {
-                total += items[i].h;
-                if (i < items.Count - 1) total += items[i + 1].brk ? MENU_GROUP_GAP : MENU_GAP;
+                total += rows[i].h;
+                if (i < rows.Count - 1) total += MENU_GAP;
+            }
+            if (hasPair)
+            {
+                if (rows.Count > 0) total += MENU_GROUP_GAP;
+                total += MENU_TERT_H;
             }
 
-            float cursor = total * 0.5f + MENU_UP_BIAS; // top of block, centred + slight up-bias
-            for (int i = 0; i < items.Count; i++)
+            float cursor = total * 0.5f + MENU_UP_BIAS; // top edge of the block (centred, slight up-bias)
+            for (int i = 0; i < rows.Count; i++)
             {
-                PlaceMenuRow(items[i].rt, cursor, items[i].w, items[i].h);
-                cursor -= items[i].h;
-                if (i < items.Count - 1) cursor -= items[i + 1].brk ? MENU_GROUP_GAP : MENU_GAP;
+                PlaceMenuRow(rows[i].rt, cursor, rows[i].w, rows[i].h);
+                cursor -= rows[i].h;
+                if (i < rows.Count - 1) cursor -= MENU_GAP;
+            }
+            if (hasPair)
+            {
+                if (rows.Count > 0) cursor -= MENU_GROUP_GAP;
+                PlacePairRow(pair, cursor, MENU_TERT_H);
             }
         }
 
+        // Two equal-width buttons side by side, centred on the stack's width with a small gap.
+        private static void PlacePairRow(List<RectTransform> pair, float topY, float height)
+        {
+            if (pair.Count == 1) { PlaceMenuRowAtX(pair[0], 0f, topY, MENU_BTN_W, height); return; }
+            float halfW = (MENU_BTN_W - MENU_PAIR_GAP) * 0.5f;
+            float cx = (halfW + MENU_PAIR_GAP) * 0.5f;
+            PlaceMenuRowAtX(pair[0], -cx, topY, halfW, height); // Library — left
+            PlaceMenuRowAtX(pair[1],  cx, topY, halfW, height); // Stats — right
+        }
+
         private static void PlaceMenuRow(RectTransform rt, float topY, float width, float height)
+            => PlaceMenuRowAtX(rt, 0f, topY, width, height);
+
+        private static void PlaceMenuRowAtX(RectTransform rt, float x, float topY, float width, float height)
         {
             if (rt == null) return;
             rt.localScale = Vector3.one;                 // undo scene scale hacks (2.0 / 0.9)
             rt.anchorMin = new Vector2(0.5f, 0.5f);
             rt.anchorMax = new Vector2(0.5f, 0.5f);
             rt.pivot = new Vector2(0.5f, 1f);            // pivot top → anchoredPosition.y is the top edge
-            rt.anchoredPosition = new Vector2(0f, topY);
+            rt.anchoredPosition = new Vector2(x, topY);
             rt.sizeDelta = new Vector2(width, height);
         }
 
