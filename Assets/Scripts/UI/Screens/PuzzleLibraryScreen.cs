@@ -151,9 +151,14 @@ namespace WordPuzzle.UI
             var le = go.AddComponent<LayoutElement>();
             le.minHeight = 104f; le.preferredHeight = 104f; le.flexibleWidth = 1f;
 
+            bool tierComplete = unlocked && total > 0 && completed >= total;
+
             var border = go.AddComponent<Image>();
             ApplyRounded(border);
-            border.color = !unlocked ? C_LOCKED_BORDER : (isCurrent ? C_GOLD : C_UNPLAYED_BORDER);
+            border.color = tierComplete ? C_COMPLETED_BORDER
+                         : !unlocked    ? C_LOCKED_BORDER
+                         : isCurrent    ? C_GOLD
+                                        : C_UNPLAYED_BORDER;
 
             if (unlocked)
             {
@@ -165,7 +170,9 @@ namespace WordPuzzle.UI
 
             var fill = MakeFill(go.transform, 2f);
             ApplyRounded(fill.GetComponent<Image>());
-            fill.GetComponent<Image>().color = unlocked ? C_UNPLAYED_BG : C_LOCKED_BG;
+            fill.GetComponent<Image>().color = tierComplete ? C_COMPLETED_BG
+                                             : unlocked     ? C_UNPLAYED_BG
+                                                            : C_LOCKED_BG;
 
             // Title row: "Tier N"  +  progress / lock on the right
             CreateAnchored(fill.transform, "TierName", $"Tier {tier.tierId}", 30,
@@ -180,10 +187,12 @@ namespace WordPuzzle.UI
 
             if (unlocked)
             {
-                CreateAnchored(fill.transform, "TierProgress", $"{completed}/{total}", 24,
-                    TextAlignmentOptions.Right, isCurrent ? C_GOLD : C_HEADER_COUNT, FontStyles.Bold,
+                string progressText = tierComplete ? $"✓ {completed}/{total}" : $"{completed}/{total}";
+                Color progressColor = tierComplete ? C_COMPLETED_ICON : isCurrent ? C_GOLD : C_HEADER_COUNT;
+                CreateAnchored(fill.transform, "TierProgress", progressText, 24,
+                    TextAlignmentOptions.Right, progressColor, FontStyles.Bold,
                     new Vector2(1f, 0.5f), new Vector2(1f, 0.5f),
-                    new Vector2(-24f, 0f), new Vector2(160f, 40f));
+                    new Vector2(-24f, 0f), new Vector2(190f, 40f));
             }
             else
             {
@@ -193,10 +202,10 @@ namespace WordPuzzle.UI
                     new Vector2(1f, 1f), new Vector2(1f, 1f),
                     new Vector2(-24f, -16f), new Vector2(40f, 32f));
                 CreateAnchored(fill.transform, "UnlockHint",
-                    $"Clear {need} in Tier {tier.tierId - 1}", 16,
-                    TextAlignmentOptions.BottomRight, C_LOCKED_TEXT, FontStyles.Normal,
+                    $"Clear {need} in Tier {tier.tierId - 1} to unlock", 18,
+                    TextAlignmentOptions.BottomRight, C_SUBTITLE, FontStyles.Normal,
                     new Vector2(1f, 0f), new Vector2(1f, 0f),
-                    new Vector2(-24f, 18f), new Vector2(280f, 26f));
+                    new Vector2(-24f, 18f), new Vector2(360f, 28f));
             }
         }
 
