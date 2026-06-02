@@ -87,6 +87,25 @@ namespace WordPuzzle.Puzzle
             return tier.puzzles[index];
         }
 
+        /// <summary>
+        /// Task 18E — return a random puzzle from the tier the player has NOT yet completed,
+        /// or null when every puzzle in the tier is done (caller routes to the library grid).
+        /// Keeps "Next Puzzle" advancing through the tier instead of replaying solved ones.
+        /// </summary>
+        public PuzzleDefinition GetUnplayedTierPuzzle(int tierId, ICollection<int> completedIds)
+        {
+            if (!tierCache.TryGetValue(tierId, out var tier) || tier.puzzles == null || tier.puzzles.Length == 0)
+                return null;
+
+            var unplayed = new List<PuzzleDefinition>();
+            foreach (var p in tier.puzzles)
+                if (p != null && (completedIds == null || !completedIds.Contains(p.puzzleId)))
+                    unplayed.Add(p);
+
+            if (unplayed.Count == 0) return null;
+            return unplayed[random.Next(unplayed.Count)];
+        }
+
         // ── Random generation with common-word fallback chain ────────────────────
 
         public PuzzleDefinition GenerateRandomPuzzle(Difficulty difficulty)
@@ -142,8 +161,10 @@ namespace WordPuzzle.Puzzle
         /// Spec §2 — generate a random puzzle whose start/end words are exactly
         /// <paramref name="wordLength"/> letters long, separated by approximately
         /// <paramref name="targetDistance"/> edits in the word graph. When the caller
-        /// passes -1 (the default), targetDistance is auto-derived as max(2, wordLength-2)
-        /// so 3-letter puzzles get a 2-step ladder and 7-letter puzzles get a 5-step ladder.
+        /// passes -1 (the default), targetDistance is derived from the length floor as
+        /// max(BalanceConfig.MinMovesForLength(wordLength), wordLength-2), and any caller value
+        /// is clamped up to that floor. Acceptance additionally requires the TRUE full-graph
+        /// shortest distance to meet the floor (see MeetsFloor) — never a 1-move puzzle.
         /// </summary>
         public PuzzleDefinition GenerateRandomPuzzleOfLength(int wordLength, int targetDistance = -1)
         {

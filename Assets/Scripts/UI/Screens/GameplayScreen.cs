@@ -955,16 +955,43 @@ namespace WordPuzzle.UI
         private TextMeshProUGUI winStepsText;
         private static Sprite _roundedWin;
 
-        /// <summary>Overlay a small win card on the finished board. steps = moves taken.</summary>
+        /// <summary>
+        /// Overlay a small win card on the finished board. steps = moves taken.
+        /// Task 18C — play the celebratory win beat (TO row gold→green ascent) FIRST, then
+        /// bring up the panel, so the payoff reads clearly. ReduceMotion → instant, no wait.
+        /// </summary>
         public void ShowWinPanel(int steps)
         {
             if (winPanel == null) BuildWinPanel();
             if (winStepsText != null)
                 winStepsText.text = steps == 1 ? "Solved in 1 step" : $"Solved in {steps} steps";
+
+            OnGameWon(); // win sting + haptic + WinAscentBeat (gold→green ascent on the TO row)
+
+            if (UIAnimations.ReduceMotion)
+            {
+                ActivateWinPanel(animate: false);
+            }
+            else
+            {
+                StartCoroutine(ShowWinPanelAfterBeat());
+            }
+        }
+
+        private const float WIN_BEAT_HOLD = 0.45f; // let the ascent beat read before the panel
+
+        private IEnumerator ShowWinPanelAfterBeat()
+        {
+            yield return new WaitForSecondsRealtime(WIN_BEAT_HOLD);
+            ActivateWinPanel(animate: true);
+        }
+
+        private void ActivateWinPanel(bool animate)
+        {
+            if (winPanel == null) return;
             winPanel.transform.SetAsLastSibling();
             winPanel.SetActive(true);
-            OnGameWon(); // reuse existing win sting/haptic as the panel appears
-            if (!UIAnimations.ReduceMotion) StartCoroutine(FadeInWinPanel());
+            if (animate) StartCoroutine(FadeInWinPanel());
         }
 
         public void HideWinPanel()

@@ -1032,7 +1032,11 @@ namespace WordPuzzle
             }
             else if (activeMode is PuzzleShowMode psm)
             {
-                puzzleDefinition = puzzleGenerator.GetRandomTierPuzzle(psm.CurrentTier);
+                // Task 18E — prefer a puzzle the player hasn't completed yet so "Next Puzzle"
+                // advances through the tier; fall back to any tier puzzle if all are done.
+                var completed = new System.Collections.Generic.HashSet<int>(psm.CompletedPuzzleIds);
+                puzzleDefinition = puzzleGenerator.GetUnplayedTierPuzzle(psm.CurrentTier, completed)
+                                   ?? puzzleGenerator.GetRandomTierPuzzle(psm.CurrentTier);
                 difficulty = psm.CurrentTier <= 2 ? Difficulty.Easy
                           : psm.CurrentTier <= 4 ? Difficulty.Medium
                           : Difficulty.Hard;
@@ -1560,6 +1564,20 @@ namespace WordPuzzle
                 alreadyCountedToday);
         }
 
+        // Task 18E — does the player's current Puzzle Show tier still have any unplayed puzzle?
+        // (Defaults to true so we never get stuck if progress/lookup is unavailable.)
+        private bool CurrentTierHasUnplayed()
+        {
+            if (cachedPuzzleProgress == null || tierPuzzleIdLookup == null) return true;
+            int tier = cachedPuzzleProgress.currentTier;
+            if (!tierPuzzleIdLookup.TryGetValue(tier, out var ids) || ids == null) return true;
+            var done = new System.Collections.Generic.HashSet<int>(
+                cachedPuzzleProgress.completedPuzzleIds ?? new System.Collections.Generic.List<int>());
+            foreach (var id in ids)
+                if (!done.Contains(id)) return true;
+            return false;
+        }
+
         // Task 16C — the full results page's primary action now re-routes into the
         // relevant mode instead of dumping the player at the main menu.
         private void PlayAgain()
@@ -1571,8 +1589,12 @@ namespace WordPuzzle
                     StartTimeAttackModeWithConfig(lastTimeAttackConfig);
                     break;
                 case PostWin.PuzzleShow:
-                    // "Next Puzzle" — another puzzle in the player's current tier.
-                    StartPuzzleShowMode();
+                    // "Next Puzzle" — another UNPLAYED puzzle in the current tier; if the tier is
+                    // fully complete (Task 18E), route to the library grid instead of replaying.
+                    if (CurrentTierHasUnplayed())
+                        StartPuzzleShowMode();
+                    else
+                        ShowLibrary();
                     break;
                 case PostWin.Daily:
                     // Daily has no "Play Again" (button hidden); guard routes Home if reached.
