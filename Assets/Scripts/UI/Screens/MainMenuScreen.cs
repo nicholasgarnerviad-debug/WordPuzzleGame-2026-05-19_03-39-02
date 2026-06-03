@@ -84,8 +84,6 @@ namespace WordPuzzle.UI
         //  GameplayScreen drives its own layout (SeatPowerUpBar/StylePowerUpButton).
         //  Design tokens are centralized here — no scattered inline hex.
         // ============================================================
-        private static readonly Color C_BG_BASE = Hex("#0F1217"); // screen background (matches gameplay)
-
         // Task 23A — per-button menu colours now live in WordPuzzle.UI.MenuPalette (UITheme.cs);
         // no gold on this screen. Font sizes per tier (named — no magic numbers).
         private const float FONT_HERO = 46f;  // Daily — slightly larger to read as the hero
@@ -108,20 +106,21 @@ namespace WordPuzzle.UI
         /// <summary>Style + arrange the whole menu. Called from OnEnable.</summary>
         private void ApplyMenuPolish()
         {
-            var bg = GetComponent<Image>();
-            if (bg != null) bg.color = C_BG_BASE;
+            // Task 26 — render over the shared full-screen BackgroundLayer (root goes transparent so the
+            // black layer — and a future space image — shows through). Fixes the leftover teal cast too.
+            UIThemeManager.ApplyScreenBackground(gameObject);
 
             StyleTitle();
-            // Task 23A — each primary button gets its own distinct bright fill (no gold).
-            // Daily = coral hero; Library/Stats stay muted slate (secondary chrome).
+            // Task 25 — outline ("ghost") buttons: each keeps its colour as a rounded BORDER over the
+            // black, transparent centre. Daily is the faint-fill hero; Library/Stats use a muted ring.
             StyleMenuButton(resumeButton,      MenuPalette.ResumeFill,     MenuPalette.ResumeLabel,     FONT_MODE, bold: true);
-            StyleMenuButton(dailyButton,       MenuPalette.DailyFill,      MenuPalette.DailyLabel,      FONT_HERO, bold: true);
+            StyleMenuButton(dailyButton,       MenuPalette.DailyFill,      MenuPalette.DailyLabel,      FONT_HERO, bold: true, hero: true);
             StyleMenuButton(classicModeButton, MenuPalette.ClassicFill,    MenuPalette.ClassicLabel,    FONT_MODE, bold: true);
             StyleMenuButton(puzzleShowButton,  MenuPalette.PuzzleShowFill, MenuPalette.PuzzleShowLabel, FONT_MODE, bold: true);
             StyleMenuButton(timeAttackButton,  MenuPalette.TimeAttackFill, MenuPalette.TimeAttackLabel, FONT_MODE, bold: true);
-            StyleMenuButton(libraryButton,     MenuPalette.SecondaryFill,  MenuPalette.SecondaryLabel,  FONT_TERT, bold: false);
-            StyleMenuButton(statsButton,       MenuPalette.SecondaryFill,  MenuPalette.SecondaryLabel,  FONT_TERT, bold: false);
-            StyleMenuButton(settingsButton,    MenuPalette.SecondaryFill,  MenuPalette.SecondaryLabel,  FONT_TERT, bold: false);
+            StyleMenuButton(libraryButton,     MenuPalette.SecondaryBorder, MenuPalette.SecondaryLabel, FONT_TERT, bold: false);
+            StyleMenuButton(statsButton,       MenuPalette.SecondaryBorder, MenuPalette.SecondaryLabel, FONT_TERT, bold: false);
+            StyleMenuButton(settingsButton,    MenuPalette.SecondaryBorder, MenuPalette.SecondaryLabel, FONT_TERT, bold: false);
 
             // Settings now lives in the shared top-right gear (UIManager.CreateGlobalSettingsButton),
             // so remove the bottom-row Settings from the menu — the tertiary row is Library + Stats.
@@ -145,15 +144,15 @@ namespace WordPuzzle.UI
             title.enableWordWrapping = false;
         }
 
-        // Task 23A — apply a button's distinct fill + legible label colour. Visual only; never
-        // touches onClick/routing. Preserves the Task 22 bubbly rounded background. Disables any
-        // leftover Outline from the previous gold-hero treatment so no gold edge survives.
-        private static void StyleMenuButton(Button btn, Color fill, Color labelColor, float fontSize, bool bold)
+        // Task 25 — render a button as a coloured rounded OUTLINE (transparent centre over black).
+        // `color` is the border colour (its existing identity colour); `hero` adds a faint fill wash so
+        // Daily still reads as the primary action. Visual only; never touches onClick/routing.
+        private static void StyleMenuButton(Button btn, Color color, Color labelColor, float fontSize, bool bold, bool hero = false)
         {
             if (btn == null) return;
             var img = btn.GetComponent<Image>();
-            UIThemeManager.ApplyRoundedButton(img); // keep Task 22 bubbly corners
-            if (img != null) img.color = fill;
+            if (hero) UIThemeManager.ApplyHeroOutlineButton(img, color);
+            else      UIThemeManager.ApplyOutlineButton(img, color);
 
             // Task 24 — neutralise the scene's inconsistent per-button ColorBlock. Some menu buttons
             // were authored with a DARK normalColor which (via ColorTint) multiplied the fill down to
@@ -305,9 +304,6 @@ namespace WordPuzzle.UI
             rt.anchoredPosition = new Vector2(x, topY);
             rt.sizeDelta = new Vector2(width, height);
         }
-
-        private static Color Hex(string h) =>
-            ColorUtility.TryParseHtmlString(h, out var c) ? c : Color.magenta;
 
         public void Show() => gameObject.SetActive(true);
         public void Hide() => gameObject.SetActive(false);

@@ -75,7 +75,8 @@ namespace WordPuzzle.UI
         private static readonly Color C_LABEL_REACHED        = HexToColor("#6AAA64");
 
         // Task 10B — power-up bar (Hint/Undo/Reveal) styling.
-        private static readonly Color C_PU_SURFACE   = HexToColor("#1B1F27"); // bg-surface panel
+        private static readonly Color C_PU_SURFACE   = HexToColor("#1B1F27"); // bg-surface panel (legacy)
+        private static readonly Color C_PU_BORDER    = HexToColor("#8A93A1"); // Task 25 — visible muted outline ring
         private static readonly Color C_PU_LABEL     = HexToColor("#E7E1C4"); // text-primary (enabled)
         private static readonly Color C_PU_LABEL_DIM = HexToColor("#5A6270"); // text-dim (0-count/disabled)
 
@@ -156,6 +157,7 @@ namespace WordPuzzle.UI
         // ============================================================
         private void OnEnable()
         {
+            UIThemeManager.ApplyScreenBackground(gameObject); // Task 25 — true-black background
             if (submitButton != null) submitButton.onClick.AddListener(SubmitWord);
             if (wordInputField != null) wordInputField.onSubmit.AddListener(OnInputSubmit);
             if (backButton != null)
@@ -412,7 +414,7 @@ namespace WordPuzzle.UI
             if (btn == null) return;
             var label = FindPowerUpLabel(btn, badge);
             if (label != null) label.fontStyle = FontStyles.Bold;
-            UIThemeManager.ApplyRoundedButton(btn.GetComponent<Image>()); // Task 21B — rounded corners
+            UIThemeManager.ApplyOutlineButton(btn.GetComponent<Image>(), C_PU_BORDER); // Task 25 — ghost button
             ApplyPowerUpVisual(btn, badge, btn.interactable);
         }
 
@@ -437,7 +439,7 @@ namespace WordPuzzle.UI
             var img = btn.GetComponent<Image>();
             if (img != null)
             {
-                var c = C_PU_SURFACE;
+                var c = C_PU_BORDER; // Task 25 — tint the outline ring; dim when the power-up is unusable
                 c.a = enabled ? 1f : 0.45f;
                 img.color = c;
             }
@@ -1074,14 +1076,16 @@ namespace WordPuzzle.UI
             winStepsText = MakeWinText(card.transform, "Steps", "", 30, new Vector2(0f, 1f), new Vector2(1f, 1f),
                 new Vector2(0f, -120f), new Color32(0x8A, 0x93, 0xA1, 0xFF), FontStyles.Normal); // muted
 
+            // Task 25 — ghost buttons: colour is now the BORDER, labels are LIGHT (the old NEXT label
+            // was near-black #0F1217 and would vanish on the transparent-over-black button).
             MakeWinButton(card.transform, "NextButton", "NEXT PUZZLE",
                 new Vector2(0.5f, 0f), new Vector2(0f, 116f), new Vector2(420f, 76f),
-                new Color32(0xC9, 0xB4, 0x58, 0xFF), new Color32(0x0F, 0x12, 0x17, 0xFF),
-                () => OnNextPuzzle?.Invoke());   // gold primary
+                new Color32(0xC9, 0xB4, 0x58, 0xFF), new Color32(0xF5, 0xF7, 0xFA, 0xFF),
+                () => OnNextPuzzle?.Invoke());   // gold border, light label (hero)
             MakeWinButton(card.transform, "HomeButton", "Home",
                 new Vector2(0.5f, 0f), new Vector2(0f, 36f), new Vector2(420f, 56f),
-                new Color32(0x24, 0x29, 0x36, 0xFF), new Color32(0x8A, 0x93, 0xA1, 0xFF),
-                () => OnWinHome?.Invoke());       // muted secondary
+                new Color32(0x8A, 0x93, 0xA1, 0xFF), new Color32(0xE7, 0xE1, 0xC4, 0xFF),
+                () => OnWinHome?.Invoke());       // muted border, cream label
         }
 
         private static TextMeshProUGUI MakeWinText(Transform parent, string name, string text, float size,
@@ -1099,7 +1103,7 @@ namespace WordPuzzle.UI
         }
 
         private void MakeWinButton(Transform parent, string name, string label,
-            Vector2 anchor, Vector2 pos, Vector2 size, Color bg, Color fg, Action onClick)
+            Vector2 anchor, Vector2 pos, Vector2 size, Color border, Color fg, Action onClick)
         {
             var go = new GameObject(name, typeof(RectTransform));
             go.transform.SetParent(parent, false);
@@ -1107,8 +1111,7 @@ namespace WordPuzzle.UI
             rt.anchorMin = rt.anchorMax = anchor; rt.pivot = new Vector2(0.5f, 0f);
             rt.anchoredPosition = pos; rt.sizeDelta = size;
             var img = go.AddComponent<Image>();
-            UIThemeManager.ApplyRoundedButton(img); // Task 22B — shared bubbly corner
-            img.color = bg;
+            UIThemeManager.ApplyOutlineButton(img, border); // Task 25 — ghost button (transparent centre)
             var btn = go.AddComponent<Button>();
             btn.transition = Selectable.Transition.None;
             btn.onClick.AddListener(() => onClick?.Invoke());

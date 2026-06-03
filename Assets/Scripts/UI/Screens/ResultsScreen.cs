@@ -69,9 +69,12 @@ namespace WordPuzzle.UI
                 shareButton.onClick.AddListener(() => OnShareRequested?.Invoke());
             if (toastText != null) toastText.gameObject.SetActive(false);
 
-            // Task 21B — consistent rounded corners on the results buttons.
-            foreach (var b in new[] { playAgainButton, mainMenuButton, shareButton })
-                if (b != null) UIThemeManager.ApplyRoundedButton(b.GetComponent<Image>());
+            UIThemeManager.ApplyScreenBackground(gameObject); // Task 25 — true-black background
+
+            // Task 25 — outline ("ghost") buttons: Play Again = green CTA, Home/Share = muted; light labels.
+            UIThemeManager.ApplyOutlineButton(playAgainButton, new Color32(0x6A, 0xAA, 0x64, 0xFF), new Color32(0xF5, 0xF7, 0xFA, 0xFF));
+            UIThemeManager.ApplyOutlineButton(mainMenuButton,  new Color32(0x8A, 0x93, 0xA1, 0xFF), new Color32(0xE7, 0xE1, 0xC4, 0xFF));
+            UIThemeManager.ApplyOutlineButton(shareButton,     new Color32(0x8A, 0x93, 0xA1, 0xFF), new Color32(0xE7, 0xE1, 0xC4, 0xFF));
         }
 
         // §2.1/§2.3 Home-button visual swap.
@@ -259,9 +262,8 @@ namespace WordPuzzle.UI
             rt.anchoredPosition = src.anchoredPosition + new Vector2(0f, src.sizeDelta.y + 16f);
             go.transform.SetSiblingIndex(playAgainButton.transform.GetSiblingIndex());
 
-            // Gold emphasis on the tier-up action.
-            var img = nextTierButton.GetComponent<Image>();
-            if (img != null) img.color = C_ACCENT_GOLD;
+            // Task 25 — gold outline emphasis on the tier-up action; light label.
+            UIThemeManager.ApplyOutlineButton(nextTierButton, C_ACCENT_GOLD, new Color32(0xF5, 0xF7, 0xFA, 0xFF));
         }
 
         private static void SetButtonVisible(Button b, bool visible)

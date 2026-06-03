@@ -91,7 +91,7 @@ namespace WordPuzzle.UI
         // enough that a LIGHT label (#F5F7FA) sits on it with strong contrast — no dark-on-dark.
         public static readonly Color ResumeFill      = Hex("#1B9E8F"); // teal — "continue"
         public static readonly Color ResumeLabel     = Hex("#F5F7FA");
-        public static readonly Color DailyFill       = Hex("#DD7E2A"); // amber — warm hero (also larger font)
+        public static readonly Color DailyFill       = Hex("#FF8A2E"); // Task 26 — bright clear orange hero border (thicker ring, no fill)
         public static readonly Color DailyLabel      = Hex("#F5F7FA");
         public static readonly Color ClassicFill     = Hex("#3D9E54"); // green
         public static readonly Color ClassicLabel    = Hex("#F5F7FA");
@@ -100,6 +100,7 @@ namespace WordPuzzle.UI
         public static readonly Color TimeAttackFill  = Hex("#D23F58"); // rose-red — urgency suits the timer
         public static readonly Color TimeAttackLabel = Hex("#F5F7FA");
         public static readonly Color SecondaryFill   = Hex("#39435A"); // calm slate family member — Library/Stats
+        public static readonly Color SecondaryBorder = Hex("#8A93A1"); // Task 25 — visible muted ring for outline Library/Stats
         public static readonly Color SecondaryLabel  = Hex("#E7E1C4"); // cream — legible, slightly calmer
         public static readonly Color TitleColor      = Hex("#F5F7FA"); // flat, bright, non-gold title
 
@@ -243,5 +244,174 @@ public static class UIThemeManager
         img.sprite = sprite;
         img.type = UnityEngine.UI.Image.Type.Sliced;
         img.pixelsPerUnitMultiplier = pixelsPerUnitMultiplier;
+    }
+
+    // ============================================================
+    //  Task 25 — true-black background + outline ("ghost") buttons.
+    // ============================================================
+
+    /// <summary>App background — neutral near-black #0A0A0A (Task 26: no blue/teal cast; reads as genuine black).</summary>
+    public static readonly UnityEngine.Color AppBackground =
+        new UnityEngine.Color(0x0A / 255f, 0x0A / 255f, 0x0A / 255f, 1f);
+
+    private const string BackgroundLayerName = "BackgroundLayer";
+
+    /// <summary>
+    /// Task 26 — make a screen render over the one shared full-screen BackgroundLayer: the screen root
+    /// Image is made transparent (so the layer shows through) and the layer is ensured behind all UI.
+    /// Also forces the main camera's clear colour to black. Runtime only — no scene edit.
+    /// </summary>
+    public static void ApplyScreenBackground(UnityEngine.GameObject root)
+    {
+        if (root != null)
+        {
+            var img = root.GetComponent<UnityEngine.UI.Image>();
+            if (img != null) img.color = new UnityEngine.Color(0f, 0f, 0f, 0f); // transparent — shared layer shows through
+            EnsureBackgroundLayer(root.transform);
+        }
+        var cam = UnityEngine.Camera.main;
+        if (cam != null)
+        {
+            cam.clearFlags = UnityEngine.CameraClearFlags.SolidColor;
+            cam.backgroundColor = AppBackground;
+        }
+    }
+
+    /// <summary>
+    /// Task 26 — ensure ONE reusable full-screen "BackgroundLayer" Image exists as the first child of the
+    /// root Canvas (so it renders behind every screen). It is filled with the flat app black now, and will
+    /// auto-display a space backdrop the moment a sprite is dropped at Resources/UI/SpaceBackground.png
+    /// (no scene edit, no restructuring). Stretches to fill the Canvas on every device; never eats taps.
+    /// </summary>
+    public static void EnsureBackgroundLayer(UnityEngine.Transform underCanvas)
+    {
+        if (underCanvas == null) return;
+        var canvas = underCanvas.GetComponentInParent<UnityEngine.Canvas>();
+        if (canvas == null) return;
+        canvas = canvas.rootCanvas;
+
+        var existing = canvas.transform.Find(BackgroundLayerName);
+        UnityEngine.UI.Image img;
+        if (existing != null)
+        {
+            img = existing.GetComponent<UnityEngine.UI.Image>();
+            if (img == null) img = existing.gameObject.AddComponent<UnityEngine.UI.Image>();
+        }
+        else
+        {
+            var go = new UnityEngine.GameObject(BackgroundLayerName,
+                typeof(UnityEngine.RectTransform), typeof(UnityEngine.CanvasRenderer), typeof(UnityEngine.UI.Image));
+            go.transform.SetParent(canvas.transform, false);
+            img = go.GetComponent<UnityEngine.UI.Image>();
+        }
+
+        var rt = img.rectTransform;
+        rt.anchorMin = UnityEngine.Vector2.zero;
+        rt.anchorMax = UnityEngine.Vector2.one;
+        rt.offsetMin = UnityEngine.Vector2.zero;
+        rt.offsetMax = UnityEngine.Vector2.zero;
+        rt.localScale = UnityEngine.Vector3.one;
+        img.raycastTarget = false; // never block taps to the buttons in front
+
+        // Drop a sprite at Resources/UI/SpaceBackground.png to fill this layer later; until then it's flat black.
+        var space = UnityEngine.Resources.Load<UnityEngine.Sprite>("UI/SpaceBackground");
+        if (space != null)
+        {
+            img.sprite = space;
+            img.type = UnityEngine.UI.Image.Type.Simple;
+            img.preserveAspect = false; // stretch to fill — no gaps on any aspect ratio
+            img.color = UnityEngine.Color.white; // untinted so the image shows its true colours
+        }
+        else
+        {
+            img.sprite = null;
+            img.color = AppBackground; // flat neutral black for now
+        }
+
+        img.transform.SetAsFirstSibling(); // behind every screen
+    }
+
+    // Border-only rounded 9-slice ring (transparent centre) — Assets/Resources/UI/RoundedButtonOutline.png.
+    // Same 44px corner border as the solid bubbly sprite, so the rounded corner matches Task 22.
+    private static UnityEngine.Sprite _outlineButton;
+    private static bool _outlineButtonLoaded;
+    public static UnityEngine.Sprite OutlineButtonSprite
+    {
+        get
+        {
+            if (!_outlineButtonLoaded)
+            {
+                _outlineButton = UnityEngine.Resources.Load<UnityEngine.Sprite>("UI/RoundedButtonOutline");
+                _outlineButtonLoaded = true;
+            }
+            return _outlineButton;
+        }
+    }
+
+    // Task 26 — thicker hero ring (RoundedButtonOutlineHero.png) for the primary action (Daily).
+    private static UnityEngine.Sprite _heroOutlineButton;
+    private static bool _heroOutlineButtonLoaded;
+    public static UnityEngine.Sprite HeroOutlineButtonSprite
+    {
+        get
+        {
+            if (!_heroOutlineButtonLoaded)
+            {
+                _heroOutlineButton = UnityEngine.Resources.Load<UnityEngine.Sprite>("UI/RoundedButtonOutlineHero");
+                _heroOutlineButtonLoaded = true;
+            }
+            return _heroOutlineButton;
+        }
+    }
+
+    private const string RingChildName = "__OutlineBorder";
+
+    /// <summary>
+    /// Render a button/card as a coloured rounded OUTLINE with a transparent centre (the black bg shows
+    /// through). The border takes <paramref name="borderColor"/>. Falls back to the filled bubbly sprite
+    /// (tinted) only if the outline asset is missing, so a button is never invisible. Visual only — leaves
+    /// raycast and children (labels/icons/badges) untouched. Clears any prior hero faint-fill ring child.
+    /// </summary>
+    public static void ApplyOutlineButton(UnityEngine.UI.Image img, UnityEngine.Color borderColor)
+    {
+        if (img == null) return;
+        var ring = OutlineButtonSprite;
+        img.sprite = ring != null ? ring : RoundedButtonSprite;
+        img.type = UnityEngine.UI.Image.Type.Sliced;
+        img.pixelsPerUnitMultiplier = 1f;
+        img.color = borderColor;
+        RemoveRingChild(img.transform);
+    }
+
+    /// <summary>Convenience: render a Button as a coloured outline and set its label colour in one call.</summary>
+    public static void ApplyOutlineButton(UnityEngine.UI.Button btn, UnityEngine.Color borderColor, UnityEngine.Color labelColor)
+    {
+        if (btn == null) return;
+        ApplyOutlineButton(btn.GetComponent<UnityEngine.UI.Image>(), borderColor);
+        var label = btn.GetComponentInChildren<TMPro.TMP_Text>(true);
+        if (label != null) label.color = labelColor;
+    }
+
+    /// <summary>
+    /// Task 26 — Hero outline: a THICKER, brighter ring with NO fill, so a primary action (e.g. Daily)
+    /// stands out while staying a clean transparent outline like its peers (the old faint fill read as a
+    /// muddy brown over black). Uses the dedicated thicker ring sprite (RoundedButtonOutlineHero), falling
+    /// back to the normal ring. Visual only; removes any leftover faint-fill ring child from the old style.
+    /// </summary>
+    public static void ApplyHeroOutlineButton(UnityEngine.UI.Image img, UnityEngine.Color borderColor)
+    {
+        if (img == null) return;
+        var ring = HeroOutlineButtonSprite != null ? HeroOutlineButtonSprite : OutlineButtonSprite;
+        img.sprite = ring != null ? ring : RoundedButtonSprite;
+        img.type = UnityEngine.UI.Image.Type.Sliced;
+        img.pixelsPerUnitMultiplier = 1f;
+        img.color = borderColor;
+        RemoveRingChild(img.transform); // drop the old faint-fill ring child if it exists
+    }
+
+    private static void RemoveRingChild(UnityEngine.Transform parent)
+    {
+        var existing = parent.Find(RingChildName);
+        if (existing != null) UnityEngine.Object.Destroy(existing.gameObject);
     }
 }

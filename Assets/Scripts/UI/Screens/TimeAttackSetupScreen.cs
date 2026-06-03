@@ -34,7 +34,6 @@ namespace WordPuzzle.UI
 
         // ── Design tokens (README §14). UI layout/colour constants live here, mirroring
         //    GameplayScreen's in-screen literals; gameplay tunables stay in BalanceConfig. ──
-        private static readonly Color C_BG_SURFACE2  = new Color32(0x24, 0x29, 0x36, 0xFF); // surface-2
         private static readonly Color C_ACCENT_GOLD  = new Color32(0xC9, 0xB4, 0x58, 0xFF); // Timed
         private static readonly Color C_ACCENT_GREEN = new Color32(0x6A, 0xAA, 0x64, 0xFF); // Survival
         private static readonly Color C_TEXT_PRIMARY = new Color32(0xE7, 0xE1, 0xC4, 0xFF); // duration / title
@@ -79,6 +78,8 @@ namespace WordPuzzle.UI
         {
             // 13A — kill the 2.01x zoom that clipped labels and flung header chrome off-screen.
             transform.localScale = Vector3.one;
+
+            UIThemeManager.ApplyScreenBackground(gameObject); // Task 25 — true-black background
 
             // 13C — header: gold title + muted subtitle, repositioned on-screen.
             PlaceCentered(titleText != null ? titleText.rectTransform : null, TITLE_Y, 860f, 110f);
@@ -145,17 +146,13 @@ namespace WordPuzzle.UI
             var img = card.GetComponent<Image>();
             if (img != null)
             {
-                UIThemeManager.ApplyRoundedButton(img); // Task 22B — shared bubbly corner
-                img.color = C_BG_SURFACE2;
+                UIThemeManager.ApplyOutlineButton(img, accent); // Task 25 — ghost card, accent border over black
                 img.raycastTarget = true;
             }
 
+            // The ring sprite now carries the accent border, so drop the old offset Outline edge.
             var outline = card.GetComponent<Outline>();
-            if (outline != null)
-            {
-                outline.effectColor = new Color(accent.r, accent.g, accent.b, 0.85f);
-                outline.effectDistance = new Vector2(3f, -3f);
-            }
+            if (outline != null) outline.enabled = false;
 
             var top = card.transform.Find("LabelTop")?.GetComponent<TMP_Text>();
             if (top != null)

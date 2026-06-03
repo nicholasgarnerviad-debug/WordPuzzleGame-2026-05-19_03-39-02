@@ -86,10 +86,17 @@ namespace WordPuzzle.UI
             if (resetConfirmOverlay != null) resetConfirmOverlay.SetActive(false);
             if (toastRoot != null) toastRoot.SetActive(false);
 
-            // Task 21B — consistent rounded corners on the settings buttons.
-            foreach (var b in new[] { homeButton, resetProgressButton, replayTutorialButton,
-                                      resetConfirmCancelButton, resetConfirmResetButton })
-                if (b != null) UIThemeManager.ApplyRoundedButton(b.GetComponent<Image>());
+            UIThemeManager.ApplyScreenBackground(gameObject); // Task 25 — true-black background
+
+            // Task 25 — outline ("ghost") buttons; destructive reset actions get a red ring. Light labels.
+            var muted  = new Color32(0x8A, 0x93, 0xA1, 0xFF);
+            var cream  = new Color32(0xE7, 0xE1, 0xC4, 0xFF);
+            var danger = new Color32(0xC9, 0x21, 0x5C, 0xFF);
+            UIThemeManager.ApplyOutlineButton(homeButton,               muted,  cream);
+            UIThemeManager.ApplyOutlineButton(resetProgressButton,      danger, cream);
+            UIThemeManager.ApplyOutlineButton(replayTutorialButton,     muted,  cream);
+            UIThemeManager.ApplyOutlineButton(resetConfirmCancelButton, muted,  cream);
+            UIThemeManager.ApplyOutlineButton(resetConfirmResetButton,  danger, cream);
         }
 
         private void OnDisable()

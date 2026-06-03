@@ -25,21 +25,21 @@ namespace WordPuzzle.UI
         public event Action<int> OnPuzzleSelected;
 
         // --- Design tokens (README §14) ---
-        private static readonly Color C_LOCKED_BG       = HexC("#1B1F27");
-        private static readonly Color C_LOCKED_BORDER   = HexC("#2A2F3A");
+        private static readonly Color C_LOCKED_BG       = HexC("#060709"); // Task 25 — near-black ghost centre
+        private static readonly Color C_LOCKED_BORDER   = HexC("#454B59"); // Task 25 — dim but visible ring
         private static readonly Color C_LOCKED_TEXT     = HexC("#5A6270");
 
-        private static readonly Color C_UNPLAYED_BG     = HexC("#242936"); // surface-2
-        private static readonly Color C_UNPLAYED_BORDER = HexC("#3A4150");
+        private static readonly Color C_UNPLAYED_BG     = HexC("#060709"); // Task 25 — near-black ghost centre
+        private static readonly Color C_UNPLAYED_BORDER = HexC("#6B7689"); // Task 25 — clearly visible ring
         private static readonly Color C_UNPLAYED_TEXT   = HexC("#E7E1C4");
         private static readonly Color C_UNPLAYED_ICON   = HexC("#7A828F");
 
-        private static readonly Color C_INPROGRESS_BG     = HexC("#242936");
+        private static readonly Color C_INPROGRESS_BG     = HexC("#060709"); // Task 25 — near-black ghost centre
         private static readonly Color C_INPROGRESS_BORDER = HexC("#C9B458"); // gold
         private static readonly Color C_INPROGRESS_TEXT   = HexC("#F5F7FA");
         private static readonly Color C_INPROGRESS_ICON   = HexC("#C9B458");
 
-        private static readonly Color C_COMPLETED_BG     = HexC("#1F2A1F");
+        private static readonly Color C_COMPLETED_BG     = HexC("#0C140C"); // Task 25 — near-black, faint-green ghost centre
         private static readonly Color C_COMPLETED_BORDER = HexC("#6AAA64"); // green
         private static readonly Color C_COMPLETED_TEXT   = HexC("#F5F7FA");
         private static readonly Color C_COMPLETED_ICON   = HexC("#6AAA64");
@@ -78,9 +78,12 @@ namespace WordPuzzle.UI
 
         private void OnEnable()
         {
+            UIThemeManager.ApplyScreenBackground(gameObject); // Task 25 — true-black background
             if (backButton != null)
             {
                 backButton.onClick.AddListener(HandleTopBack);
+                UIThemeManager.ApplyOutlineButton(backButton.GetComponent<Image>(),
+                    new Color32(0x8A, 0x93, 0xA1, 0xFF)); // Task 25 — ghost HOME pill
                 // Preserve the existing HOME pill look (label styled in-code as before).
                 var label = backButton.GetComponentInChildren<TMP_Text>(true);
                 if (label != null)
@@ -168,11 +171,11 @@ namespace WordPuzzle.UI
                 btn.onClick.AddListener(() => OpenTier(captured));
             }
 
-            var fill = MakeFill(go.transform, 2f);
+            var fill = MakeFill(go.transform, 6f); // Task 25 — wider ring for the ghost look
             ApplyRounded(fill.GetComponent<Image>());
             fill.GetComponent<Image>().color = tierComplete ? C_COMPLETED_BG
                                              : unlocked     ? C_UNPLAYED_BG
-                                                            : C_LOCKED_BG;
+                                                            : C_LOCKED_BG; // all near-black centres now
 
             // Title row: "Tier N"  +  progress / lock on the right
             CreateAnchored(fill.transform, "TierName", $"Tier {tier.tierId}", 30,
@@ -256,7 +259,8 @@ namespace WordPuzzle.UI
             brt.pivot = new Vector2(0f, 0.5f);
             brt.anchoredPosition = new Vector2(16f, 0f);
             brt.sizeDelta = new Vector2(96f, 52f);
-            var backImg = backGo.AddComponent<Image>(); ApplyRounded(backImg); backImg.color = C_UNPLAYED_BG;
+            var backImg = backGo.AddComponent<Image>();
+            UIThemeManager.ApplyOutlineButton(backImg, new Color32(0x8A, 0x93, 0xA1, 0xFF)); // Task 25 — ghost back chip
             var backBtn = backGo.AddComponent<Button>(); backBtn.transition = Selectable.Transition.None;
             backBtn.onClick.AddListener(BackToTierSelect);
             CreateText(backGo.transform, "BackLabel", "‹ Back", 20,
@@ -315,10 +319,10 @@ namespace WordPuzzle.UI
             btn.interactable = (state != PuzzleState.Locked);
             btn.onClick.AddListener(() => OnPuzzleSelected?.Invoke(capturedId));
 
-            var fillGo = MakeFill(go.transform, state == PuzzleState.Locked ? 1f : 2f);
+            var fillGo = MakeFill(go.transform, state == PuzzleState.Locked ? 4f : 6f); // Task 25 — wider ghost ring
             var fillImg = fillGo.GetComponent<Image>();
             ApplyRounded(fillImg);
-            fillImg.color = StateBg(state);
+            fillImg.color = StateBg(state); // near-black centre; state read from the border ring
 
             // Row 1 — id + state icon (shape-coded, legible in grayscale / colorblind).
             CreateAnchored(fillGo.transform, "PuzzleId", $"#{puzzle.puzzleId:000}", 14,

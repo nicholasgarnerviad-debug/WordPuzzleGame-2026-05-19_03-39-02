@@ -75,6 +75,7 @@ namespace WordPuzzle.UI
 
         private void OnEnable()
         {
+            UIThemeManager.ApplyScreenBackground(gameObject); // Task 25 — true-black background
             if (homeButton != null)
                 homeButton.onClick.AddListener(OnHomeClicked);
         }
