@@ -53,10 +53,13 @@ namespace WordPuzzle.UI.Components
                 selfRT.anchoredPosition = new Vector2(0f, 0f);
             }
 
-            // Dark panel behind keys so the keyboard blends with bg-surface (#1B1F27)
+            // Task 32 — the keyboard panel is TRANSPARENT so the static space background fills the whole
+            // lower screen; the rounded keys (solid #242936 + white letters) float on top and stay legible.
+            // The Image is kept (not removed) but raycastTarget stays false — it's now an invisible layer,
+            // never a tap surface (each key carries its own raycast target), so taps are unaffected.
             var bgImg = GetComponent<UnityEngine.UI.Image>();
             if (bgImg == null) bgImg = gameObject.AddComponent<UnityEngine.UI.Image>();
-            bgImg.color = new Color(0x1B / 255f, 0x1F / 255f, 0x27 / 255f, 1f); // #1B1F27 bg-surface
+            bgImg.color = new Color(0f, 0f, 0f, 0f); // fully transparent — no grey backing rectangle
             bgImg.raycastTarget = false;
 
             BuildKeyboard();

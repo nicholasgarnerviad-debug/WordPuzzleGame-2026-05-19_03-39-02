@@ -168,7 +168,12 @@ namespace WordPuzzle.UI
             // Task 31A — force a fresh full render on (re)show; the guards below then skip unchanged per-frame ticks.
             _seenStartEnd = _seenChain = _seenInput = _seenHint = _seenReveal = false;
             UIThemeManager.ApplyScreenBackground(gameObject); // Task 25 — true-black background
-            if (submitButton != null) submitButton.onClick.AddListener(SubmitWord);
+            // Task 32 — hide the vestigial legacy SubmitButton: a solid green (#6AAA64) rect anchored at the
+            // bottom that peeked out as a "tiny green bar" at the very bottom of the screen. Submission now
+            // goes through the on-screen keyboard's GO key; this button read from the inactive legacy
+            // WordInputField, so it did nothing. Deactivated at runtime (no scene edit), which also clears its
+            // stray raycast target. SubmitWord() is kept for the legacy text-input path.
+            if (submitButton != null) submitButton.gameObject.SetActive(false);
             if (wordInputField != null) wordInputField.onSubmit.AddListener(OnInputSubmit);
             if (backButton != null)
             {
