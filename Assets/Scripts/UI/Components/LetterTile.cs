@@ -155,6 +155,41 @@ namespace WordPuzzle.UI.Components
             rectTransform.localScale = baseScale;
         }
 
+        /// <summary>
+        /// Task 29C — "placing a rung": as a letter is dropped into the active row, its glyph settles DOWN
+        /// into the tile with a quick fade-in. Subtle/premium, ~0.16s, ease-out. Animates only the letter
+        /// label, so it never fights the row's HorizontalLayoutGroup (layout-safe). ReduceMotion → instant.
+        /// </summary>
+        public IEnumerator DropInSettle(float duration = 0.16f)
+        {
+            EnsureChildren();
+            if (letterText == null) yield break;
+            var lrt = letterText.rectTransform;
+            Vector3 home = lrt.localPosition;
+            Color baseColor = letterText.color;
+
+            if (UIAnimations.ReduceMotion)
+            {
+                lrt.localPosition = home;
+                baseColor.a = 1f; letterText.color = baseColor;
+                yield break;
+            }
+
+            const float fromY = 7f; // start slightly high, settle down into the tile
+            float t = 0f;
+            while (t < duration)
+            {
+                if (letterText == null) yield break; // tile rebuilt mid-type — bail safely
+                t += Time.unscaledDeltaTime;
+                float p = UIAnimations.EaseOutCubic(Mathf.Clamp01(t / duration));
+                lrt.localPosition = home + new Vector3(0f, Mathf.Lerp(fromY, 0f, p), 0f);
+                Color c = baseColor; c.a = Mathf.Lerp(0.25f, 1f, p); letterText.color = c;
+                yield return null;
+            }
+            lrt.localPosition = home;
+            baseColor.a = 1f; letterText.color = baseColor;
+        }
+
         /// <summary>Flashes the background to the given color, then reverts to the state color.</summary>
         public IEnumerator FlashColor(Color flash, float duration = 0.25f)
         {
@@ -533,18 +568,19 @@ namespace WordPuzzle.UI.Components
             return cachedRoundedSprite;
         }
 
-        // Task 27 — a rounded-rect RING (transparent centre) for see-through outline tiles.
-        // Rendered at 64px / outer-radius 12 / 8px stroke with pixelsPerUnit 200 and a 12px 9-slice border,
-        // so the displayed corner radius (12 * 100/200 = 6) matches the solid tile sprite above and the
-        // displayed stroke is ~4px — bold, not hairline. 9-slicing keeps the ring crisp at any tile size.
+        // Task 27 / Task 29A — a rounded-rect RING (transparent centre) for see-through outline tiles.
+        // Rendered at 96px / outer-radius 18 / 14px stroke with pixelsPerUnit 200 and an 18px 9-slice border,
+        // so the displayed corner radius (18 * 100/200 = 9) stays tile-appropriate while the displayed stroke
+        // is ~7px — a CONFIDENT, bold outline (Task 29A roughly doubled it from the old ~4px hairline) that reads
+        // like the menu's button borders. 9-slicing keeps the ring crisp and a constant width at any tile size.
         private static Sprite cachedOutlineSprite;
         private static Sprite TryGetRoundedRectOutlineSprite()
         {
             if (cachedOutlineSprite != null) return cachedOutlineSprite;
 
-            const int size = 64;
-            const int outerR = 12;
-            const int stroke = 8;
+            const int size = 96;
+            const int outerR = 18;
+            const int stroke = 14;
             const int inset = stroke;            // inner rect inset on every side
             const int innerR = outerR - stroke;  // inner corner radius (4)
             var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);

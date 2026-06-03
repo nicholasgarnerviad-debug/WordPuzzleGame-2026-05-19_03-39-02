@@ -22,6 +22,9 @@ namespace WordPuzzle.UI.Components
         private const float KeyHeight = 82f;
         private const float KeySpacing = 8f;   // slightly more gap so keys read as dark panel
         private const float RowSpacing = 10f;
+        // Task 29B — round the keys with the app's shared bubbly 9-slice. A higher ppu multiplier shrinks
+        // the baked 44px corner down to a tidy key-sized radius (the wide menu buttons use multiplier 1).
+        private const float KeyCornerPpuMultiplier = 2.5f;
 
         // Dark premium palette — matches design tokens
         private static readonly Color C_KEY_FILL    = new Color(0x24 / 255f, 0x29 / 255f, 0x36 / 255f, 1f); // #242936 surface-2
@@ -140,6 +143,9 @@ namespace WordPuzzle.UI.Components
             var image = obj.GetComponent<Image>();
             image.color = bgColor;
             image.raycastTarget = true; // explicit: this Image is the hit-target for the Button
+            // Task 29B — rounded key corners on-brand with the rest of the app. Tints with bgColor, so
+            // DEL (red) / GO (green) keep their fills; raycast unchanged so taps still register everywhere.
+            UIThemeManager.ApplyRoundedButton(image, KeyCornerPpuMultiplier);
 
             var btn = obj.GetComponent<Button>();
             btn.targetGraphic = image; // wire targetGraphic so Button.interactable state transitions are reliable

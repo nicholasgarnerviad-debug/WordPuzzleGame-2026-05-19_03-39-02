@@ -215,6 +215,35 @@ namespace WordPuzzle.UI
         }
 
         /// <summary>
+        /// Task 29C — "climb a rung": a newly-accepted chain row rises a few px UP into place with a gentle
+        /// scale settle (ease-out, ~0.22s, non-bouncy), so progressing up the ladder reads like climbing.
+        /// Layout-safe in practice — changing localPosition does not dirty the parent Layout, and the row is
+        /// already laid out before this runs. ReduceMotion → instant (no motion).
+        /// </summary>
+        public static IEnumerator RowClimbSettle(RectTransform rt, float duration = 0.22f)
+        {
+            if (ReduceMotion || rt == null) yield break;
+            Vector3 home = rt.localPosition;
+            Vector3 from = home - new Vector3(0f, 10f, 0f); // start low, rise into place
+            Vector3 endScale = rt.localScale;
+            Vector3 startScale = endScale * 0.97f;
+            rt.localPosition = from;
+            rt.localScale = startScale;
+            float t = 0f;
+            while (t < duration)
+            {
+                if (rt == null) yield break;
+                t += Time.unscaledDeltaTime;
+                float p = EaseOutCubic(Mathf.Clamp01(t / duration));
+                rt.localPosition = Vector3.LerpUnclamped(from, home, p);
+                rt.localScale = Vector3.LerpUnclamped(startScale, endScale, p);
+                yield return null;
+            }
+            rt.localPosition = home;
+            rt.localScale = endScale;
+        }
+
+        /// <summary>
         /// Ease-out easing function: smooth deceleration.
         /// Formula: t = 1 - (1-t)^2
         /// </summary>

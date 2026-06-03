@@ -103,6 +103,7 @@ namespace WordPuzzle.UI
         public static readonly Color SecondaryBorder = Hex("#8A93A1"); // Task 25 — visible muted ring for outline Library/Stats
         public static readonly Color SecondaryLabel  = Hex("#E7E1C4"); // cream — legible, slightly calmer
         public static readonly Color TitleColor      = Hex("#45E0E0"); // Task 28 — cyan WORD LADDER header
+        public static readonly Color ChainOutline    = Hex("#45E0E0"); // Task 30 — played chain rows: see-through cyan outline (distinct from teal start / orange target / green highlight)
 
         private static Color Hex(string h) => ColorUtility.TryParseHtmlString(h, out var c) ? c : Color.magenta;
     }

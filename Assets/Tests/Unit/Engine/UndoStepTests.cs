@@ -82,10 +82,12 @@ public class UndoStepTests
         mockValidator.SetValidResult(true, true);
         manager.Dispatch(new SubmitWordAction("bat"));
 
-        // Spend a reveal so hintLetterIndex + revealedNextWord are populated.
+        // Task 31 — Hint and Reveal are now independent: spend a HINT to populate hintLetterIndex and
+        // a REVEAL to populate revealedNextWord (Reveal no longer sets the hint index itself).
+        manager.Dispatch(new UseHintAction(0));
         manager.Dispatch(new UseRevealAction());
         Assert.AreNotEqual(-1, manager.GetCurrentState().hintLetterIndex,
-            "Precondition: reveal populated a hint index.");
+            "Precondition: hint populated a hint index.");
         Assert.AreNotEqual(string.Empty, manager.GetCurrentState().revealedNextWord,
             "Precondition: reveal populated the next word.");
 

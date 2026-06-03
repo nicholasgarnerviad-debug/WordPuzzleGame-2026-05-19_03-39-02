@@ -135,6 +135,14 @@ namespace WordPuzzle.UI
         private int revealedChangedIndex = -1;            // computed from revealedNextWord vs chain tail
         private Coroutine smoothScrollRoutine;
 
+        // Task 31A — render-cache guards (reset in OnEnable). UpdateGameplayUI() ticks EVERY frame to
+        // refresh the timer, and each Set*() below rebuilds rows / re-fires the auto-scroll. Skipping that
+        // work when the value is unchanged kills the per-frame Reveal flicker (and is a big perf win).
+        // Dedicated caches so the legacy standalone setters can't accidentally suppress a needed render.
+        private bool _seenStartEnd, _seenChain, _seenInput, _seenHint, _seenReveal;
+        private string _rcStart = "", _rcEnd = "", _rcChainKey = "", _rcInput = "", _rcReveal = "";
+        private int _rcHintIdx = -1, _rcRevealIdx = -1;
+
         public event Action<string> OnWordSubmitted;
         public event Action OnBackToMenu;
         public event Action OnHintUsed;
@@ -157,6 +165,8 @@ namespace WordPuzzle.UI
         // ============================================================
         private void OnEnable()
         {
+            // Task 31A — force a fresh full render on (re)show; the guards below then skip unchanged per-frame ticks.
+            _seenStartEnd = _seenChain = _seenInput = _seenHint = _seenReveal = false;
             UIThemeManager.ApplyScreenBackground(gameObject); // Task 25 — true-black background
             if (submitButton != null) submitButton.onClick.AddListener(SubmitWord);
             if (wordInputField != null) wordInputField.onSubmit.AddListener(OnInputSubmit);
@@ -615,7 +625,11 @@ namespace WordPuzzle.UI
                 if (idx >= 0 && idx < currentInputRow.childCount)
                 {
                     var tile = currentInputRow.GetChild(idx).GetComponent<LetterTile>();
-                    if (tile != null) StartCoroutine(tile.PunchScale());
+                    if (tile != null)
+                    {
+                        StartCoroutine(tile.PunchScale());
+                        StartCoroutine(tile.DropInSettle()); // Task 29C — letter settles into the tile ("placing a rung")
+                    }
                 }
             }
         }
@@ -687,8 +701,14 @@ namespace WordPuzzle.UI
         /// <summary>§6: Idempotent. Sets persistent FROM/TO row labels + tile content.</summary>
         public void SetStartAndEndWords(string startWord, string endWord)
         {
-            currentStartWord = startWord ?? string.Empty;
-            currentEndWord = endWord ?? string.Empty;
+            string s = startWord ?? string.Empty;
+            string e = endWord ?? string.Empty;
+            // Task 31A — skip the per-frame start/target tile rebuild when unchanged.
+            if (_seenStartEnd && s == _rcStart && e == _rcEnd) return;
+            _seenStartEnd = true; _rcStart = s; _rcEnd = e;
+
+            currentStartWord = s;
+            currentEndWord = e;
 
             // Recompute tile size based on word length (3-7 letters adaptive).
             int wordLen = Mathf.Max(
@@ -708,6 +728,11 @@ namespace WordPuzzle.UI
         /// <summary>§6: Re-renders history (element 0 = start word; 1..N-1 = chain with §3.5 diff highlighting).</summary>
         public void SetChain(IReadOnlyList<string> chain)
         {
+            // Task 31A — skip the per-frame chain rebuild + auto-scroll when the chain content is unchanged.
+            string key = chain == null ? string.Empty : string.Join("", chain);
+            if (_seenChain && key == _rcChainKey) { currentChain = chain; return; }
+            _seenChain = true; _rcChainKey = key;
+
             currentChain = chain;
             if (wordChainText != null)
             {
@@ -733,7 +758,12 @@ namespace WordPuzzle.UI
         /// <summary>§6: Fills current-input row tiles. Applies hint highlight if hintLetterIndex>=0.</summary>
         public void SetCurrentInput(string typedSoFar)
         {
-            currentInput = (typedSoFar ?? string.Empty).ToLower();
+            string normalized = (typedSoFar ?? string.Empty).ToLower();
+            // Task 31A — skip the per-frame active-row rebuild when the typed input is unchanged.
+            if (_seenInput && normalized == _rcInput) return;
+            _seenInput = true; _rcInput = normalized;
+
+            currentInput = normalized;
             if (currentInputText != null) currentInputText.text = currentInput.ToUpper();
             if (keyboard != null) keyboard.SetCurrentInput(currentInput.ToUpper());
 
@@ -743,6 +773,9 @@ namespace WordPuzzle.UI
         /// <summary>§6: index &lt; 0 clears hint highlight; otherwise tile[index] in current-input uses gold style.</summary>
         public void SetHintLetterIndex(int index)
         {
+            // Task 31A — skip the per-frame active-row rebuild when the hint index is unchanged.
+            if (_seenHint && index == _rcHintIdx) return;
+            _seenHint = true; _rcHintIdx = index;
             hintLetterIndex = index;
             RenderCurrentInputRow();
         }
@@ -750,7 +783,13 @@ namespace WordPuzzle.UI
         /// <summary>§6: null/empty hides preview row; otherwise shows ghost row with tile[changedIndex] in gold.</summary>
         public void SetRevealedNextWord(string word, int changedIndex)
         {
-            revealedNextWord = string.IsNullOrEmpty(word) ? string.Empty : word.ToLower();
+            string normalized = string.IsNullOrEmpty(word) ? string.Empty : word.ToLower();
+            // Task 31A — THE flicker fix: skip the per-frame preview rebuild + auto-scroll when unchanged,
+            // so Reveal applies its result ONCE instead of re-rendering + re-scrolling every frame.
+            if (_seenReveal && normalized == _rcReveal && changedIndex == _rcRevealIdx) return;
+            _seenReveal = true; _rcReveal = normalized; _rcRevealIdx = changedIndex;
+
+            revealedNextWord = normalized;
             revealedChangedIndex = changedIndex;
             RenderRevealPreviewRow();
             ScrollSoCurrentInputAboveEndWord();
@@ -960,7 +999,7 @@ namespace WordPuzzle.UI
             {
                 var lastRow = chainScrollContent.GetChild(chainScrollContent.childCount - 1)
                     as RectTransform;
-                if (lastRow != null) StartCoroutine(UIAnimations.RowAcceptSettle(lastRow));
+                if (lastRow != null) StartCoroutine(UIAnimations.RowClimbSettle(lastRow)); // Task 29C — upward "climb"
             }
         }
 
@@ -1472,9 +1511,11 @@ namespace WordPuzzle.UI
                     break;
 
                 case LadderTileStyle.ChainUnchanged:
-                    // Settled/played chain rows stay SOLID (distinct from the start/target outline rows).
+                    // Task 30 — played chain rows are SEE-THROUGH with a calm CYAN outline (ghost look),
+                    // matching the start/target outline language instead of the old solid grey brick.
+                    // ChainChanged (green correct-letter) stays a fill, so highlights still read within the row.
                     tile.SetState(TileState.DefaultPrefilled);
-                    tile.SetColor(C_TILE_DEFAULT_FILL);
+                    tile.SetOutline(MenuPalette.ChainOutline);
                     SetTextColor(tile, C_TILE_TEXT);
                     break;
 
@@ -1587,11 +1628,15 @@ namespace WordPuzzle.UI
             // center tiles across the same pixel X-range as the full-width FROM/input/TO rows.
             // Without this, rows were only as wide as their tile content, shifting them right.
             vlg.childControlWidth = true;
-            vlg.childControlHeight = false;
+            // Task 30 — childControlHeight MUST be true so the VLG honours each row's
+            // LayoutElement.preferredHeight (= _chainRowHeight) and actually applies `spacing`
+            // between rows. With it false, the group ignored the preferred height and the rung
+            // gap collapsed, so consecutive played rows stacked flush (the grey-brick block).
+            vlg.childControlHeight = true;
             vlg.childForceExpandWidth = true;
             vlg.childForceExpandHeight = false;
-            // Task 8C: ROW_GAP_V (8px) between chain rows; tight top/bottom pad so chain
-            // doesn't crowd the FROM/TO rows on small portrait devices (1080x1920 and smaller).
+            // RUNG_GAP (38px) between chain rows — same rung gap the start/input/target rows use —
+            // with tight top/bottom pad so the chain doesn't crowd the FROM/TO rows on small portrait.
             vlg.spacing = ROW_GAP_V;
             vlg.padding = new RectOffset(8, 8, 8, 8);
 

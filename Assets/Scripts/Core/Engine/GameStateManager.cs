@@ -418,12 +418,15 @@ namespace WordPuzzle.State
                 return;
             }
 
-            var (nextTarget, changedIndex) = ResolveHintTarget();
+            var (nextTarget, _) = ResolveHintTarget();
             if (string.IsNullOrEmpty(nextTarget))
                 return; // no actionable reveal, do not consume counter
 
+            // Task 31 — Reveal shows ONLY its preview row. It must NOT also set hintLetterIndex:
+            // that gold-fills the active input tile exactly like Hint does (the unwanted overlap the
+            // player saw). The preview row's own gold changed-letter is computed separately
+            // (ComputeChangedIndex from chain tail vs revealedNextWord), so this doesn't affect it.
             workingState.revealedNextWord = nextTarget;
-            workingState.hintLetterIndex = changedIndex;
             workingState.revealsRemaining--;
         }
 

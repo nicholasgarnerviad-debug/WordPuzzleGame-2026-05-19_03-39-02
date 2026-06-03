@@ -174,9 +174,9 @@ public class GameStateManagerTests
     }
 
     [Test]
-    public void Dispatch_UseReveal_SetsRevealedNextWordAndHintIndex()
+    public void Dispatch_UseReveal_SetsRevealedNextWord_NotHintIndex()
     {
-        // From start word "cat" the next solution word is "bat"; differing index is 0.
+        // From start word "cat" the next solution word is "bat".
         var puzzle = new PuzzleType(1, "cat", "dog", 3,
             new[] { "cat", "bat", "bag", "dog" }, 0, Diff.Easy);
         manager.StartNewPuzzle(puzzle);
@@ -186,7 +186,9 @@ public class GameStateManagerTests
         var state = manager.GetCurrentState();
         Assert.AreEqual(0, state.revealsRemaining);
         Assert.AreEqual("bat", state.revealedNextWord);
-        Assert.AreEqual(0, state.hintLetterIndex);
+        // Task 31 — Reveal shows ONLY its preview row; it must NOT also gold-highlight the active
+        // input tile like Hint does. hintLetterIndex stays -1 (Hint is the separate power-up for that).
+        Assert.AreEqual(-1, state.hintLetterIndex);
     }
 
     [Test]
