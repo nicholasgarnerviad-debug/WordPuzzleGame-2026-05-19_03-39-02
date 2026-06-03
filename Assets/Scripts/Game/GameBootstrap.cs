@@ -69,6 +69,8 @@ namespace WordPuzzle
         private IEconomyManager economyManager;
         private IAdService adService;
         private AdPolicyService adPolicy;
+        private IStoreService storeService;                      // Task 33 — real-money store (mock in editor)
+        private WordPuzzle.UI.ShopScreen shopScreen;     // Task 33 — runtime Shop overlay
 
         // Task 7B/7C — Juice: haptics + SFX.
         [SerializeField] private SfxManager sfxManager;
@@ -322,6 +324,8 @@ namespace WordPuzzle
             if (uiManager == null)
                 return;
 
+            SetupShop(); // Task 33 — create the runtime Shop overlay + route the coin-pill tap to it.
+
             // Wire main menu mode selection
             uiManager.GetMainMenu().OnClassicModeSelected += StartClassicMode;
             uiManager.GetMainMenu().OnPuzzleShowSelected += StartPuzzleShowMode;
@@ -477,6 +481,48 @@ namespace WordPuzzle
             }
         }
 
+        // Task 33 — create the real-money store (mock in-editor) + the runtime Shop overlay, and route the
+        // coin pill's tap to open it. The Shop is a full-screen overlay under the Canvas (no scene edit).
+        private void SetupShop()
+        {
+            if (shopScreen != null) return;
+            if (economyManager == null || uiManager == null) return;
+
+            // Mock store for the Editor; real billing is the clearly-stubbed PlatformStoreServiceStub.
+            storeService = new MockStoreService(
+                economyManager,
+                ShopCatalog.Load(),
+                onRemoveAdsGranted: () => { if (adPolicy != null) adPolicy.AdsRemoved = true; });
+
+            var menu = uiManager.GetMainMenu();
+            var canvas = menu != null ? menu.transform.parent as RectTransform : null;
+            if (canvas == null) return;
+
+            var go = new GameObject("ShopScreen", typeof(RectTransform));
+            go.transform.SetParent(canvas, false);
+            shopScreen = go.AddComponent<WordPuzzle.UI.ShopScreen>();
+            shopScreen.Configure(economyManager, storeService, RefreshCoinPill,
+                BalanceConfig.PowerUpBundleSizes, BalanceConfig.HintShopUnitCoins, BalanceConfig.UndoShopUnitCoins,
+                BalanceConfig.RevealShopUnitCoins, BalanceConfig.TimeShopUnitCoins);
+            go.SetActive(false);
+
+            uiManager.OnShopRequested += OpenShop;
+            RefreshCoinPill();
+        }
+
+        private void OpenShop()
+        {
+            if (shopScreen == null) return;
+            RefreshCoinPill();
+            shopScreen.Open();
+        }
+
+        private void RefreshCoinPill()
+        {
+            int coins = economyManager?.GetCurrentProgress()?.totalCoins ?? 0;
+            uiManager?.SetCoinBalance(coins);
+        }
+
         private void ShowMainMenu()
         {
             activeMode = null;
@@ -487,6 +533,7 @@ namespace WordPuzzle
             awaitingClassicNext = false;
             uiManager.GetGameplay()?.HideWinPanel();
             uiManager.ShowMainMenu();
+            RefreshCoinPill();
             RefreshDailyButtonState();
             RefreshResumeAffordance();
         }

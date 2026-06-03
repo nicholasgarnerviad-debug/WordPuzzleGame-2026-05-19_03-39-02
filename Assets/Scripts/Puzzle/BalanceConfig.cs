@@ -156,6 +156,15 @@ public static class BalanceConfig
     /// <summary>Daily grant: each power-up is topped up by this much, once per local day.</summary>
     public const int DailyPowerUpGrant = 2;
 
+    /// <summary>Power-up shop bundle sizes (coins-priced). Each power-up is sold in these quantities.</summary>
+    public static readonly int[] PowerUpBundleSizes = { 5, 15, 40 };
+
+    /// <summary>Coin price per single power-up in the shop (bundle price = size × unit). Reveal is premium.</summary>
+    public const int HintShopUnitCoins   = 8;
+    public const int UndoShopUnitCoins   = 8;
+    public const int RevealShopUnitCoins = 20;
+    public const int TimeShopUnitCoins   = 12;
+
     // ─── Ad policy (Task 6B) ─────────────────────────────────────────────────
 
     /// <summary>Minimum real-time seconds that must elapse between interstitial impressions.</summary>

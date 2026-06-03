@@ -1,6 +1,7 @@
 using System;
 using UnityEngine;
 using UnityEngine.UI;
+using TMPro;
 
 namespace WordPuzzle.UI
 {
@@ -27,6 +28,11 @@ namespace WordPuzzle.UI
         public event Action OnGlobalSettingsRequested;
         private GameObject globalSettingsButton;
 
+        // Task 33 — a canvas-level coin balance pill (gold token + count). Tap opens the Shop.
+        public event Action OnShopRequested;
+        private GameObject coinPill;
+        private TMP_Text coinPillText;
+
         private void Awake()
         {
             if (Instance != null && Instance != this)
@@ -36,11 +42,13 @@ namespace WordPuzzle.UI
             }
             Instance = this;
             CreateGlobalSettingsButton();
+            CreateCoinPill();
         }
 
         public void ShowMainMenu()
         {
             mainMenuScreen.Show();
+            SetCoinPillVisible(true);          // Task 33 — coin pill shown on the menu
             SetGlobalSettingsVisible(true);   // gear is visible everywhere except the Settings screen
             gameplayScreen.Hide();
             resultsScreen.Hide();
@@ -53,6 +61,7 @@ namespace WordPuzzle.UI
         public void ShowGameplay()
         {
             mainMenuScreen.Hide();
+            SetCoinPillVisible(false);
             gameplayScreen.Show();
             resultsScreen.Hide();
             if (libraryScreen != null) libraryScreen.Hide();
@@ -64,6 +73,7 @@ namespace WordPuzzle.UI
         public void ShowResults()
         {
             mainMenuScreen.Hide();
+            SetCoinPillVisible(false);
             gameplayScreen.Hide();
             resultsScreen.Show();
             if (libraryScreen != null) libraryScreen.Hide();
@@ -75,6 +85,7 @@ namespace WordPuzzle.UI
         public void ShowLibrary()
         {
             mainMenuScreen.Hide();
+            SetCoinPillVisible(false);
             gameplayScreen.Hide();
             resultsScreen.Hide();
             if (libraryScreen != null) libraryScreen.Show();
@@ -86,6 +97,7 @@ namespace WordPuzzle.UI
         public void ShowSettings()
         {
             mainMenuScreen.Hide();
+            SetCoinPillVisible(false);
             gameplayScreen.Hide();
             resultsScreen.Hide();
             if (libraryScreen != null) libraryScreen.Hide();
@@ -99,6 +111,7 @@ namespace WordPuzzle.UI
         public void ShowTimeAttackSetup()
         {
             mainMenuScreen.Hide();
+            SetCoinPillVisible(false);
             gameplayScreen.Hide();
             resultsScreen.Hide();
             if (libraryScreen != null) libraryScreen.Hide();
@@ -111,6 +124,7 @@ namespace WordPuzzle.UI
         public void ShowStats()
         {
             mainMenuScreen.Hide();
+            SetCoinPillVisible(false);
             gameplayScreen.Hide();
             resultsScreen.Hide();
             if (libraryScreen != null) libraryScreen.Hide();
@@ -163,6 +177,71 @@ namespace WordPuzzle.UI
         private void SetGlobalSettingsVisible(bool visible)
         {
             if (globalSettingsButton != null) globalSettingsButton.SetActive(visible);
+        }
+
+        // Task 33 — a canvas-level coin balance pill (gold token + count). Tap opens the Shop.
+        private void CreateCoinPill()
+        {
+            if (coinPill != null || mainMenuScreen == null) return;
+            var canvas = mainMenuScreen.transform.parent as RectTransform;
+            if (canvas == null) return;
+
+            var go = new GameObject("CoinPill", typeof(RectTransform), typeof(Image), typeof(Button));
+            go.transform.SetParent(canvas, false);
+            var rt = go.GetComponent<RectTransform>();
+            rt.anchorMin = rt.anchorMax = new Vector2(0f, 1f);   // top-left
+            rt.pivot = new Vector2(0f, 1f);
+            rt.anchoredPosition = new Vector2(40f, -140f);       // mirrors the gear's inset, below the notch
+            rt.sizeDelta = new Vector2(200f, 70f);
+
+            var bg = go.GetComponent<Image>();
+            UIThemeManager.ApplyRoundedButton(bg, 2.5f);
+            bg.color = new Color(0x1B / 255f, 0x1F / 255f, 0x27 / 255f, 0.72f);   // subtle dark pill for legibility
+            bg.raycastTarget = true;
+            var btn = go.GetComponent<Button>();
+            btn.targetGraphic = bg;
+            btn.onClick.AddListener(() => OnShopRequested?.Invoke());
+
+            var coinGO = new GameObject("Coin", typeof(RectTransform), typeof(Image));
+            coinGO.transform.SetParent(go.transform, false);
+            var crt = coinGO.GetComponent<RectTransform>();
+            crt.anchorMin = crt.anchorMax = new Vector2(0f, 0.5f);
+            crt.pivot = new Vector2(0f, 0.5f);
+            crt.anchoredPosition = new Vector2(14f, 0f);
+            crt.sizeDelta = new Vector2(40f, 40f);
+            var coinImg = coinGO.GetComponent<Image>();
+            UIThemeManager.ApplyRoundedButton(coinImg, 1f);
+            coinImg.color = new Color(0xC9 / 255f, 0xB4 / 255f, 0x58 / 255f, 1f);   // gold token
+            coinImg.raycastTarget = false;
+
+            var txtGO = new GameObject("Count", typeof(RectTransform));
+            txtGO.transform.SetParent(go.transform, false);
+            var trt = txtGO.GetComponent<RectTransform>();
+            trt.anchorMin = new Vector2(0f, 0f); trt.anchorMax = new Vector2(1f, 1f);
+            trt.offsetMin = new Vector2(64f, 0f); trt.offsetMax = new Vector2(-12f, 0f);
+            coinPillText = txtGO.AddComponent<TextMeshProUGUI>();
+            coinPillText.text = "0";
+            coinPillText.fontSize = 32f;
+            coinPillText.fontStyle = FontStyles.Bold;
+            coinPillText.color = new Color(0xC9 / 255f, 0xB4 / 255f, 0x58 / 255f, 1f);
+            coinPillText.alignment = TextAlignmentOptions.MidlineLeft;
+            coinPillText.raycastTarget = false;
+            coinPillText.enableWordWrapping = false;
+
+            go.transform.SetAsLastSibling();
+            coinPill = go;
+            SetCoinPillVisible(false);   // shown only while the menu is up
+        }
+
+        /// <summary>Task 33 — update the coin pill's number (GameBootstrap calls this when coins change).</summary>
+        public void SetCoinBalance(int coins)
+        {
+            if (coinPillText != null) coinPillText.text = coins.ToString();
+        }
+
+        private void SetCoinPillVisible(bool visible)
+        {
+            if (coinPill != null) coinPill.SetActive(visible);
         }
 
         // Screen accessors
