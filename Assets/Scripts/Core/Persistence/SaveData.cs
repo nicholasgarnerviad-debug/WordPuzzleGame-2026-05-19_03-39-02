@@ -32,6 +32,10 @@ namespace WordPuzzle.Persistence
         public int totalHintsEarned;
         public int totalRevealsEarned;
         public int totalUndosEarned;
+        public int totalTimeEarned;          // Task 33 — owned +TIME inventory
+        public bool removeAds;               // Task 33 — remove-ads purchase flag
+        public bool startingGrantApplied;    // Task 33 — 5-each starting grant applied once
+        public string lastDailyGrantDate;    // Task 33 — ISO date of last daily grant ("" = never)
         public ClassicModeStatsData classicStats;
         public TimeAttackModeStatsData timeAttackStats;
     }

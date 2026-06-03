@@ -366,6 +366,10 @@ namespace WordPuzzle.Persistence
             totalHintsEarned = progress.totalHintsEarned,
             totalRevealsEarned = progress.totalRevealsEarned,
             totalUndosEarned = progress.totalUndosEarned,
+            totalTimeEarned = progress.totalTimeEarned,
+            removeAds = progress.removeAds,
+            startingGrantApplied = progress.startingGrantApplied,
+            lastDailyGrantDate = progress.lastDailyGrantDate,
             classicStats = new ClassicModeStatsData
             {
                 gamesPlayed = progress.classicStats.gamesPlayed,
@@ -392,6 +396,10 @@ namespace WordPuzzle.Persistence
             totalHintsEarned = data.totalHintsEarned,
             totalRevealsEarned = data.totalRevealsEarned,
             totalUndosEarned = data.totalUndosEarned,
+            totalTimeEarned = data.totalTimeEarned,
+            removeAds = data.removeAds,
+            startingGrantApplied = data.startingGrantApplied,
+            lastDailyGrantDate = data.lastDailyGrantDate ?? "",
             classicStats = new ClassicModeStats
             {
                 gamesPlayed = data.classicStats.gamesPlayed,

@@ -147,13 +147,27 @@ namespace WordPuzzle
 
                 // Task 6A — Economy manager (persisted via IDataManager).
                 economyManager = new EconomyManager(dataManager);
-                _ = economyManager.InitializeAsync();
+
+                // Task 33 — full real economy: seed each puzzle's hint/reveal charges from the player's
+                // OWNED inventory (falls back to BalanceConfig defaults until the economy finishes loading).
+                stateManager.SetOwnedPowerUpProvider(() =>
+                {
+                    var p = economyManager?.GetCurrentProgress();
+                    return p != null
+                        ? (p.totalHintsEarned, p.totalRevealsEarned)
+                        : (BalanceConfig.DefaultHintsPerPuzzle, BalanceConfig.DefaultRevealsPerPuzzle);
+                });
 
                 // Task 6B — Ad service + policy. AdService is a MonoBehaviour on this
                 // GameObject (added in the Inspector or at runtime). Fall back to a no-op
                 // so the game runs in Editor without an ad SDK.
                 adService = GetComponent<IAdService>() ?? (IAdService)new NullAdService();
                 adPolicy  = new AdPolicyService(adService);
+
+                // Task 33 — initialize the economy, then apply the once-only starting inventory (5 each)
+                // + the once-per-day grant (+2 each), and reflect the persisted remove-ads flag into the ad
+                // policy. Fire-and-forget (like the original init); adPolicy is already constructed above.
+                _ = InitializeEconomyAndGrantsAsync();
 
                 // Task 9G — attempt to load a resumable snapshot (requires daily pool ready).
                 LoadResumeSnapshotBlocking(dataManager);
@@ -1046,6 +1060,20 @@ namespace WordPuzzle
             UpdateGameplayUI();
         }
 
+        // Task 33 — boot economy sequence: init -> starting inventory (once) -> daily grant (once/day)
+        // -> reflect the persisted remove-ads flag into the ad policy so interstitials stay suppressed.
+        private async System.Threading.Tasks.Task InitializeEconomyAndGrantsAsync()
+        {
+            if (economyManager == null) return;
+            await economyManager.InitializeAsync();
+            await economyManager.ApplyStartingInventoryIfNeeded();
+            await economyManager.GrantDailyIfDue(dailyClock.TodayIso);
+
+            var prog = economyManager.GetCurrentProgress();
+            if (adPolicy != null && prog != null && prog.removeAds)
+                adPolicy.AdsRemoved = true;
+        }
+
         // §5 — Player tapped +Time on the gameplay screen. Dispatch via state manager
         // so the action is journaled and the GameStateManager.OnTimeAdded event fires.
         private void OnAddTimeUsed()
@@ -1214,13 +1242,21 @@ namespace WordPuzzle
         // Phase 2: Power-up event handlers
         private void OnHintUsed()
         {
+            int before = stateManager.GetCurrentState().hintsRemaining;
             stateManager.Dispatch(new UseHintAction(0));
+            // Task 33 — a consumed hint also spends one from the persisted OWNED inventory.
+            if (stateManager.GetCurrentState().hintsRemaining < before)
+                _ = economyManager?.UseHintAsync();
             UpdatePowerUpUI();
         }
 
         private void OnRevealUsed()
         {
+            int before = stateManager.GetCurrentState().revealsRemaining;
             stateManager.Dispatch(new UseRevealAction());
+            // Task 33 — a consumed reveal also spends one from the persisted OWNED inventory.
+            if (stateManager.GetCurrentState().revealsRemaining < before)
+                _ = economyManager?.UseRevealAsync();
             UpdatePowerUpUI();
         }
 

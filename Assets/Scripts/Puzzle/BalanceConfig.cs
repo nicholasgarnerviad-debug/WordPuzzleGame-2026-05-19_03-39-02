@@ -144,6 +144,18 @@ public static class BalanceConfig
     /// <summary>Hint charges granted by one fully-watched rewarded video.</summary>
     public const int RewardedAdHintGrant = 1;
 
+    // ─── Shop economy & grants (Task 33) ─────────────────────────────────────
+
+    /// <summary>
+    /// Starting inventory: how many of EACH power-up (hint/undo/reveal/time) a player owns
+    /// out of the gate. Granted exactly once (startingGrantApplied) — new players and existing
+    /// saves alike are topped up to at least this amount on first run after the update.
+    /// </summary>
+    public const int StartingPowerUpGrant = 5;
+
+    /// <summary>Daily grant: each power-up is topped up by this much, once per local day.</summary>
+    public const int DailyPowerUpGrant = 2;
+
     // ─── Ad policy (Task 6B) ─────────────────────────────────────────────────
 
     /// <summary>Minimum real-time seconds that must elapse between interstitial impressions.</summary>

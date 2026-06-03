@@ -13,10 +13,16 @@ namespace WordPuzzle.Persistence
         public int highestTierUnlocked;
         public Dictionary<int, TierProgress> tierProgress;
 
-        // Cross-mode totals
+        // Cross-mode totals (owned power-up inventory; decremented on use).
         public int totalHintsEarned;
         public int totalRevealsEarned;
         public int totalUndosEarned;
+        public int totalTimeEarned;          // Task 33 — owned +TIME power-up inventory
+
+        // Task 33 — shop economy: remove-ads flag + starting/daily power-up grant tracking.
+        public bool removeAds;
+        public bool startingGrantApplied;    // 5-each starting inventory granted once
+        public string lastDailyGrantDate;    // ISO yyyy-MM-dd of the last daily grant ("" = never)
 
         // Mode-specific stats
         public ClassicModeStats classicStats;
@@ -31,6 +37,10 @@ namespace WordPuzzle.Persistence
             totalHintsEarned = 0;
             totalRevealsEarned = 0;
             totalUndosEarned = 0;
+            totalTimeEarned = 0;
+            removeAds = false;
+            startingGrantApplied = false;
+            lastDailyGrantDate = "";
             classicStats = new ClassicModeStats();
             timeAttackStats = new TimeAttackModeStats();
         }

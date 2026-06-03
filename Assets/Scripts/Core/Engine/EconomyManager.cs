@@ -150,6 +150,84 @@ namespace WordPuzzle.State
         await dataManager.UpdatePlayerProgressAsync(currentProgress);
     }
 
+    // ─── Time power-up (Task 33) — mirrors the hint/reveal/undo pattern ───
+    public Task<int> GetTimePowerUpsAsync()
+    {
+        return Task.FromResult(currentProgress.totalTimeEarned);
+    }
+
+    public async Task UseTimePowerUpAsync()
+    {
+        if (currentProgress.totalTimeEarned <= 0)
+        {
+            Debug.LogWarning("Attempted to use time power-up but none available");
+            return;
+        }
+
+        currentProgress.totalTimeEarned--;
+        LogEconomyEvent("TimeUsed", $"timeRemaining:{currentProgress.totalTimeEarned}");
+        await dataManager.UpdatePlayerProgressAsync(currentProgress);
+    }
+
+    public async Task AddTimePowerUpsAsync(int amount, string source)
+    {
+        if (amount < 0)
+        {
+            Debug.LogWarning($"Attempted to add negative time power-ups: {amount} from source: {source}");
+            return;
+        }
+
+        currentProgress.totalTimeEarned += amount;
+        LogEconomyEvent("TimeAdded", $"amount:{amount},source:{source},newBalance:{currentProgress.totalTimeEarned}");
+        await dataManager.UpdatePlayerProgressAsync(currentProgress);
+    }
+
+    // ─── Remove-ads (Task 33) ───
+    public Task<bool> GetRemoveAdsAsync()
+    {
+        return Task.FromResult(currentProgress.removeAds);
+    }
+
+    public async Task SetRemoveAdsAsync(bool value)
+    {
+        currentProgress.removeAds = value;
+        LogEconomyEvent("RemoveAdsSet", $"value:{value}");
+        await dataManager.UpdatePlayerProgressAsync(currentProgress);
+    }
+
+    // ─── Starting inventory + daily grant (Task 33) ───
+    public async Task ApplyStartingInventoryIfNeeded()
+    {
+        if (currentProgress.startingGrantApplied) return;
+
+        int g = BalanceConfig.StartingPowerUpGrant;
+        // Top up to AT LEAST the starting amount — never reduce a save that already has more.
+        currentProgress.totalHintsEarned   = Mathf.Max(currentProgress.totalHintsEarned, g);
+        currentProgress.totalRevealsEarned = Mathf.Max(currentProgress.totalRevealsEarned, g);
+        currentProgress.totalUndosEarned   = Mathf.Max(currentProgress.totalUndosEarned, g);
+        currentProgress.totalTimeEarned    = Mathf.Max(currentProgress.totalTimeEarned, g);
+        currentProgress.startingGrantApplied = true;
+
+        LogEconomyEvent("StartingInventoryGranted", $"each:{g}");
+        await dataManager.UpdatePlayerProgressAsync(currentProgress);
+    }
+
+    public async Task GrantDailyIfDue(string todayIso)
+    {
+        if (string.IsNullOrEmpty(todayIso)) return;
+        if (currentProgress.lastDailyGrantDate == todayIso) return; // already granted today — idempotent
+
+        int g = BalanceConfig.DailyPowerUpGrant;
+        currentProgress.totalHintsEarned   += g;
+        currentProgress.totalRevealsEarned += g;
+        currentProgress.totalUndosEarned   += g;
+        currentProgress.totalTimeEarned    += g;
+        currentProgress.lastDailyGrantDate = todayIso; // missed days do NOT stack — one grant per visited day
+
+        LogEconomyEvent("DailyGrant", $"each:{g},date:{todayIso}");
+        await dataManager.UpdatePlayerProgressAsync(currentProgress);
+    }
+
     public PlayerProgress GetCurrentProgress()
     {
         return currentProgress;

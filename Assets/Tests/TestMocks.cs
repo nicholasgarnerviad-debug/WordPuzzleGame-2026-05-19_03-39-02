@@ -420,6 +420,45 @@ public class MockEconomyManager : IEconomyManager
     public Task AddUndosAsync(int amount, string source)
         => Task.CompletedTask;
 
+    // Task 33 — time power-up, remove-ads, grants.
+    public int timeAdded = 0;
+    public bool removeAds = false;
+    public int startingGrantCount = 0;
+    public int dailyGrantCount = 0;
+
+    public Task<int> GetTimePowerUpsAsync()
+        => Task.FromResult(timeAdded);
+
+    public Task UseTimePowerUpAsync()
+        => Task.CompletedTask;
+
+    public Task AddTimePowerUpsAsync(int amount, string source)
+    {
+        timeAdded += amount;
+        return Task.CompletedTask;
+    }
+
+    public Task<bool> GetRemoveAdsAsync()
+        => Task.FromResult(removeAds);
+
+    public Task SetRemoveAdsAsync(bool value)
+    {
+        removeAds = value;
+        return Task.CompletedTask;
+    }
+
+    public Task ApplyStartingInventoryIfNeeded()
+    {
+        startingGrantCount++;
+        return Task.CompletedTask;
+    }
+
+    public Task GrantDailyIfDue(string todayIso)
+    {
+        dailyGrantCount++;
+        return Task.CompletedTask;
+    }
+
     public PlayerProgress GetCurrentProgress()
         => new PlayerProgress();
 

@@ -66,6 +66,13 @@ namespace WordPuzzle.State
             );
         }
 
+        // Task 33 — optional provider for the player's OWNED hint/reveal inventory (set by GameBootstrap).
+        // When present, StartNewPuzzle seeds the per-puzzle charges from it instead of the BalanceConfig
+        // defaults, so shop purchases + the starting/daily grants actually affect gameplay. Null in unit
+        // tests => the BalanceConfig seed stands, so isolated GameStateManager tests are unchanged.
+        private System.Func<(int hints, int reveals)> ownedPowerUpProvider;
+        public void SetOwnedPowerUpProvider(System.Func<(int hints, int reveals)> provider) => ownedPowerUpProvider = provider;
+
         public void StartNewPuzzle(WordPuzzleModel puzzle)
         {
             currentPuzzle = puzzle;
@@ -93,6 +100,15 @@ namespace WordPuzzle.State
                 addTimesRemaining = 0,
                 addTimeGrantSeconds = 0f
             };
+
+            // Task 33 — override the per-puzzle seed with the player's OWNED hint/reveal inventory when wired
+            // (full real economy). Provider null in unit tests => the BalanceConfig defaults above stand.
+            if (ownedPowerUpProvider != null)
+            {
+                var owned = ownedPowerUpProvider();
+                workingState.hintsRemaining = Mathf.Max(0, owned.hints);
+                workingState.revealsRemaining = Mathf.Max(0, owned.reveals);
+            }
 
             wordValidator.Initialize(puzzle.startWord, puzzle.endWord, workingState.wordChain.ToArray());
 
