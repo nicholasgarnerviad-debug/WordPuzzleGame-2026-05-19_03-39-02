@@ -51,13 +51,14 @@ FROM  C  A  T            FROM  S  T  O  N  E
 | Screen | |
 |---|---|
 | **Main Menu** — white `WORD LADDER` masthead on black. Buttons are **colored rounded outlines** (transparent centers): **DAILY** is the hero — a thicker, brighter **orange** ring (primary call-to-action; shows the streak once today is solved). The modes each carry their own color — **Classic** green, **Puzzle Show** violet, **Time Attack** red, **Resume** (only with an in-progress save) teal. **Puzzle Library / Stats** are a muted side-by-side row (Settings lives in the shared top-right gear). | <img src="docs/screenshots/main-menu.png" width="250"> |
-| **Classic Mode** — the core word ladder on black. The **start** word is a row of **teal see-through outline tiles** (the origin); the **target** word is **orange outline tiles** (the goal); between them the played **chain** and the **active input row** stay solid/filled (the "fill here" zone, gold-edged as you type). Below: the Hint / Undo / Reveal **power-up bar** (outline buttons) above the QWERTY keyboard (red `DEL`, green `GO`). An icon **HOME** (top-left) and the shared **Settings** gear (top-right) flank a calm score header. Random 3–7-letter puzzles; on a solve a **compact win panel** ("Next Puzzle" / "Home") keeps you in the loop ([§1](#1-game-modes)). | <img src="docs/screenshots/classic-mode.png" width="250"> |
+| **Classic Mode** — the core word ladder on black. The **start** word is a row of **teal see-through outline tiles** (the origin), the **target** is **orange** outline tiles (the goal), and the played **chain** rows are **cyan** see-through outlines; only the **active input row stays solid** (the "fill here" zone, gold-edged as you type). Tiles carry **bold ~7px rings** and **ladder-feel motion** (letters drop in, accepted rows climb). Below: the Hint / Undo / Reveal **power-up bar** over a **rounded** QWERTY keyboard (red `DEL`, green `GO`) **floating on a transparent panel** — the space backdrop runs edge-to-edge. An icon **HOME** (top-left) and the shared **Settings** gear (top-right) flank a calm score header. Random 3–7-letter puzzles; on a solve a **compact win panel** ("Next Puzzle" / "Home") keeps you in the loop ([§1](#1-game-modes)). | <img src="docs/screenshots/classic-mode.png" width="250"> |
 | **Puzzle Show** — tier-progression play on the same gameplay screen, with a `Tier X / Y` indicator under the score. **350 curated ladders (7 tiers × 50)** on a length/difficulty curve (Tier 1 easy 3-letter → Tier 7 hard 7-letter, up to 8-step ladders). Solving shows a stat screen offering **Next Puzzle / Tier N ▸ / Home** ([§7](#7-puzzle-show-tiers)). | <img src="docs/screenshots/puzzle-show.png" width="250"> |
 | **Time Attack** — a countdown timer + the **+Time** power-up; chosen as 60s/120s × Timed/Survival on a setup screen. Ladders **auto-advance** as you solve them; the full results screen (puzzles solved + **Play Again** → new run) appears only when the **timer hits 0**. | <img src="docs/screenshots/time-attack.png" width="250"> |
 | **Puzzle Library → Tier Select** (level 1) — the entry to Puzzle Show: a list of **7 tiers**, each with its theme (e.g. "3-letter words"), progress (`X/50`) and lock state (**gold** = current tier; **padlock + "Clear N in Tier M"** = locked). Tap an unlocked tier to open its grid. | <img src="docs/screenshots/puzzle-library.png" width="250"> |
 | **Puzzle Library → Tier Grid** (level 2) — the selected tier's **50** puzzle cards with a **Back** to tier-select (only the active tier renders, for performance). Cards reflect saved progress: **Completed** (green + ✓), **Unplayed** (surface grey), **Locked** (padlock). Tapping a card launches that exact puzzle. | <img src="docs/screenshots/puzzle-library-tier.png" width="250"> |
 | **Stats** — current & longest daily **streak**, dailies completed, total **coins**, total puzzles, and per-mode played/won (Classic, Time Attack best round). | <img src="docs/screenshots/stats.png" width="250"> |
 | **Settings** — audio sliders (master / SFX / music), accessibility toggles (mute, reduce-motion, haptics, colorblind mode, high-contrast, large-text), **Reset Progress** (confirm-gated; preserves settings + tutorial flag), **Replay Tutorial**, and the build version. | <img src="docs/screenshots/settings.png" width="250"> |
+| **Shop** (Task 33) — opened by tapping the **gold coin pill** on the menu. A black overlay with a **cyan** title and **gold** balance: **Power-Ups** (Hint / Undo / Reveal / Time in ×5 / ×15 / ×40, bought with coins), **Coins** (real-money bundles via a mockable store — billing stubbed), and **Remove Ads** (one-time). Buys update the balance + owned counts live; unaffordable bundles disable ([§3](#3-economy--monetization)). | _reached from the menu coin pill_ |
 
 > **Global chrome:** one shared **Settings** gear (icon-only, top-right, ~HOME-sized) shows on every screen *except* Settings itself and opens it — `UIManager.CreateGlobalSettingsButton` → `OnGlobalSettingsRequested` → `GameBootstrap.ShowSettings` (which populates then shows). On the gameplay screen a house **HOME** (top-left) and the gear (top-right) flank the header. Icon assets: `Assets/UI/Icons/*.svg` (Vector Graphics) + `Assets/Resources/Icons/*.png`.
 
@@ -89,38 +90,38 @@ FROM  C  A  T            FROM  S  T  O  N  E
 
 ## 2. Power-ups
 
-| Power-up | Effect | Default budget / puzzle | Coin cost | Available in |
+| Power-up | Effect | Owned inventory | Get more | Available in |
 |---|---|---|---|---|
-| **Hint** | Gold-highlights the position in the current word to change next | `BalanceConfig.DefaultHintsPerPuzzle` = **3** | `HintCost` = 0 | All modes |
-| **Reveal** | Shows the next solution word as a ghost preview row | `BalanceConfig.DefaultRevealsPerPuzzle` = **1** | `RevealCost` = 25 | All modes |
-| **Undo** | Pops the last accepted chain word | n/a | `UndoCost` = 0 | All modes |
-| **+Time** | Adds `AddTimeGrantSeconds` (10s); charges = 1 (60s base) / 2 (120s base) | from `TimeAttackConfig` | — | Time Attack only |
+| **Hint** | Gold-highlights the position in the current word to change next | persisted; **start 5**, **+2/day** | coins (shop) / rewarded ad | All modes |
+| **Reveal** | Shows the next solution word as a ghost preview row | persisted; **start 5**, **+2/day** | coins (shop) | All modes |
+| **Undo** | Pops the last accepted chain word | tracked* | coins (shop) | All modes |
+| **+Time** | Adds `AddTimeGrantSeconds` (10s) to the clock | persisted; **start 5**, **+2/day** | coins (shop) | Time Attack only* |
 
-Reveal is deliberately **scarcer and pricier** than Hint (it's strictly stronger). Budgets seed in `GameStateManager.StartNewPuzzle` from `BalanceConfig`. Submitting a valid word or using Undo clears any active hint/reveal preview.
+**Full real economy (Task 33):** power-ups are now a **persisted owned inventory** (`PlayerProgress.total{Hints,Reveals,Undos,Time}Earned` via `EconomyManager`). Hint/Reveal charges **seed each puzzle from that inventory** (`GameStateManager.SetOwnedPowerUpProvider`, wired by `GameBootstrap`; null in unit tests so they fall back to the `BalanceConfig` defaults), and using one in-game **spends from your saved stock** (`Use*Async`). Every player starts with **5 each** and gets **+2 each per local day**; the shop tops them up — see [§3](#3-economy--monetization). Reveal stays the premium power-up. *\*Undo's count + the +TIME→Time-Attack hookup are tracked in the economy but their gameplay wiring is still in progress (see [§13](#13-known-tech-debt--candidate-tasks)).* Submitting a valid word or using Undo clears any active hint/reveal preview.
 
 ---
 
 ## 3. Economy & monetization
 
-**Single economy:** `EconomyManager : IEconomyManager` (constructed + `InitializeAsync()` in `GameBootstrap`), persisting coins through `DataManager` → `PlayerProgress.totalCoins`. (A legacy `CoinSystem` MonoBehaviour also exists but is orphaned — see [§13](#13-known-tech-debt--candidate-tasks).)
+**Coins → power-ups (Task 33).** One `EconomyManager : IEconomyManager` (constructed + initialized in `GameBootstrap`) persists everything through `DataManager` → `PlayerProgress`: the coin balance **and** the owned power-up inventory (hint/undo/reveal/time), plus the `removeAds` flag and the starting/daily-grant bookkeeping. All amounts/prices live in `BalanceConfig`. (A legacy `CoinSystem` MonoBehaviour also exists but is orphaned — see [§13](#13-known-tech-debt--candidate-tasks).)
 
-**Faucet / sink model** (all amounts in `BalanceConfig`):
+**Two currencies, one direction — real money buys coins; coins buy power-ups:**
 
-| Direction | Source / sink | Amount |
+| Layer | What | Bought with |
 |---|---|---|
-| 🟢 Faucet | Puzzle completion (`GrantPuzzleReward`) | `PuzzleCompletionReward` = +10 |
-| 🟢 Faucet | Daily bonus (stacks) | `DailyBonusReward` = +25 |
-| 🟢 Faucet | Rewarded video (opt-in) | `RewardedAdHintGrant` = +1 Hint |
-| 🔴 Sink | Reveal (extra) | `RevealCost` = −25 |
-| ⚪ Free baseline | Per puzzle | 3 hints + 1 reveal, regardless of balance |
+| 💎 Coin bundles | `coins_50` / `coins_150` / `coins_500` (from `coin_shop.json`) | **real money** via `IStoreService` |
+| 🎟️ Power-up bundles | Hint / Undo / Reveal / Time, each in **×5 / ×15 / ×40** | **coins** (`SpendCoinsAsync` → `Add*Async`) |
+| 🚫 Remove Ads | one-time, sets the persisted `removeAds` flag | **real money** via `IStoreService` |
 
-**Anti-deadlock guarantee:** the free per-puzzle baseline + no fail/lives gate means a broke player can always finish; 3 completions (3×10) more than fund one Reveal (25). Power-ups accelerate, never gate — no pay-to-win.
+**Free grants:** every new player starts with **5 each** power-up (`ApplyStartingInventoryIfNeeded` — idempotent, *tops up* and never reduces a richer save) and receives **+2 each per local day** (`GrantDailyIfDue` — idempotent, no missed-day stacking, reuses the `DailyPuzzleService` clock). Coins still faucet from play: `PuzzleCompletionReward` = +10, `DailyBonusReward` = +25, rewarded video = +1 Hint.
 
-**Ads (Google Mobile Ads, already integrated):**
-- `IAdService` (in the low-dep `Puzzle` assembly so tests can mock it) → `AdService : MonoBehaviour` (real AdMob) + `NullAdService` (Editor/headless fallback).
-- **Ad unit IDs are AdMob TEST IDs as `[SerializeField]` placeholders — never real IDs in source.**
-- **Rewarded video is opt-in only** (`GameBootstrap.RequestRewardedHintAd` / `RequestRewardedContinue`); reward granted **exactly once** on the SDK's reward callback, **never** on dismiss/failure.
-- `AdPolicyService` enforces the **interstitial frequency cap** — both a time cooldown (`InterstitialCooldownSeconds` = 300) **and** a puzzle count (`InterstitialPuzzleCap` = 5), between-session only, gated on a stubbed `AdsRemoved` flag (future "remove ads" IAP). Clock is injectable for tests.
+**The Shop** (`ShopScreen` — a runtime overlay: black bg, cyan title, gold balance, colored rounded-outline buttons) is opened by tapping the **gold coin pill** on the main menu (`UIManager` coin pill → `OnShopRequested` → `GameBootstrap`). It rebuilds from live state after each purchase; unaffordable bundles are disabled; Remove-Ads flips to **"Owned."**
+
+**Mockable store — real billing is stubbed, not faked:** `IStoreService` abstracts real-money purchases. The Editor/tests use `MockStoreService` (grants immediately so the flow is testable); the real platform impl is `PlatformStoreServiceStub` — a clearly-marked TODO that **always returns `Failed`** until Unity IAP + store-console products + a device are wired (it never grants from a non-functional path). Granting happens **only on `Success`**; `Cancelled`/`Failed` grant nothing; Remove-Ads is a non-consumable (owned once).
+
+**Anti-deadlock:** no fail/lives gate + the free starting + daily grants mean a broke player can always finish; power-ups accelerate, never gate — no pay-to-win.
+
+**Ads (Google Mobile Ads, integrated):** `IAdService` (low-dep `Puzzle` assembly so tests mock it) → `AdService` (real AdMob) + `NullAdService` (Editor). Unit IDs are AdMob **TEST IDs** as `[SerializeField]` placeholders — never real IDs in source. **Rewarded video is opt-in only**, granted exactly once on the SDK reward callback, never on dismiss/failure. `AdPolicyService` enforces the **interstitial frequency cap** (time cooldown `InterstitialCooldownSeconds` = 300 **and** `InterstitialPuzzleCap` = 5 puzzles, between-session only) — and **`AdsRemoved` is now wired to the persisted `removeAds` flag** (set at boot + on the Remove-Ads purchase), so the one-time IAP genuinely suppresses interstitials.
 
 ---
 
@@ -130,8 +131,8 @@ All three feedback channels fire on the same four moments and all respect a **re
 
 | Moment | Animation (≤200ms ease-out) | Haptic | Sound |
 |---|---|---|---|
-| Letter placed | tile lock-in punch (`LetterTile.PunchScale`) | light tap | key-press |
-| Word accepted | row settle + changed tile → green glow | medium tap | accept |
+| Letter placed | tile punch + glyph **drop-in settle** (`LetterTile.PunchScale` / `DropInSettle`) | light tap | key-press |
+| Word accepted | newest row **climbs** up into place (`UIAnimations.RowClimbSettle`); changed tile → green | medium tap | accept |
 | Word rejected | input-row shake (skipped if reduce-motion; reason still shows) | buzz | reject |
 | Puzzle won | `GameplayScreen.WinAscentBeat` (TO row gold→green, upward rise+settle, ~500ms) | buzz | win sting |
 
@@ -146,7 +147,10 @@ All three feedback channels fire on the same four moments and all respect a **re
 True-black, **outline ("ghost")** identity with a vertical ladder/ascent metaphor.
 - **Outline buttons:** every button is a **colored rounded outline with a transparent center** (not a fill), so the black backdrop shows through. Each action owns a color from the menu set — **Resume** teal, **Daily** orange (hero), **Classic** green, **Puzzle Show** violet, **Time Attack** red, **Library/Stats** muted slate. The hero (Daily) gets a **thicker, brighter** orange ring; light/white labels sit on every button. The ring + black treatment is centralized in `UITheme` (`ApplyOutlineButton` / `ApplyHeroOutlineButton`, 9-slice ring sprites under `Assets/Resources/UI/`).
 - **Black background + swappable space layer:** the app renders on a neutral near-black `#0A0A0A`, painted by a single full-screen **Background layer** behind every screen (`UIThemeManager.ApplyScreenBackground` / `EnsureBackgroundLayer`). It auto-loads `Assets/Resources/UI/SpaceBackground.png` if present — drop a sprite there to swap in a space backdrop with no restructuring (a pixel-art starfield ships now).
-- **Gameplay tiles:** the **start** word row is **teal** see-through outline tiles, the **target** row is **orange** see-through outline tiles, and the **active input row stays solid** (the obvious "current row," gold-edged as you type). Settled chain rows stay solid; the win beat turns the target solid green.
+- **Gameplay tiles (Tasks 29–30):** the **start** row is **teal** see-through outline tiles, the **target** row is **orange**, and the played **chain** rows are **cyan** see-through outlines — all with a **bold ~7px ring** (thickened from the old hairline). The **active input row stays solid** (the obvious "current row," gold-edged as you type); the **green** correct-letter highlight still shows inside the cyan rows; the win beat turns the target solid green. The chain `VerticalLayoutGroup` honors the rung gap (`childControlHeight = true`) so rows read as **separate rungs**, not a touching block.
+- **Keyboard (Tasks 29, 32):** **rounded** keys (the shared bubbly 9-slice) — DEL red, GO green — floating on a **transparent panel**, so the space background fills the whole lower screen (no grey brick behind the keys).
+- **Gameplay motion (Task 29):** subtle **ladder-feel** animations — a letter **drops into** its tile as you type, a valid word's row **climbs** up into place, the win beat pulses, an invalid word shakes — all `ReduceMotion`-gated and clamped-`dt` smoothed.
+- **Shop (Task 33):** the same identity — black, **cyan** title, **gold** balance, colored rounded-outline buttons — reached via a tappable **gold coin pill** on the menu.
 - **Gold is now in-game only:** `accent-gold #C9B458` is no longer a menu color — it's reserved for in-game focus (hint / active-input tiles, the win "Next Puzzle", in-progress & current-tier rings, the streak headline).
 - **Menu motion (Task 28):** the cyan **WORD LADDER** title does a one-time entrance then a slow, subtle vertical float; the buttons **cascade** in on open and give a tactile **press-punch** on tap. All coroutine/`Mathf`-based, **clamped-`dt` smoothed** so it rides through screen-transition hitches, and **fully gated by `UIAnimations.ReduceMotion`** (ON ⇒ static).
 - **Ascent:** the chain climbs toward the anchored TO row at the bottom; the win beat reinforces upward motion.
@@ -287,13 +291,15 @@ All via `PlayerPrefs` (JSON values). `DataManager` owns them.
 | Key | Holds | Cleared by Reset Progress? |
 |---|---|---|
 | `puzzle_progress_v1` | `PuzzleProgressData` (tiers, completed IDs) | ✅ yes |
-| `wordpuzzle_progress` | `PlayerProgress` (coins, stats) | ✅ yes |
+| `wordpuzzle_progress` | `PlayerProgress` (coins, **owned power-up inventory**, `removeAds`, starting/daily-grant flags, stats) | ✅ yes |
 | `wordpuzzle_save` | in-flight `GameStateSnapshot` | ✅ yes |
 | `daily_v1` | `DailyProgress` (streak) | ✅ yes |
 | `settings_v1` | `SettingsData` (volumes, mute, reduceMotion, hapticsEnabled) | ❌ preserved |
 | `onboarding_v1` | `OnboardingData` (tutorial done/skipped) | ❌ preserved (only Replay clears) |
 
 `DataManager.ResetAllAsync` clears the four "yes" keys and preserves settings + onboarding. (`"Coins"` is a legacy key written only by the orphaned `CoinSystem`/`PlayerDataManager` — see [§13](#13-known-tech-debt--candidate-tasks).)
+
+**Migration (Task 33):** `PlayerProgress`/`PlayerProgressData` gained `totalTimeEarned`, `removeAds`, `startingGrantApplied`, `lastDailyGrantDate`. They serialize through the `PlayerProgressData` DTO via `DataManager`'s converters, and **JsonUtility auto-defaults missing fields** — so pre-Task-33 saves load cleanly (new fields = 0/false/""), and `startingGrantApplied = false` makes the **5-each starting grant apply once** on the next boot.
 
 ---
 
@@ -335,7 +341,7 @@ The word data is **machine-generated and validated**, not hand-edited — re-run
 
 ## 14. Writing a master prompt for this repo
 
-Tasks here are driven by a consistent **meta-prompt** format — paste the whole document into Opus (often with `USE SWARM`) and it self-organizes, plans, implements, and verifies. The shape that's proven out across 25+ tasks (the modern template):
+Tasks here are driven by a consistent **meta-prompt** format — paste the whole document into Opus (often with `USE SWARM`) and it self-organizes, plans, implements, and verifies. The shape that's proven out across 30+ tasks (the modern template):
 
 **1. OPERATING RULES (read first).** A short preamble that sets the bar for *every* task:
 - **Definition of done** — concrete and outcome-based; *"a tool reported success" is NOT done.* Spell out exactly what must be true (every screen, all tests green, editor left **OUT of Play mode**).
@@ -358,6 +364,8 @@ Tasks here are driven by a consistent **meta-prompt** format — paste the whole
 
 **8. FINAL VERIFICATION + FINAL DELIVERABLE** — a checklist the Lead must *honestly* tick (or flag as incomplete), then a SUMMARY: what changed, the perf/ReduceMotion confirmation, before/after Simulator notes, EditMode assertions read by hand, and confirmation the editor is OUT of Play mode with a clean tree.
 
+**For BIG features, phase it.** Land the **foundation first** (logic + persistence + tests, EditMode-verifiable) → get a confirm → then the **UI + the human's playtest**. And when a task has a genuine fork the code can't settle (how deep to wire an economy, a missed-day policy, a visual-weight choice), **ask the user that one question, then proceed on sensible defaults for the rest** — don't stall the whole task on choices that have an obvious default. Commit/push each verified, self-contained increment so the working tree never carries a half-built feature.
+
 **Repo conventions to bake into every prompt:** colors live in `UITheme` (`MenuPalette` for the menu) — **no inline hex**; tunables live in `BalanceConfig`; the menu/screens **style themselves at runtime**, so most visual tasks need **no scene edit** (restyle/animate in code and `GameUI.unity` stays clean); all motion routes through `UIAnimations.ReduceMotion`; name the exact `BalanceConfig` constant to read, the `GameBootstrap` wire point, and the existing mock to extend; inject a `Func<>`/`Action` for anything time/SDK-driven so it's testable; and for anything visual the final check is a manual portrait eyeball.
 
 ### Shared Context Block (paste into every task prompt)
@@ -376,7 +384,17 @@ Word data (Assets/Resources/Data/, all MACHINE-GENERATED by Tools/*.py — re-ru
   Every puzzle's TRUE full-dictionary shortest path is >= MinMovesForLength (no 1-move puzzles).
 Post-win surface routing: pure PostWinRouter.Decide(...) called by GameBootstrap.CheckGameOver.
 Persistence: PlayerPrefs JSON via DataManager (keys: puzzle_progress_v1, wordpuzzle_progress,
-wordpuzzle_save, daily_v1, settings_v1, onboarding_v1).
+wordpuzzle_save, daily_v1, settings_v1, onboarding_v1). New persisted PlayerProgress fields serialize
+through the PlayerProgressData DTO + DataManager converters; JsonUtility auto-defaults missing fields.
+Economy (Task 33): EconomyManager : IEconomyManager owns the persisted coin balance + the OWNED power-up
+inventory (PlayerProgress.total{Hints,Reveals,Undos,Time}Earned) + removeAds + starting/daily-grant flags.
+Hint/Reveal charges SEED each puzzle from owned (GameStateManager.SetOwnedPowerUpProvider, wired in
+GameBootstrap; using one persists via Use*Async; null in unit tests => BalanceConfig defaults stand). New
+players get 5 each; +2 each/day (GrantDailyIfDue). Shop = ShopScreen runtime overlay opened by the UIManager
+coin pill (OnShopRequested). Real-money buys go through IStoreService (MockStoreService in editor;
+PlatformStoreServiceStub = real billing, NOT implemented). removeAds wires AdPolicyService.AdsRemoved.
+Prices/grants in BalanceConfig (the UI assembly does NOT reference Puzzle, so shop pricing is INJECTED).
+Tests live in Assets/Tests/Unit/ (NOT Assets/Scripts/Tests).
 Assemblies (dep direction): Puzzle (lowest; BalanceConfig, WordGraph, WordValidator, IAdService) <-
 Persistence/State <- Modes <- Game/UI. Puzzle must NOT reference State/UI.
 Design tokens: bg-base #0A0A0A (true black; one full-screen Background layer behind every screen,
@@ -388,7 +406,8 @@ orange #FF8A2E, Classic green #3D9E54, Puzzle Show violet #7B5FD4, Time Attack r
 
 Hard constraints (ALL prompts):
 - Preserve the immutable GameState + Dispatch architecture and the public interfaces
-  IWordValidator, IDataManager, IGameMode, IEconomyManager unless a task says otherwise.
+  IWordValidator, IDataManager, IGameMode, IEconomyManager (extended additively in Task 33),
+  IStoreService unless a task says otherwise.
 - All existing EditMode/PlayMode tests stay green. Delete the .meta when you delete a Unity asset,
   and GUID-check scenes/prefabs before deleting any MonoBehaviour script.
 - Never commit Library/Temp/obj. Minimal, surgical diffs.
@@ -457,4 +476,4 @@ Environment quirks learned the hard way — relevant when an agent verifies its 
 
 ## Project history
 
-Built iteratively through AI-orchestrated swarms, one concern each: word library & ladder semantics → modern tile/keyboard polish → library cards & tier gate → HOME/settings → hint/reveal semantics → per-mode behaviors & AddTime → TimeAttack UI → share result → daily + streak → **balance config & common-words generation** → **economy & rewarded ads** → **tactile juice (motion/haptics/sound)** → **premium visual identity (gold focus, ascent, motion vocabulary)** → **UI polish pass** (main-menu hierarchy with a gold DAILY hero, gameplay spacing, a keyboard-anchored power-up bar, a reliable visible HOME, and a properly clipping/scrolling word-chain) → **icon chrome** (SVG-via-Vector-Graphics + PNG icons: a house HOME and one shared, icon-only top-right Settings gear on every screen) → **Time Attack setup polish** (fit/styling/header, HOME aligned to the shared gear) → **dictionary expansion & cleanup** (reproducible ENABLE+Norvig tool: junk removed, 8,626→12,183 words, dense common 6/7-letter coverage) → **Puzzle Show 7×50** (350 curated ladders, two-level tier-select→grid navigation, completion coloring, progressive unlock) → **post-win flow** (compact win panel for endless Classic, auto-advancing Time Attack with results on timeout, Puzzle Show stat screen, Daily Home-only; "Play Again" re-routes into the mode) → **minimum-move floor** (no 1-move puzzles anywhere; min scales with word length, enforced by true full-dictionary shortest path in the generator and across all curated data). The git log captures the progression.
+Built iteratively through AI-orchestrated swarms, one concern each: word library & ladder semantics → modern tile/keyboard polish → library cards & tier gate → HOME/settings → hint/reveal semantics → per-mode behaviors & AddTime → TimeAttack UI → share result → daily + streak → **balance config & common-words generation** → **economy & rewarded ads** → **tactile juice (motion/haptics/sound)** → **premium visual identity (gold focus, ascent, motion vocabulary)** → **UI polish pass** (main-menu hierarchy with a gold DAILY hero, gameplay spacing, a keyboard-anchored power-up bar, a reliable visible HOME, and a properly clipping/scrolling word-chain) → **icon chrome** (SVG-via-Vector-Graphics + PNG icons: a house HOME and one shared, icon-only top-right Settings gear on every screen) → **Time Attack setup polish** (fit/styling/header, HOME aligned to the shared gear) → **dictionary expansion & cleanup** (reproducible ENABLE+Norvig tool: junk removed, 8,626→12,183 words, dense common 6/7-letter coverage) → **Puzzle Show 7×50** (350 curated ladders, two-level tier-select→grid navigation, completion coloring, progressive unlock) → **post-win flow** (compact win panel for endless Classic, auto-advancing Time Attack with results on timeout, Puzzle Show stat screen, Daily Home-only; "Play Again" re-routes into the mode) → **minimum-move floor** (no 1-move puzzles anywhere; min scales with word length, enforced by true full-dictionary shortest path in the generator and across all curated data) → **Classic-mode polish** (bolder tile outlines, rounded keyboard keys, subtle ladder-feel drop-in/climb animations) → **see-through cyan chain rows** with even rung spacing → **Reveal flicker fix** (idempotent per-frame render guards; Reveal/Hint decoupled) → **transparent keyboard panel** (space background edge-to-edge) → **shop & coins economy** (real-money coin bundles + coins-for-power-ups, a persisted owned inventory that seeds gameplay, 5-each starting + +2/day grants, a remove-ads IAP, a mockable store with real billing stubbed, and a `ShopScreen` reached from a live coin pill). The git log captures the progression.
