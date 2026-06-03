@@ -10,7 +10,12 @@ FROM  C  A  T            FROM  S  T  O  N  E
  TO   B  A  G            TO     S  H  A  R  P   ← changed 1
 ```
 
-> **This README is also the canonical context document for AI-assisted development.** It is written so an LLM (e.g. Claude Opus) can read it and author precise, surgical task prompts ("master prompts") for this repo. See **[§14 Writing a master prompt](#14-writing-a-master-prompt-for-this-repo)** and the **[Shared Context Block](#shared-context-block-paste-into-every-task-prompt)** at the end.
+> **This README is also the canonical context document for AI-assisted development.** It is written so an LLM (e.g. Claude Opus) can read it and author precise, surgical task prompts ("meta prompts") for this repo. See **[§14 Writing a master prompt](#14-writing-a-master-prompt-for-this-repo)** and the **[Shared Context Block](#shared-context-block-paste-into-every-task-prompt)** at the end.
+
+<p align="center">
+  <img src="docs/screenshots/menu-hero.png" width="300" alt="Word Ladder main menu — black pixel-space backdrop, cyan WORD LADDER header, colored outline ('ghost') buttons, a small teal creature">
+  <br><em>Main menu — a true-black pixel-space backdrop, a softly-floating cyan <strong>WORD LADDER</strong> title, and colored outline (“ghost”) buttons that cascade in (Tasks 22–28).</em>
+</p>
 
 ---
 
@@ -39,9 +44,9 @@ FROM  C  A  T            FROM  S  T  O  N  E
 
 ## Screens
 
-> Live captures (iPhone 13 Pro Max portrait). The UI follows the **true-black, outline ("ghost")** identity in [§5](#5-visual-identity) / [§15](#15-design-tokens) — colored rounded outlines over a black backdrop (a swappable full-screen space layer), each action in its own color.
+> Live captures (iPhone 13 Pro Max portrait). The UI follows the **true-black, outline ("ghost")** identity in [§5](#5-visual-identity) / [§15](#15-design-tokens) — colored rounded outlines over a black pixel-space backdrop (a swappable full-screen layer), each action in its own color, with subtle **ReduceMotion-gated** menu motion (floating cyan title, button cascade, press feedback).
 >
-> ⚠️ **Note:** the thumbnails below predate the black/outline overhaul (they show the earlier dark, gold-accented look) — they'll be refreshed in a later pass.
+> ⚠️ **Note:** the **Main Menu** thumbnail reflects the current look; the other thumbnails still show the earlier dark, gold-accented design and will be refreshed in a later pass.
 
 | Screen | |
 |---|---|
@@ -143,6 +148,7 @@ True-black, **outline ("ghost")** identity with a vertical ladder/ascent metapho
 - **Black background + swappable space layer:** the app renders on a neutral near-black `#0A0A0A`, painted by a single full-screen **Background layer** behind every screen (`UIThemeManager.ApplyScreenBackground` / `EnsureBackgroundLayer`). It auto-loads `Assets/Resources/UI/SpaceBackground.png` if present — drop a sprite there to swap in a space backdrop with no restructuring (a pixel-art starfield ships now).
 - **Gameplay tiles:** the **start** word row is **teal** see-through outline tiles, the **target** row is **orange** see-through outline tiles, and the **active input row stays solid** (the obvious "current row," gold-edged as you type). Settled chain rows stay solid; the win beat turns the target solid green.
 - **Gold is now in-game only:** `accent-gold #C9B458` is no longer a menu color — it's reserved for in-game focus (hint / active-input tiles, the win "Next Puzzle", in-progress & current-tier rings, the streak headline).
+- **Menu motion (Task 28):** the cyan **WORD LADDER** title does a one-time entrance then a slow, subtle vertical float; the buttons **cascade** in on open and give a tactile **press-punch** on tap. All coroutine/`Mathf`-based, **clamped-`dt` smoothed** so it rides through screen-transition hitches, and **fully gated by `UIAnimations.ReduceMotion`** (ON ⇒ static).
 - **Ascent:** the chain climbs toward the anchored TO row at the bottom; the win beat reinforces upward motion.
 - **Motion vocabulary** (one place: `UIAnimations`): `MICRO = 0.16s` (micro-interactions), `STANDARD = 0.22s` (transitions), `EaseOutCubic`. Deliberate and weighted — no cartoon bounce. All restyles are static and honor ReduceMotion.
 
@@ -329,17 +335,30 @@ The word data is **machine-generated and validated**, not hand-edited — re-run
 
 ## 14. Writing a master prompt for this repo
 
-A good task prompt for this codebase has a consistent shape. Reuse it:
+Tasks here are driven by a consistent **meta-prompt** format — paste the whole document into Opus (often with `USE SWARM`) and it self-organizes, plans, implements, and verifies. The shape that's proven out across 25+ tasks (the modern template):
 
-1. **Paste the [Shared Context Block](#shared-context-block-paste-into-every-task-prompt)** (repo layout, hard constraints, design tokens) at the top — it grounds the agent.
-2. **State a single GOAL** (one concern per prompt; this repo was built one swarm per concern).
-3. **`PLAN FIRST`** — require the agent to locate exact files + method seams against the real files, list assumptions where ambiguous, and *not* edit before confirming. (Critical: parts of this README may drift; the agent must verify against the tree.)
-4. **Break the work into lettered sub-tasks** (e.g. `TASK 9A / 9B …`), each with concrete file/seam targets.
-5. **Give explicit ACCEPTANCE criteria** — what an EditMode test must assert, what stays green, what the manual check is.
-6. **Repeat the hard constraints** (immutable state + Dispatch; preserve `IWordValidator/IDataManager/IGameMode/IEconomyManager`; all tests green; delete `.meta` with assets; never commit `Library/Temp/obj`; surgical diffs).
-7. **Optionally `USE SWARM`** for 3+ file / cross-module work; keep single-file fixes solo.
+**1. OPERATING RULES (read first).** A short preamble that sets the bar for *every* task:
+- **Definition of done** — concrete and outcome-based; *"a tool reported success" is NOT done.* Spell out exactly what must be true (every screen, all tests green, editor left **OUT of Play mode**).
+- **Ask before assuming** — STOP and surface assumptions in the PLAN rather than guessing.
+- **Scope discipline** — do ONLY this task; list everything else at the end as *"Observations for later."*
+- **Verification honesty** — the unityMCP test runner is unreliable ([§17](#17-notes-for-ai-agents-working-in-this-repo)): verify by **reading the assertions**, running a **must-fail canary**, and a **human-in-Editor Simulator eyeball** (MCP can't screenshot the portrait Simulator, so hand visual/feel sign-off to the user).
+- **Single-editor reality** — only one process writes the Unity project at once; specialists PLAN in parallel, a **named Lead** integrates, resolves shared-file conflicts, and verifies editor state.
 
-**Effective patterns observed:** name the exact constant in `BalanceConfig` to read; specify the testable seam (inject a `Func<>`/`Action` rather than calling `Time`/`Handheld`/SDK directly); say where in `GameBootstrap` to wire; tell the agent which existing mock to extend; and for anything visual, acknowledge the final check is a manual portrait eyeball.
+**2. [Shared Context Block](#shared-context-block-paste-into-every-task-prompt)** — paste it; tell the agent to **verify it against the live tree** (this README drifts).
+
+**3. REFERENCE** — if a screenshot is attached, *describe it in prose* for the agent that can't see images.
+
+**4. GOAL** — one concern per prompt.
+
+**5. Lettered sub-tasks** (`TASK NA / NB …`) — each with **Targets** (exact files/seams), **Do** (steps), and **ACCEPTANCE** (what a test asserts / the manual check).
+
+**6. DO NOT (guardrails)** — the easy-to-trip mistakes: don't change `onClick`/routing/scoring, don't break tap/raycast/badge/label, honor ReduceMotion, don't save `GameUI.unity` with non-default screen visibility, delete the `.meta` with any asset.
+
+**7. SWARM ORCHESTRATION** — name a **Lead Developer (coordinator)** plus specialist agents (UI/Theme, Layout, UI/Feel, QA, …) that coordinate **through the Lead** (SendMessage-first, not polling). The process is always **PLAN FIRST → Lead approves → implement → QA + Lead watch the Simulator → Lead integrates.** Give an explicit **dependency order**.
+
+**8. FINAL VERIFICATION + FINAL DELIVERABLE** — a checklist the Lead must *honestly* tick (or flag as incomplete), then a SUMMARY: what changed, the perf/ReduceMotion confirmation, before/after Simulator notes, EditMode assertions read by hand, and confirmation the editor is OUT of Play mode with a clean tree.
+
+**Repo conventions to bake into every prompt:** colors live in `UITheme` (`MenuPalette` for the menu) — **no inline hex**; tunables live in `BalanceConfig`; the menu/screens **style themselves at runtime**, so most visual tasks need **no scene edit** (restyle/animate in code and `GameUI.unity` stays clean); all motion routes through `UIAnimations.ReduceMotion`; name the exact `BalanceConfig` constant to read, the `GameBootstrap` wire point, and the existing mock to extend; inject a `Func<>`/`Action` for anything time/SDK-driven so it's testable; and for anything visual the final check is a manual portrait eyeball.
 
 ### Shared Context Block (paste into every task prompt)
 ```

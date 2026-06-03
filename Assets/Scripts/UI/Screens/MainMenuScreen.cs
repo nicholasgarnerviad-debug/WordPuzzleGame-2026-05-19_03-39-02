@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
@@ -35,6 +36,11 @@ namespace WordPuzzle.UI
         public event Action OnDailySelected;
         public event Action OnStatsSelected;
         public event Action OnResumeSelected;
+
+        // Task 28 — subtle menu motion state (coroutine/Mathf-based; all gated by UIAnimations.ReduceMotion).
+        private RectTransform _titleRt;
+        private float _titleBaseY;
+        private Coroutine _titleCo, _cascadeCo;
 
         private void OnEnable()
         {
@@ -76,6 +82,8 @@ namespace WordPuzzle.UI
                 statsButton.onClick.RemoveAllListeners();
             if (resumeButton != null)
                 resumeButton.onClick.RemoveAllListeners();
+
+            StopMenuMotion(); // Task 28 — stop floats/cascade; coroutines also auto-stop on disable
         }
 
         // ============================================================
@@ -102,6 +110,7 @@ namespace WordPuzzle.UI
         private const float MENU_BTN_W     = 720f;
         private const float MENU_PAIR_GAP  = 24f;   // gap between Library & Stats in the two-up row
         private const float MENU_UP_BIAS   = 30f;   // slight upper-weighting
+        private const float MENU_TITLE_LIFT = 16f;  // Task 28 — nudge just the header up a touch
 
         /// <summary>Style + arrange the whole menu. Called from OnEnable.</summary>
         private void ApplyMenuPolish()
@@ -128,6 +137,7 @@ namespace WordPuzzle.UI
             if (settingsButton != null) settingsButton.gameObject.SetActive(false);
 
             ArrangeMenu();
+            PlayMenuMotion(); // Task 28 — title float + button cascade + Daily glow + press feedback
         }
 
         private void StyleTitle()
@@ -279,6 +289,11 @@ namespace WordPuzzle.UI
                 if (rows.Count > 0) cursor -= MENU_GROUP_GAP;
                 PlacePairRow(pair, cursor, MENU_TERT_H);
             }
+
+            // Task 28 — remember the title's layout Y so the float oscillates around it (and follows a
+            // Resume show/hide re-layout). Captured here, right after placement, before any float offset.
+            var titleNow = transform.Find("TitleText") as RectTransform;
+            if (titleNow != null) _titleBaseY = titleNow.anchoredPosition.y + MENU_TITLE_LIFT;
         }
 
         // Two equal-width buttons side by side, centred on the stack's width with a small gap.
@@ -339,5 +354,157 @@ namespace WordPuzzle.UI
 
             ArrangeMenu(); // re-center now that the visible row count changed
         }
+
+        // ============================================================
+        //  Task 28 — subtle menu motion: floating title (one-time entrance + slow sine float),
+        //  staggered button cascade, a faint breathing Daily halo, and tap press-feedback.
+        //  Everything routes through UIAnimations.ReduceMotion (ON ⇒ fully static).
+        //  Coroutine/Mathf-based, no per-frame allocations, no shaders — mobile-safe.
+        // ============================================================
+        private void PlayMenuMotion()
+        {
+            StopMenuMotion();
+            _titleRt = transform.Find("TitleText") as RectTransform;
+            RemoveDailyHalo(); // user feedback — drop the wider orange halo on Daily
+            HookPressFeedback();
+
+            if (UIAnimations.ReduceMotion)
+            {
+                // Fully static: title at its layout Y, all buttons opaque.
+                if (_titleRt != null)
+                {
+                    _titleRt.anchoredPosition = new Vector2(_titleRt.anchoredPosition.x, _titleBaseY);
+                    var tcg = EnsureCanvasGroup(_titleRt.gameObject);
+                    if (tcg != null) tcg.alpha = 1f;
+                }
+                SetButtonsOpaque();
+                return;
+            }
+
+            _titleCo   = StartCoroutine(TitleEntranceAndFloat());
+            _cascadeCo = StartCoroutine(ButtonCascade());
+        }
+
+        private void StopMenuMotion()
+        {
+            if (_titleCo != null)   { StopCoroutine(_titleCo);   _titleCo = null; }
+            if (_cascadeCo != null) { StopCoroutine(_cascadeCo); _cascadeCo = null; }
+        }
+
+        // Title: gentle one-shot fade + settle from slightly above, then a small slow vertical float.
+        private IEnumerator TitleEntranceAndFloat()
+        {
+            if (_titleRt == null) yield break;
+            var cg = EnsureCanvasGroup(_titleRt.gameObject);
+            float baseX = _titleRt.anchoredPosition.x;
+
+            const float entDur = 0.45f, fromOffset = 16f;
+            float t = 0f;
+            cg.alpha = 0f;
+            while (t < entDur)
+            {
+                t += Dt();
+                float p = UIAnimations.EaseOutCubic(Mathf.Clamp01(t / entDur));
+                cg.alpha = p;
+                _titleRt.anchoredPosition = new Vector2(baseX, _titleBaseY + Mathf.Lerp(fromOffset, 0f, p));
+                yield return null;
+            }
+            cg.alpha = 1f;
+
+            const float amp = 8f, period = 3.6f; // small + slow — weightless
+            float w = Mathf.PI * 2f / period;
+            float phase = 0f;
+            while (true)
+            {
+                phase += Dt() * w; // clamped dt → a transition hitch never jumps the float; it stays smooth
+                _titleRt.anchoredPosition = new Vector2(baseX, _titleBaseY + Mathf.Sin(phase) * amp);
+                yield return null;
+            }
+        }
+
+        // Buttons: a quick polished cascade — fade the visible buttons in, top-to-bottom.
+        private IEnumerator ButtonCascade()
+        {
+            var order = new[] { resumeButton, dailyButton, classicModeButton,
+                                puzzleShowButton, timeAttackButton, libraryButton, statsButton };
+            var groups = new List<CanvasGroup>();
+            foreach (var b in order)
+            {
+                if (b == null || !b.gameObject.activeSelf) continue;
+                var cg = EnsureCanvasGroup(b.gameObject);
+                cg.alpha = 0f;
+                groups.Add(cg);
+            }
+            // user feedback — a touch slower + smoother (ease-in-out) so buttons drift in gently.
+            const float stepDelay = 0.07f, dur = 0.45f;
+            for (int i = 0; i < groups.Count; i++)
+            {
+                StartCoroutine(FadeIn(groups[i], dur));
+                yield return new WaitForSecondsRealtime(stepDelay);
+            }
+        }
+
+        private static IEnumerator FadeIn(CanvasGroup cg, float dur)
+        {
+            float t = 0f;
+            while (t < dur)
+            {
+                t += Dt();
+                cg.alpha = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(t / dur)); // S-curve — silky ease-in-out
+                yield return null;
+            }
+            cg.alpha = 1f;
+        }
+
+        // user feedback — the Daily halo was removed; clean up any runtime-created child defensively.
+        private void RemoveDailyHalo()
+        {
+            if (dailyButton == null) return;
+            var t = dailyButton.transform.Find("__DailyHalo");
+            if (t != null) Destroy(t.gameObject);
+        }
+
+        // Press feedback: a quick scale punch on tap. Added alongside the routing listener (which OnDisable
+        // clears); ApplyMenuPolish runs once per enable, so exactly one is added per active session.
+        private void HookPressFeedback()
+        {
+            AddPress(resumeButton); AddPress(dailyButton); AddPress(classicModeButton);
+            AddPress(puzzleShowButton); AddPress(timeAttackButton);
+            AddPress(libraryButton); AddPress(statsButton);
+        }
+
+        private void AddPress(Button b)
+        {
+            if (b == null) return;
+            var rt = b.transform as RectTransform;
+            b.onClick.AddListener(() =>
+            {
+                if (!UIAnimations.ReduceMotion && isActiveAndEnabled && rt != null)
+                    StartCoroutine(UIAnimations.ScaleButtonTap(rt));
+            });
+        }
+
+        private void SetButtonsOpaque()
+        {
+            foreach (var b in new[] { resumeButton, dailyButton, classicModeButton,
+                                      puzzleShowButton, timeAttackButton, libraryButton, statsButton })
+            {
+                if (b == null) continue;
+                var cg = b.GetComponent<CanvasGroup>();
+                if (cg != null) cg.alpha = 1f;
+            }
+        }
+
+        private static CanvasGroup EnsureCanvasGroup(GameObject go)
+        {
+            if (go == null) return null;
+            var cg = go.GetComponent<CanvasGroup>();
+            if (cg == null) cg = go.AddComponent<CanvasGroup>();
+            return cg;
+        }
+
+        // Clamped unscaled delta — keeps the menu motion smooth THROUGH a transition frame-hitch
+        // (heading into / out of a game mode) instead of jumping/stuttering. Caps a single frame at 50ms.
+        private static float Dt() => Mathf.Min(Time.unscaledDeltaTime, 0.05f);
     }
 }

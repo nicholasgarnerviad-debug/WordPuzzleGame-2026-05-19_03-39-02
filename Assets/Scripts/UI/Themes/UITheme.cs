@@ -102,7 +102,7 @@ namespace WordPuzzle.UI
         public static readonly Color SecondaryFill   = Hex("#39435A"); // calm slate family member — Library/Stats
         public static readonly Color SecondaryBorder = Hex("#8A93A1"); // Task 25 — visible muted ring for outline Library/Stats
         public static readonly Color SecondaryLabel  = Hex("#E7E1C4"); // cream — legible, slightly calmer
-        public static readonly Color TitleColor      = Hex("#F5F7FA"); // flat, bright, non-gold title
+        public static readonly Color TitleColor      = Hex("#45E0E0"); // Task 28 — cyan WORD LADDER header
 
         private static Color Hex(string h) => ColorUtility.TryParseHtmlString(h, out var c) ? c : Color.magenta;
     }
@@ -313,22 +313,109 @@ public static class UIThemeManager
         rt.localScale = UnityEngine.Vector3.one;
         img.raycastTarget = false; // never block taps to the buttons in front
 
-        // Drop a sprite at Resources/UI/SpaceBackground.png to fill this layer later; until then it's flat black.
-        var space = UnityEngine.Resources.Load<UnityEngine.Sprite>("UI/SpaceBackground");
-        if (space != null)
+        // Backdrop priority: a LOOPING VIDEO (Resources/UI/SpaceBackground.mp4) > a still sprite
+        // (SpaceBackground.png) > flat black. All swappable by just dropping the file in — no scene edit.
+        var clip = UnityEngine.Resources.Load<UnityEngine.Video.VideoClip>("UI/SpaceBackground");
+        if (clip != null)
         {
-            img.sprite = space;
-            img.type = UnityEngine.UI.Image.Type.Simple;
-            img.preserveAspect = false; // stretch to fill — no gaps on any aspect ratio
-            img.color = UnityEngine.Color.white; // untinted so the image shows its true colours
+            img.sprite = null;
+            img.color = AppBackground;        // black base behind the video while it warms up
+            EnsureVideoBackground(img.transform, clip);
         }
         else
         {
-            img.sprite = null;
-            img.color = AppBackground; // flat neutral black for now
+            RemoveVideoBackground(img.transform);
+            var space = UnityEngine.Resources.Load<UnityEngine.Sprite>("UI/SpaceBackground");
+            if (space != null)
+            {
+                img.sprite = space;
+                img.type = UnityEngine.UI.Image.Type.Simple;
+                img.preserveAspect = false;   // stretch to fill — no gaps on any aspect ratio
+                img.color = UnityEngine.Color.white; // untinted so the image shows its true colours
+            }
+            else
+            {
+                img.sprite = null;
+                img.color = AppBackground;     // flat neutral black for now
+            }
         }
 
         img.transform.SetAsFirstSibling(); // behind every screen
+    }
+
+    private const string VideoSurfaceName = "VideoSurface";
+
+    /// <summary>
+    /// Task 27.1 — set up (once) a full-screen RawImage child driven by a LOOPING, MUTED VideoPlayer that
+    /// renders the clip into a RenderTexture, so a video backdrop sits behind every screen and loops
+    /// forever. Idempotent: reuses the existing surface; only (re)configures when the clip changes.
+    /// </summary>
+    private static void EnsureVideoBackground(UnityEngine.Transform layer, UnityEngine.Video.VideoClip clip)
+    {
+        if (layer == null || clip == null) return;
+
+        var t = layer.Find(VideoSurfaceName);
+        UnityEngine.UI.RawImage raw;
+        UnityEngine.Video.VideoPlayer vp;
+        if (t != null)
+        {
+            raw = t.GetComponent<UnityEngine.UI.RawImage>();
+            vp  = t.GetComponent<UnityEngine.Video.VideoPlayer>();
+        }
+        else
+        {
+            var go = new UnityEngine.GameObject(VideoSurfaceName,
+                typeof(UnityEngine.RectTransform), typeof(UnityEngine.CanvasRenderer),
+                typeof(UnityEngine.UI.RawImage), typeof(UnityEngine.Video.VideoPlayer));
+            go.transform.SetParent(layer, false);
+            raw = go.GetComponent<UnityEngine.UI.RawImage>();
+            vp  = go.GetComponent<UnityEngine.Video.VideoPlayer>();
+        }
+        if (raw == null || vp == null) return;
+
+        var rrt = raw.rectTransform;
+        rrt.anchorMin = UnityEngine.Vector2.zero;
+        rrt.anchorMax = UnityEngine.Vector2.one;
+        rrt.offsetMin = UnityEngine.Vector2.zero;
+        rrt.offsetMax = UnityEngine.Vector2.zero;
+        rrt.localScale = UnityEngine.Vector3.one;
+        raw.raycastTarget = false;
+        raw.color = UnityEngine.Color.white;
+
+        // Configure the player + render target once (or when the clip changes).
+        if (vp.clip != clip || vp.targetTexture == null)
+        {
+            if (vp.targetTexture == null)
+            {
+                var renderTex = new UnityEngine.RenderTexture(1080, 1920, 0) { name = "SpaceBackgroundRT" };
+                renderTex.filterMode = UnityEngine.FilterMode.Point; // keep pixel art crisp
+                vp.targetTexture = renderTex;
+                raw.texture = renderTex;
+            }
+            vp.source            = UnityEngine.Video.VideoSource.VideoClip;
+            vp.clip              = clip;
+            vp.renderMode        = UnityEngine.Video.VideoRenderMode.RenderTexture;
+            vp.aspectRatio       = UnityEngine.Video.VideoAspectRatio.FitOutside; // cover — fill, no distortion
+            vp.isLooping         = true;
+            vp.playOnAwake       = true;
+            vp.waitForFirstFrame = true;
+            vp.skipOnDrop        = true;
+            vp.audioOutputMode   = UnityEngine.Video.VideoAudioOutputMode.None;   // muted
+            vp.Play();
+        }
+        else if (!vp.isPlaying)
+        {
+            vp.Play();
+        }
+
+        raw.transform.SetAsLastSibling(); // cover the layer's black base
+    }
+
+    private static void RemoveVideoBackground(UnityEngine.Transform layer)
+    {
+        if (layer == null) return;
+        var t = layer.Find(VideoSurfaceName);
+        if (t != null) UnityEngine.Object.Destroy(t.gameObject);
     }
 
     // Border-only rounded 9-slice ring (transparent centre) — Assets/Resources/UI/RoundedButtonOutline.png.
