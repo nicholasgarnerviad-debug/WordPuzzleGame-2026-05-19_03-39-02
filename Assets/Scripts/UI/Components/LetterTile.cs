@@ -210,6 +210,26 @@ namespace WordPuzzle.UI.Components
         public void Initialize(char letter) => SetLetter(letter);
         public char GetLetter() => currentLetter;
         public void SetColor(Color color) { if (background != null) background.color = color; }
+
+        /// <summary>
+        /// Task 27 — render this tile as a SEE-THROUGH outline: transparent centre (the black/space
+        /// background shows through) with a bold rounded ring in <paramref name="ringColor"/>. Used for the
+        /// start (teal) and target (orange) word rows; the active input row keeps its solid fill, so don't
+        /// call this on it. The state machine still owns borderImage.color, so a later SetState (e.g. the
+        /// win beat turning the target green) cleanly replaces the ring with a solid fill.
+        /// </summary>
+        public void SetOutline(Color ringColor)
+        {
+            EnsureChildren();
+            if (background != null) background.color = new Color(0f, 0f, 0f, 0f); // see-through centre
+            if (shadow != null) shadow.color = new Color(0f, 0f, 0f, 0f);          // no drop shadow on ghost tiles
+            if (borderImage != null)
+            {
+                borderImage.sprite = TryGetRoundedRectOutlineSprite();
+                borderImage.type = Image.Type.Sliced;
+                borderImage.color = ringColor;
+            }
+        }
         public void ResetColor() => ApplyStateVisuals();
         public void HighlightHint() => SetState(TileState.RevealedByHint);
         public void SetEnabled(bool enabled) { if (button != null) button.interactable = enabled; }
@@ -511,6 +531,52 @@ namespace WordPuzzle.UI.Components
             tex.Apply();
             cachedRoundedSprite = Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), 100f, 0, SpriteMeshType.FullRect, new Vector4(radius, radius, radius, radius));
             return cachedRoundedSprite;
+        }
+
+        // Task 27 — a rounded-rect RING (transparent centre) for see-through outline tiles.
+        // Rendered at 64px / outer-radius 12 / 8px stroke with pixelsPerUnit 200 and a 12px 9-slice border,
+        // so the displayed corner radius (12 * 100/200 = 6) matches the solid tile sprite above and the
+        // displayed stroke is ~4px — bold, not hairline. 9-slicing keeps the ring crisp at any tile size.
+        private static Sprite cachedOutlineSprite;
+        private static Sprite TryGetRoundedRectOutlineSprite()
+        {
+            if (cachedOutlineSprite != null) return cachedOutlineSprite;
+
+            const int size = 64;
+            const int outerR = 12;
+            const int stroke = 8;
+            const int inset = stroke;            // inner rect inset on every side
+            const int innerR = outerR - stroke;  // inner corner radius (4)
+            var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            tex.filterMode = FilterMode.Bilinear;
+            var clear = new Color(0f, 0f, 0f, 0f);
+            var px = new Color[size * size];
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    bool inOuter = InsideRoundedSquare(x, y, 0, size - 1, outerR);
+                    bool inInner = InsideRoundedSquare(x, y, inset, size - 1 - inset, innerR);
+                    px[y * size + x] = (inOuter && !inInner) ? Color.white : clear;
+                }
+            }
+            tex.SetPixels(px);
+            tex.Apply();
+            cachedOutlineSprite = Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f),
+                200f, 0, SpriteMeshType.FullRect, new Vector4(outerR, outerR, outerR, outerR));
+            return cachedOutlineSprite;
+        }
+
+        // True if (x,y) is inside the rounded square spanning [lo,hi] on both axes with corner radius r.
+        private static bool InsideRoundedSquare(int x, int y, int lo, int hi, int r)
+        {
+            if (x < lo || x > hi || y < lo || y > hi) return false;
+            int cxL = lo + r, cxR = hi - r, cyB = lo + r, cyT = hi - r;
+            if (x < cxL && y < cyB) return (cxL - x) * (cxL - x) + (cyB - y) * (cyB - y) <= r * r;
+            if (x > cxR && y < cyB) return (x - cxR) * (x - cxR) + (cyB - y) * (cyB - y) <= r * r;
+            if (x < cxL && y > cyT) return (cxL - x) * (cxL - x) + (y - cyT) * (y - cyT) <= r * r;
+            if (x > cxR && y > cyT) return (x - cxR) * (x - cxR) + (y - cyT) * (y - cyT) <= r * r;
+            return true;
         }
     }
 }

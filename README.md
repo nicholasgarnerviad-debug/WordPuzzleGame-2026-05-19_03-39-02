@@ -39,12 +39,14 @@ FROM  C  A  T            FROM  S  T  O  N  E
 
 ## Screens
 
-> Live captures (iPhone 13 Pro Max portrait). The UI follows the dark, gold-accented "premium puzzle" identity in [§5](#5-visual-identity) / [§15](#15-design-tokens) — `accent-gold` reserved for the current focus/target.
+> Live captures (iPhone 13 Pro Max portrait). The UI follows the **true-black, outline ("ghost")** identity in [§5](#5-visual-identity) / [§15](#15-design-tokens) — colored rounded outlines over a black backdrop (a swappable full-screen space layer), each action in its own color.
+>
+> ⚠️ **Note:** the thumbnails below predate the black/outline overhaul (they show the earlier dark, gold-accented look) — they'll be refreshed in a later pass.
 
 | Screen | |
 |---|---|
-| **Main Menu** — gold `WORD LADDER` masthead. **DAILY** is the gold hero (primary call-to-action; shows the streak once today is solved). The three modes — **Classic Mode / Puzzle Show / Time Attack** — are the surface-tier group; **Puzzle Library / Stats** are demoted tertiary chrome (Settings now lives in the shared top-right gear). **Resume** appears only when an in-progress save exists. | <img src="docs/screenshots/main-menu.png" width="250"> |
-| **Classic Mode** — the core word ladder. Anchored **start** word up top, the played **chain** (each rung a one-letter change), the **gold-edged active input row**, the anchored **target** word, then the Hint / Undo / Reveal **power-up bar** seated just above the QWERTY keyboard (red `DEL`, green `GO`). An icon **HOME** (house, top-left) and the shared **Settings** gear (top-right) flank a calm score header — both icon-only. Random 3–7-letter puzzles; on a solve a **compact win panel** ("Next Puzzle" / "Home") keeps you in the loop ([§1](#1-game-modes)). | <img src="docs/screenshots/classic-mode.png" width="250"> |
+| **Main Menu** — white `WORD LADDER` masthead on black. Buttons are **colored rounded outlines** (transparent centers): **DAILY** is the hero — a thicker, brighter **orange** ring (primary call-to-action; shows the streak once today is solved). The modes each carry their own color — **Classic** green, **Puzzle Show** violet, **Time Attack** red, **Resume** (only with an in-progress save) teal. **Puzzle Library / Stats** are a muted side-by-side row (Settings lives in the shared top-right gear). | <img src="docs/screenshots/main-menu.png" width="250"> |
+| **Classic Mode** — the core word ladder on black. The **start** word is a row of **teal see-through outline tiles** (the origin); the **target** word is **orange outline tiles** (the goal); between them the played **chain** and the **active input row** stay solid/filled (the "fill here" zone, gold-edged as you type). Below: the Hint / Undo / Reveal **power-up bar** (outline buttons) above the QWERTY keyboard (red `DEL`, green `GO`). An icon **HOME** (top-left) and the shared **Settings** gear (top-right) flank a calm score header. Random 3–7-letter puzzles; on a solve a **compact win panel** ("Next Puzzle" / "Home") keeps you in the loop ([§1](#1-game-modes)). | <img src="docs/screenshots/classic-mode.png" width="250"> |
 | **Puzzle Show** — tier-progression play on the same gameplay screen, with a `Tier X / Y` indicator under the score. **350 curated ladders (7 tiers × 50)** on a length/difficulty curve (Tier 1 easy 3-letter → Tier 7 hard 7-letter, up to 8-step ladders). Solving shows a stat screen offering **Next Puzzle / Tier N ▸ / Home** ([§7](#7-puzzle-show-tiers)). | <img src="docs/screenshots/puzzle-show.png" width="250"> |
 | **Time Attack** — a countdown timer + the **+Time** power-up; chosen as 60s/120s × Timed/Survival on a setup screen. Ladders **auto-advance** as you solve them; the full results screen (puzzles solved + **Play Again** → new run) appears only when the **timer hits 0**. | <img src="docs/screenshots/time-attack.png" width="250"> |
 | **Puzzle Library → Tier Select** (level 1) — the entry to Puzzle Show: a list of **7 tiers**, each with its theme (e.g. "3-letter words"), progress (`X/50`) and lock state (**gold** = current tier; **padlock + "Clear N in Tier M"** = locked). Tap an unlocked tier to open its grid. | <img src="docs/screenshots/puzzle-library.png" width="250"> |
@@ -136,10 +138,13 @@ All three feedback channels fire on the same four moments and all respect a **re
 
 ## 5. Visual identity
 
-Dark, gold-accented "premium puzzle" identity with a vertical ladder/ascent metaphor.
-- **Gold discipline:** `accent-gold #C9B458` is reserved for the **current focus/target** — the current-input/hint tiles, the in-progress library card, the primary streak number, tutorial emphasis. Secondary chrome (TO label, tier indicator, score, "Best:", library header/badge) is demoted to `text-muted #8A93A1`.
+True-black, **outline ("ghost")** identity with a vertical ladder/ascent metaphor.
+- **Outline buttons:** every button is a **colored rounded outline with a transparent center** (not a fill), so the black backdrop shows through. Each action owns a color from the menu set — **Resume** teal, **Daily** orange (hero), **Classic** green, **Puzzle Show** violet, **Time Attack** red, **Library/Stats** muted slate. The hero (Daily) gets a **thicker, brighter** orange ring; light/white labels sit on every button. The ring + black treatment is centralized in `UITheme` (`ApplyOutlineButton` / `ApplyHeroOutlineButton`, 9-slice ring sprites under `Assets/Resources/UI/`).
+- **Black background + swappable space layer:** the app renders on a neutral near-black `#0A0A0A`, painted by a single full-screen **Background layer** behind every screen (`UIThemeManager.ApplyScreenBackground` / `EnsureBackgroundLayer`). It auto-loads `Assets/Resources/UI/SpaceBackground.png` if present — drop a sprite there to swap in a space backdrop with no restructuring (a pixel-art starfield ships now).
+- **Gameplay tiles:** the **start** word row is **teal** see-through outline tiles, the **target** row is **orange** see-through outline tiles, and the **active input row stays solid** (the obvious "current row," gold-edged as you type). Settled chain rows stay solid; the win beat turns the target solid green.
+- **Gold is now in-game only:** `accent-gold #C9B458` is no longer a menu color — it's reserved for in-game focus (hint / active-input tiles, the win "Next Puzzle", in-progress & current-tier rings, the streak headline).
 - **Ascent:** the chain climbs toward the anchored TO row at the bottom; the win beat reinforces upward motion.
-- **Motion vocabulary** (one place: `UIAnimations`): `MICRO = 0.16s` (micro-interactions), `STANDARD = 0.22s` (transitions), `EaseOutCubic`. Deliberate and weighted — no cartoon bounce.
+- **Motion vocabulary** (one place: `UIAnimations`): `MICRO = 0.16s` (micro-interactions), `STANDARD = 0.22s` (transitions), `EaseOutCubic`. Deliberate and weighted — no cartoon bounce. All restyles are static and honor ReduceMotion.
 
 ---
 
@@ -355,9 +360,12 @@ Persistence: PlayerPrefs JSON via DataManager (keys: puzzle_progress_v1, wordpuz
 wordpuzzle_save, daily_v1, settings_v1, onboarding_v1).
 Assemblies (dep direction): Puzzle (lowest; BalanceConfig, WordGraph, WordValidator, IAdService) <-
 Persistence/State <- Modes <- Game/UI. Puzzle must NOT reference State/UI.
-Design tokens: bg-base #0F1217, bg-surface #1B1F27, surface-2 #242936, accent-gold #C9B458
-(reserve for current focus/target), accent-green #6AAA64, accent-red #C9215C,
-text-primary #E7E1C4/#F5F7FA, text-muted #8A93A1, text-dim #5A6270.
+Design tokens: bg-base #0A0A0A (true black; one full-screen Background layer behind every screen,
+auto-loads Resources/UI/SpaceBackground.png), bg-surface #1B1F27, surface-2 #242936. Buttons + start/
+target tiles are colored OUTLINES via UITheme (MenuPalette: Resume/start teal #1B9E8F, Daily/target
+orange #FF8A2E, Classic green #3D9E54, Puzzle Show violet #7B5FD4, Time Attack red #D23F58). accent-gold
+#C9B458 is IN-GAME ONLY now (hints, active input, win/tier accents — not a menu color). accent-green
+#6AAA64, accent-red #C9215C, text-primary #E7E1C4/#F5F7FA, text-muted #8A93A1, text-dim #5A6270.
 
 Hard constraints (ALL prompts):
 - Preserve the immutable GameState + Dispatch architecture and the public interfaces
@@ -373,17 +381,35 @@ Hard constraints (ALL prompts):
 
 ## 15. Design tokens
 
+**Base / surface**
+
 | Token | Hex | Use |
 |---|---|---|
-| `bg-base` | `#0F1217` | Screen backgrounds |
-| `bg-surface` | `#1B1F27` | Buttons, panels, tiles |
-| `surface-2` | `#242936` | Filled letter tiles |
-| `accent-gold` | `#C9B458` | **Current focus/target only** — hints, active input, primary streak |
-| `accent-green` | `#6AAA64` | Correct chain, success, +TIME, win |
-| `accent-red` | `#C9215C` | Destructive actions, reveal accent |
-| `text-primary` | `#E7E1C4` / `#F5F7FA` | Body, button labels |
-| `text-muted` | `#8A93A1` | Subtitles, demoted secondary chrome |
+| `bg-base` | `#0A0A0A` | App background — one full-screen layer behind every screen (holds the swappable space image) |
+| `bg-surface` | `#1B1F27` | Keyboard panel, win-card surface |
+| `surface-2` | `#242936` | Solid letter tiles (active input + settled chain rows), keys |
+| `text-primary` | `#E7E1C4` / `#F5F7FA` | Body, button/tile labels |
+| `text-muted` | `#8A93A1` | Subtitles, muted secondary outlines |
 | `text-dim` | `#5A6270` | Locked card text, version |
+
+**Menu / outline palette** (`UITheme.MenuPalette`) — each button's color is its ring/border; light labels.
+
+| Token | Hex | Use |
+|---|---|---|
+| Resume (teal) | `#1B9E8F` | Resume button + **start-word** tile outline |
+| Daily (orange) | `#FF8A2E` | Daily hero button (thicker ring) + **target-word** tile outline |
+| Classic (green) | `#3D9E54` | Classic Mode button |
+| Puzzle Show (violet) | `#7B5FD4` | Puzzle Show button |
+| Time Attack (red) | `#D23F58` | Time Attack button |
+| Secondary (slate) | `#39435A` / ring `#8A93A1` | Library / Stats / utility outlines |
+
+**In-game accents**
+
+| Token | Hex | Use |
+|---|---|---|
+| `accent-gold` | `#C9B458` | **In-game only** (no longer a menu color) — hints, active-input tiles, win "Next Puzzle", in-progress & current-tier rings, streak headline |
+| `accent-green` | `#6AAA64` | Correct chain, success, +TIME, win beat |
+| `accent-red` | `#C9215C` | Destructive actions, reveal accent |
 
 ---
 

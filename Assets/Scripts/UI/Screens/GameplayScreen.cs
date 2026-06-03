@@ -1458,8 +1458,21 @@ namespace WordPuzzle.UI
             switch (style)
             {
                 case LadderTileStyle.StartWord:
-                case LadderTileStyle.ChainUnchanged:
+                    // Task 27 — start word row = see-through TEAL outline (menu Resume colour), the origin.
+                    tile.SetState(TileState.DefaultPrefilled);
+                    tile.SetOutline(MenuPalette.ResumeFill);
+                    SetTextColor(tile, C_TILE_TEXT);
+                    break;
+
                 case LadderTileStyle.EndWordNeutral:
+                    // Task 27 — target word row = see-through ORANGE outline (menu Daily colour), the goal.
+                    tile.SetState(TileState.DefaultPrefilled);
+                    tile.SetOutline(MenuPalette.DailyFill);
+                    SetTextColor(tile, C_TILE_TEXT);
+                    break;
+
+                case LadderTileStyle.ChainUnchanged:
+                    // Settled/played chain rows stay SOLID (distinct from the start/target outline rows).
                     tile.SetState(TileState.DefaultPrefilled);
                     tile.SetColor(C_TILE_DEFAULT_FILL);
                     SetTextColor(tile, C_TILE_TEXT);
