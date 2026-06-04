@@ -1,10 +1,10 @@
 {
   "coinPacks": [
-    { "id": "coins_150",  "coins": 150,  "price": 0.99,  "currency": "USD" },
-    { "id": "coins_500",  "coins": 500,  "price": 2.49,  "currency": "USD" },
-    { "id": "coins_1200", "coins": 1200, "price": 4.99,  "currency": "USD" },
-    { "id": "coins_3000", "coins": 3000, "price": 9.99,  "currency": "USD" },
-    { "id": "coins_7000", "coins": 7000, "price": 19.99, "currency": "USD" }
+    { "id": "coins_150",  "coins": 150,  "price": 0.99,  "currency": "USD", "name": "Pouch" },
+    { "id": "coins_500",  "coins": 500,  "price": 2.49,  "currency": "USD", "name": "Stack" },
+    { "id": "coins_1200", "coins": 1200, "price": 4.99,  "currency": "USD", "name": "Chest", "badge": "MOST POPULAR" },
+    { "id": "coins_3000", "coins": 3000, "price": 9.99,  "currency": "USD", "name": "Vault" },
+    { "id": "coins_7000", "coins": 7000, "price": 19.99, "currency": "USD", "name": "Hoard", "badge": "BEST VALUE" }
   ],
   "premium": {
     "id": "premium_no_ads",

@@ -21,6 +21,7 @@ namespace WordPuzzle.State
         public int coins;          // Coins / StarterPack: how many coins this product grants
         public float priceUsd;
         public string displayName;
+        public string badge;       // Coins: optional merchandising tag ("MOST POPULAR" / "BEST VALUE"); "" = none
         public int powerUpsEach;   // StarterPack: count of EACH power-up (hint/undo/reveal/time) granted
         public int adFreeDays;     // StarterPack: length of the temporary ad-free window, in days
     }
@@ -53,7 +54,7 @@ namespace WordPuzzle.State
     public static class ShopCatalog
     {
         [Serializable] private class CoinShopData { public CoinPackData[] coinPacks; public PremiumData premium; public StarterPackData starterPack; }
-        [Serializable] private class CoinPackData { public string id; public int coins; public float price; public string currency; }
+        [Serializable] private class CoinPackData { public string id; public int coins; public float price; public string currency; public string name; public string badge; }
         [Serializable] private class PremiumData  { public string id; public string name; public float price; public string currency; }
         [Serializable] private class StarterPackData { public string id; public string name; public float price; public string currency; public int coins; public int powerUpsEach; public int adFreeDays; }
 
@@ -83,7 +84,8 @@ namespace WordPuzzle.State
                         type = StoreProductType.Coins,
                         coins = p.coins,
                         priceUsd = p.price,
-                        displayName = $"{p.coins} Coins"
+                        displayName = string.IsNullOrEmpty(p.name) ? $"{p.coins} Coins" : p.name,
+                        badge = p.badge
                     });
                 }
             }

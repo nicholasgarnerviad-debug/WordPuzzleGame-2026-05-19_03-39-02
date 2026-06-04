@@ -234,11 +234,16 @@ namespace WordPuzzle.UI
         private void CoinBundleRow(StoreProduct p)
         {
             var row = MakeRow(120f);
-            var label = MakeText(row, $"{p.displayName}\n<size=22><color=#8A93A1>${p.priceUsd:0.00}</color></size>", 30f, C_GOLD, FontStyles.Bold, TextAlignmentOptions.Left);
+            // Title = pack name (Pouch/Stack/Chest/Vault/Hoard) + optional merchandising badge;
+            // subtitle = coin count; price lives on the Buy button (matches the Starter Pack row).
+            string title = string.IsNullOrEmpty(p.displayName) ? $"{p.coins} Coins" : p.displayName;
+            string badge = string.IsNullOrEmpty(p.badge) ? "" : $"  <size=18><color=#C9B458>[ {p.badge} ]</color></size>";
+            var label = MakeText(row, $"{title}{badge}\n<size=22><color=#8A93A1>{p.coins} coins</color></size>",
+                                  30f, C_GOLD, FontStyles.Bold, TextAlignmentOptions.Left);
             label.richText = true;
             var lle = label.gameObject.AddComponent<LayoutElement>(); lle.flexibleWidth = 1f;
 
-            var btn = MakeButton(row, "Buy", 28f, MenuPalette.DailyFill, C_CREAM);
+            var btn = MakeButton(row, $"${p.priceUsd:0.00}", 26f, MenuPalette.DailyFill, C_CREAM);
             var ble = btn.gameObject.AddComponent<LayoutElement>(); ble.preferredWidth = 200f; ble.flexibleWidth = 0f;
             string id = p.id;
             btn.onClick.AddListener(() => BuyRealMoney(id, "Coins added!"));
