@@ -36,6 +36,8 @@ namespace WordPuzzle.Persistence
         public bool removeAds;               // Task 33 — remove-ads purchase flag
         public bool startingGrantApplied;    // Task 33 — 5-each starting grant applied once
         public string lastDailyGrantDate;    // Task 33 — ISO date of last daily grant ("" = never)
+        public bool starterPackOwned;        // Task 36 36J — one-time Starter Pack purchased
+        public long adFreeUntilUnix;         // Task 36 36J — Unix seconds; ad-free window expiry (0 = none)
         public ClassicModeStatsData classicStats;
         public TimeAttackModeStatsData timeAttackStats;
     }

@@ -492,7 +492,8 @@ namespace WordPuzzle
             storeService = new MockStoreService(
                 economyManager,
                 ShopCatalog.Load(),
-                onRemoveAdsGranted: () => { if (adPolicy != null) adPolicy.AdsRemoved = true; });
+                onRemoveAdsGranted:   () => { if (adPolicy != null) adPolicy.AdsRemoved = true; },
+                onStarterPackGranted: () => { if (adPolicy != null) adPolicy.AdsRemoved = true; }); // 3-day ad-free window opens now
 
             var menu = uiManager.GetMainMenu();
             var canvas = menu != null ? menu.transform.parent as RectTransform : null;
@@ -1120,7 +1121,10 @@ namespace WordPuzzle
             await economyManager.GrantDailyIfDue(dailyClock.TodayIso);
 
             var prog = economyManager.GetCurrentProgress();
-            if (adPolicy != null && prog != null && prog.removeAds)
+            // Suppress interstitials if ads are permanently removed OR a temporary ad-free window
+            // (e.g. the Starter Pack's 3-day window) is still active. Recomputed each boot.
+            long nowUnix = System.DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+            if (adPolicy != null && prog != null && (prog.removeAds || economyManager.IsAdFreeActive(nowUnix)))
                 adPolicy.AdsRemoved = true;
         }
 

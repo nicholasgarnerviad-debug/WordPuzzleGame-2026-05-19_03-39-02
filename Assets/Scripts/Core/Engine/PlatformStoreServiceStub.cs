@@ -40,5 +40,12 @@ namespace WordPuzzle.State
 
         public Task<PurchaseOutcome> PurchaseAsync(string productId)
             => Task.FromResult(PurchaseOutcome.Failed); // TODO: real platform purchase + receipt validation
+
+        public Task RestorePurchasesAsync()
+        {
+            Debug.LogWarning("[PlatformStoreServiceStub] RestorePurchases is NOT implemented — " +
+                             "TODO: query platform entitlements and re-grant owned non-consumables.");
+            return Task.CompletedTask; // TODO: real platform restore API
+        }
     }
 }

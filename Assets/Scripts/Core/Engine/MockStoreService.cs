@@ -14,16 +14,19 @@ namespace WordPuzzle.State
     {
         private readonly IEconomyManager economy;
         private readonly Action onRemoveAdsGranted;
+        private readonly Action onStarterPackGranted;   // fired when the starter pack's ad-free window opens
         private readonly List<StoreProduct> products;
 
         // Test hooks — set before a PurchaseAsync call to simulate a cancel / billing failure (grants NOTHING).
         public bool nextPurchaseCancelled = false;
         public bool nextPurchaseFails = false;
 
-        public MockStoreService(IEconomyManager economy, IReadOnlyList<StoreProduct> products, Action onRemoveAdsGranted = null)
+        public MockStoreService(IEconomyManager economy, IReadOnlyList<StoreProduct> products,
+                                Action onRemoveAdsGranted = null, Action onStarterPackGranted = null)
         {
             this.economy = economy;
             this.onRemoveAdsGranted = onRemoveAdsGranted;
+            this.onStarterPackGranted = onStarterPackGranted;
             this.products = products != null ? new List<StoreProduct>(products) : new List<StoreProduct>();
         }
 
@@ -34,9 +37,12 @@ namespace WordPuzzle.State
         public bool IsOwned(string productId)
         {
             var p = Find(productId);
-            if (p == null || p.type != StoreProductType.RemoveAds) return false;
+            if (p == null) return false;
             var prog = economy?.GetCurrentProgress();
-            return prog != null && prog.removeAds;
+            if (prog == null) return false;
+            if (p.type == StoreProductType.RemoveAds)   return prog.removeAds;
+            if (p.type == StoreProductType.StarterPack) return prog.starterPackOwned;
+            return false; // consumable coin bundles are never "owned"
         }
 
         public async Task<PurchaseOutcome> PurchaseAsync(string productId)
@@ -44,8 +50,8 @@ namespace WordPuzzle.State
             var p = Find(productId);
             if (p == null) return PurchaseOutcome.NotFound;
 
-            // Non-consumable already owned — never double-grant remove-ads.
-            if (p.type == StoreProductType.RemoveAds && IsOwned(productId))
+            // Non-consumable already owned — never double-grant remove-ads or the starter pack.
+            if ((p.type == StoreProductType.RemoveAds || p.type == StoreProductType.StarterPack) && IsOwned(productId))
                 return PurchaseOutcome.AlreadyOwned;
 
             // Simulated user cancel / billing failure — grant NOTHING.
@@ -53,17 +59,37 @@ namespace WordPuzzle.State
             if (nextPurchaseFails)     { nextPurchaseFails = false;     return PurchaseOutcome.Failed; }
 
             // Success — grant exactly once.
-            if (p.type == StoreProductType.Coins)
+            switch (p.type)
             {
-                if (economy != null) await economy.AddCoinsAsync(p.coins, "iap:" + p.id);
-            }
-            else // RemoveAds
-            {
-                if (economy != null) await economy.SetRemoveAdsAsync(true);
-                onRemoveAdsGranted?.Invoke();
+                case StoreProductType.Coins:
+                    if (economy != null) await economy.AddCoinsAsync(p.coins, "iap:" + p.id);
+                    break;
+                case StoreProductType.RemoveAds:
+                    if (economy != null) await economy.SetRemoveAdsAsync(true);
+                    onRemoveAdsGranted?.Invoke();
+                    break;
+                case StoreProductType.StarterPack:
+                    // The ad-free window runs from "now" for the product's configured number of days.
+                    long adFreeUntil = DateTimeOffset.UtcNow.ToUnixTimeSeconds() + (long)p.adFreeDays * 86400L;
+                    if (economy != null) await economy.GrantStarterPackAsync(p.coins, p.powerUpsEach, adFreeUntil);
+                    onStarterPackGranted?.Invoke();
+                    break;
             }
 
             return PurchaseOutcome.Success;
+        }
+
+        public Task RestorePurchasesAsync()
+        {
+            // Editor mock: entitlements live in the local save, so re-apply only the SIDE EFFECTS of any
+            // owned non-consumables (suppress ads). Consumable coins are never re-granted.
+            var prog = economy?.GetCurrentProgress();
+            if (prog != null)
+            {
+                if (prog.removeAds)        onRemoveAdsGranted?.Invoke();
+                if (prog.starterPackOwned) onStarterPackGranted?.Invoke();
+            }
+            return Task.CompletedTask;
         }
 
         private StoreProduct Find(string productId)

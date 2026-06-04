@@ -370,6 +370,8 @@ namespace WordPuzzle.Persistence
             removeAds = progress.removeAds,
             startingGrantApplied = progress.startingGrantApplied,
             lastDailyGrantDate = progress.lastDailyGrantDate,
+            starterPackOwned = progress.starterPackOwned,
+            adFreeUntilUnix = progress.adFreeUntilUnix,
             classicStats = new ClassicModeStatsData
             {
                 gamesPlayed = progress.classicStats.gamesPlayed,
@@ -400,6 +402,8 @@ namespace WordPuzzle.Persistence
             removeAds = data.removeAds,
             startingGrantApplied = data.startingGrantApplied,
             lastDailyGrantDate = data.lastDailyGrantDate ?? "",
+            starterPackOwned = data.starterPackOwned,
+            adFreeUntilUnix = data.adFreeUntilUnix,
             classicStats = new ClassicModeStats
             {
                 gamesPlayed = data.classicStats.gamesPlayed,

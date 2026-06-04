@@ -106,6 +106,12 @@ namespace WordPuzzle.UI
             Anchor(((RectTransform)back.transform), new Vector2(0f, 1f), new Vector2(40f, -110f), new Vector2(190f, 80f));
             back.onClick.AddListener(Close);
 
+            // Restore Purchases — outline, top-right (mirrors Back). Re-establishes owned non-consumables
+            // (remove-ads / starter-pack) after a reinstall; store policy requires this when selling them.
+            var restore = MakeButton(transform, "Restore", 26f, MenuPalette.SecondaryBorder, C_CREAM);
+            Anchor(((RectTransform)restore.transform), new Vector2(1f, 1f), new Vector2(-40f, -110f), new Vector2(230f, 80f));
+            restore.onClick.AddListener(RestorePurchases);
+
             // Feedback line near the bottom.
             feedbackText = MakeText(transform, "", 26f, C_CREAM, FontStyles.Normal, TextAlignmentOptions.Center);
             Anchor(feedbackText.rectTransform, new Vector2(0.5f, 0f), new Vector2(0f, 60f), new Vector2(900f, 40f));
@@ -159,6 +165,16 @@ namespace WordPuzzle.UI
 
             for (int i = contentRoot.childCount - 1; i >= 0; i--)
                 Destroy(contentRoot.GetChild(i).gameObject);
+
+            // STARTER PACK (real money, one-time) — pinned at the very top for new players.
+            StoreProduct starter = null;
+            if (store != null)
+                foreach (var p in store.Products) { if (p != null && p.type == StoreProductType.StarterPack) { starter = p; break; } }
+            if (starter != null)
+            {
+                SectionHeader("STARTER PACK  ·  one-time  ·  best value");
+                StarterPackRow(starter);
+            }
 
             // POWER-UPS (coins)
             SectionHeader("POWER-UPS  ·  buy with coins");
@@ -225,7 +241,7 @@ namespace WordPuzzle.UI
             var btn = MakeButton(row, "Buy", 28f, MenuPalette.DailyFill, C_CREAM);
             var ble = btn.gameObject.AddComponent<LayoutElement>(); ble.preferredWidth = 200f; ble.flexibleWidth = 0f;
             string id = p.id;
-            btn.onClick.AddListener(() => BuyRealMoney(id, isRemoveAds: false));
+            btn.onClick.AddListener(() => BuyRealMoney(id, "Coins added!"));
         }
 
         private void RemoveAdsRow()
@@ -246,7 +262,24 @@ namespace WordPuzzle.UI
             var btn = MakeButton(row, owned ? "Owned" : "Buy", 28f, owned ? C_SECTION : MenuPalette.TimeAttackFill, owned ? C_MUTED : C_CREAM);
             var ble = btn.gameObject.AddComponent<LayoutElement>(); ble.preferredWidth = 200f; ble.flexibleWidth = 0f;
             btn.interactable = !owned && ads != null;
-            if (ads != null) { string id = ads.id; btn.onClick.AddListener(() => BuyRealMoney(id, isRemoveAds: true)); }
+            if (ads != null) { string id = ads.id; btn.onClick.AddListener(() => BuyRealMoney(id, "Ads removed!")); }
+        }
+
+        private void StarterPackRow(StoreProduct p)
+        {
+            bool owned = store != null && store.IsOwned(p.id);
+            var row = MakeRow(150f);
+            string contents = $"{p.coins} coins  ·  {p.powerUpsEach} of each power-up  ·  {p.adFreeDays} days ad-free";
+            var label = MakeText(row, $"{p.displayName}\n<size=20><color=#8A93A1>{contents}</color></size>",
+                                  30f, C_GOLD, FontStyles.Bold, TextAlignmentOptions.Left);
+            label.richText = true;
+            var lle = label.gameObject.AddComponent<LayoutElement>(); lle.flexibleWidth = 1f;
+
+            var btn = MakeButton(row, owned ? "Owned" : $"${p.priceUsd:0.00}", 26f,
+                                 owned ? C_SECTION : MenuPalette.DailyFill, owned ? C_MUTED : C_CREAM);
+            var ble = btn.gameObject.AddComponent<LayoutElement>(); ble.preferredWidth = 220f; ble.flexibleWidth = 0f;
+            btn.interactable = !owned;
+            if (!owned) { string id = p.id; btn.onClick.AddListener(() => BuyRealMoney(id, "Starter Pack unlocked!")); }
         }
 
         // ── Purchase handlers ────────────────────────────────────────────────
@@ -266,17 +299,25 @@ namespace WordPuzzle.UI
             Rebuild();
         }
 
-        private async void BuyRealMoney(string productId, bool isRemoveAds)
+        private async void BuyRealMoney(string productId, string successMsg)
         {
             if (store == null) return;
             var outcome = await store.PurchaseAsync(productId);
             switch (outcome)
             {
-                case PurchaseOutcome.Success:      Feedback(isRemoveAds ? "Ads removed!" : "Coins added!"); break;
+                case PurchaseOutcome.Success:      Feedback(successMsg); break;
                 case PurchaseOutcome.AlreadyOwned: Feedback("Already owned"); break;
                 case PurchaseOutcome.Cancelled:    Feedback("Cancelled"); break;
                 default:                           Feedback("Purchase unavailable (mock store)"); break;
             }
+            Rebuild();
+        }
+
+        private async void RestorePurchases()
+        {
+            if (store == null) return;
+            await store.RestorePurchasesAsync();
+            Feedback("Purchases restored");
             Rebuild();
         }
 

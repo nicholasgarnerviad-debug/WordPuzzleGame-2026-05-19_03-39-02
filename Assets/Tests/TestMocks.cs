@@ -461,6 +461,25 @@ public class MockEconomyManager : IEconomyManager
         return Task.CompletedTask;
     }
 
+    // Task 36 36J — Starter Pack + ad-free window.
+    public int starterPackGrantCount = 0;
+    public long adFreeUntilUnix = 0;
+
+    public Task<bool> GetStarterPackOwnedAsync()
+        => Task.FromResult(starterPackGrantCount > 0);
+
+    public Task GrantStarterPackAsync(int coins, int powerUpsEach, long adFreeUntilUnix)
+    {
+        if (starterPackGrantCount > 0) return Task.CompletedTask; // idempotent like the real one
+        starterPackGrantCount++;
+        coinsAdded += coins; balance += coins;
+        hintsAdded += powerUpsEach; timeAdded += powerUpsEach;
+        if (adFreeUntilUnix > this.adFreeUntilUnix) this.adFreeUntilUnix = adFreeUntilUnix;
+        return Task.CompletedTask;
+    }
+
+    public bool IsAdFreeActive(long nowUnix) => adFreeUntilUnix > nowUnix;
+
     public PlayerProgress GetCurrentProgress()
         => new PlayerProgress();
 

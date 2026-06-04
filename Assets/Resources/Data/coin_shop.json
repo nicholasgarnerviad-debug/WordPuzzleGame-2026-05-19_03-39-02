@@ -11,5 +11,14 @@
     "name": "Remove Ads",
     "price": 4.99,
     "currency": "USD"
+  },
+  "starterPack": {
+    "id": "starter_pack",
+    "name": "Starter Pack",
+    "price": 1.99,
+    "currency": "USD",
+    "coins": 1000,
+    "powerUpsEach": 5,
+    "adFreeDays": 3
   }
 }

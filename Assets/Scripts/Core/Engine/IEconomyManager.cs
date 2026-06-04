@@ -47,6 +47,19 @@ namespace WordPuzzle.State
         /// <summary>Grants +2 each once for the given local day (idempotent; no stacking of missed days).</summary>
         Task GrantDailyIfDue(string todayIso);
 
+        // Starter Pack + ad-free window (Task 36 36J)
+        /// <summary>True once the one-time Starter Pack has been purchased.</summary>
+        Task<bool> GetStarterPackOwnedAsync();
+        /// <summary>
+        /// Grant the one-time Starter Pack: <paramref name="coins"/> + <paramref name="powerUpsEach"/> of
+        /// EACH power-up (hint/undo/reveal/time) + an ad-free window through <paramref name="adFreeUntilUnix"/>.
+        /// IDEMPOTENT: a no-op (no coins, no power-ups, no window change) once owned, so a restore or a
+        /// double-tap can never double-grant the consumable contents.
+        /// </summary>
+        Task GrantStarterPackAsync(int coins, int powerUpsEach, long adFreeUntilUnix);
+        /// <summary>True when the temporary ad-free window is still active at <paramref name="nowUnix"/>.</summary>
+        bool IsAdFreeActive(long nowUnix);
+
         // Progress tracking
         PlayerProgress GetCurrentProgress();
 

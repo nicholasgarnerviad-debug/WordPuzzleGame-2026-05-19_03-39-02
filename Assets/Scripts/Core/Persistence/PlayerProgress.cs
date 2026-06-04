@@ -24,6 +24,10 @@ namespace WordPuzzle.Persistence
         public bool startingGrantApplied;    // 5-each starting inventory granted once
         public string lastDailyGrantDate;    // ISO yyyy-MM-dd of the last daily grant ("" = never)
 
+        // Task 36 Phase 5 (36J) — one-time Starter Pack + temporary ad-free window.
+        public bool starterPackOwned;        // one-time non-consumable (restore must NOT re-grant coins)
+        public long adFreeUntilUnix;          // Unix seconds; ads suppressed while now < this (0 = none)
+
         // Mode-specific stats
         public ClassicModeStats classicStats;
         public TimeAttackModeStats timeAttackStats;
@@ -41,6 +45,8 @@ namespace WordPuzzle.Persistence
             removeAds = false;
             startingGrantApplied = false;
             lastDailyGrantDate = "";
+            starterPackOwned = false;
+            adFreeUntilUnix = 0L;
             classicStats = new ClassicModeStats();
             timeAttackStats = new TimeAttackModeStats();
         }

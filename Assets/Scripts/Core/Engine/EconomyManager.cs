@@ -228,6 +228,43 @@ namespace WordPuzzle.State
         await dataManager.UpdatePlayerProgressAsync(currentProgress);
     }
 
+    // ─── Starter Pack + ad-free window (Task 36 36J) ───
+    public Task<bool> GetStarterPackOwnedAsync()
+    {
+        return Task.FromResult(currentProgress.starterPackOwned);
+    }
+
+    public async Task GrantStarterPackAsync(int coins, int powerUpsEach, long adFreeUntilUnix)
+    {
+        // One-time: once owned, NEVER re-grant the consumable coins/power-ups (covers restore + double-tap).
+        if (currentProgress.starterPackOwned)
+        {
+            LogEconomyEvent("StarterPackAlreadyOwned", "noop");
+            return;
+        }
+
+        if (coins > 0) currentProgress.totalCoins += coins;
+        if (powerUpsEach > 0)
+        {
+            currentProgress.totalHintsEarned   += powerUpsEach;
+            currentProgress.totalRevealsEarned += powerUpsEach;
+            currentProgress.totalUndosEarned   += powerUpsEach;
+            currentProgress.totalTimeEarned    += powerUpsEach;
+        }
+        // Extend (never shorten) the ad-free window.
+        if (adFreeUntilUnix > currentProgress.adFreeUntilUnix)
+            currentProgress.adFreeUntilUnix = adFreeUntilUnix;
+        currentProgress.starterPackOwned = true;
+
+        LogEconomyEvent("StarterPackGranted", $"coins:{coins},each:{powerUpsEach},adFreeUntil:{adFreeUntilUnix}");
+        await dataManager.UpdatePlayerProgressAsync(currentProgress);
+    }
+
+    public bool IsAdFreeActive(long nowUnix)
+    {
+        return currentProgress != null && currentProgress.adFreeUntilUnix > nowUnix;
+    }
+
     public PlayerProgress GetCurrentProgress()
     {
         return currentProgress;

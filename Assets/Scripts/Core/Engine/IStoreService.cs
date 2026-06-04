@@ -5,8 +5,9 @@ using UnityEngine;
 
 namespace WordPuzzle.State
 {
-    /// <summary>Real-money product kind. Coin bundles are consumable; RemoveAds is a one-time non-consumable.</summary>
-    public enum StoreProductType { Coins, RemoveAds }
+    /// <summary>Real-money product kind. Coin bundles are consumable; RemoveAds and the one-time
+    /// StarterPack are non-consumables (restorable, never re-granted as coins).</summary>
+    public enum StoreProductType { Coins, RemoveAds, StarterPack }
 
     /// <summary>Outcome of a real-money purchase attempt. A product is granted ONLY on Success.</summary>
     public enum PurchaseOutcome { Success, Cancelled, Failed, AlreadyOwned, NotFound }
@@ -17,9 +18,11 @@ namespace WordPuzzle.State
     {
         public string id;
         public StoreProductType type;
-        public int coins;          // Coins type: how many coins this bundle grants
+        public int coins;          // Coins / StarterPack: how many coins this product grants
         public float priceUsd;
         public string displayName;
+        public int powerUpsEach;   // StarterPack: count of EACH power-up (hint/undo/reveal/time) granted
+        public int adFreeDays;     // StarterPack: length of the temporary ad-free window, in days
     }
 
     /// <summary>
@@ -36,14 +39,23 @@ namespace WordPuzzle.State
         /// <summary>True for an owned non-consumable (remove-ads). Always false for consumable coin bundles.</summary>
         bool IsOwned(string productId);
         Task<PurchaseOutcome> PurchaseAsync(string productId);
+
+        /// <summary>
+        /// Re-establish entitlements for owned NON-consumables (remove-ads, starter-pack) after a
+        /// reinstall or device change. Never re-grants consumables (coins). The Editor mock re-applies
+        /// the side effects of the persisted ownership flags; the platform impl queries the store's
+        /// restore API. Required by app-store policy whenever non-consumables are sold.
+        /// </summary>
+        Task RestorePurchasesAsync();
     }
 
     /// <summary>Loads the real-money product catalog from Resources/Data/coin_shop.json (single source of truth).</summary>
     public static class ShopCatalog
     {
-        [Serializable] private class CoinShopData { public CoinPackData[] coinPacks; public PremiumData premium; }
+        [Serializable] private class CoinShopData { public CoinPackData[] coinPacks; public PremiumData premium; public StarterPackData starterPack; }
         [Serializable] private class CoinPackData { public string id; public int coins; public float price; public string currency; }
         [Serializable] private class PremiumData  { public string id; public string name; public float price; public string currency; }
+        [Serializable] private class StarterPackData { public string id; public string name; public float price; public string currency; public int coins; public int powerUpsEach; public int adFreeDays; }
 
         public static List<StoreProduct> Load()
         {
@@ -85,6 +97,20 @@ namespace WordPuzzle.State
                     coins = 0,
                     priceUsd = data.premium.price,
                     displayName = string.IsNullOrEmpty(data.premium.name) ? "Remove Ads" : data.premium.name
+                });
+            }
+
+            if (data.starterPack != null && !string.IsNullOrEmpty(data.starterPack.id))
+            {
+                list.Add(new StoreProduct
+                {
+                    id = data.starterPack.id,
+                    type = StoreProductType.StarterPack,
+                    coins = data.starterPack.coins,
+                    priceUsd = data.starterPack.price,
+                    displayName = string.IsNullOrEmpty(data.starterPack.name) ? "Starter Pack" : data.starterPack.name,
+                    powerUpsEach = data.starterPack.powerUpsEach,
+                    adFreeDays = data.starterPack.adFreeDays
                 });
             }
 
