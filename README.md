@@ -13,8 +13,8 @@ FROM  C  A  T            FROM  S  T  O  N  E
 > **This README is also the canonical context document for AI-assisted development.** It is written so an LLM (e.g. Claude Opus) can read it and author precise, surgical task prompts ("meta prompts") for this repo. See **[§14 Writing a master prompt](#14-writing-a-master-prompt-for-this-repo)** and the **[Shared Context Block](#shared-context-block-paste-into-every-task-prompt)** at the end.
 
 <p align="center">
-  <img src="docs/screenshots/menu-hero.png" width="300" alt="Word Ladder main menu — black pixel-space backdrop, cyan WORD LADDER header, colored outline ('ghost') buttons, a small teal creature">
-  <br><em>Main menu — a true-black pixel-space backdrop, a softly-floating cyan <strong>WORD LADDER</strong> title, and colored outline (“ghost”) buttons that cascade in (Tasks 22–28).</em>
+  <img src="docs/screenshots/menu-hero.png" width="300" alt="Word Ladder main menu with the Daily Rewards overlay — black pixel-space backdrop, cyan WORD LADDER header, a gold coin pill, and a 'Day 1 reward · +25 coins' claim popup">
+  <br><em>Main menu with the new <strong>Daily Rewards</strong> overlay — a true-black pixel-space backdrop, a softly-floating cyan <strong>WORD LADDER</strong> title, a gold <strong>coin pill</strong> (top-left), colored outline (“ghost”) buttons, and the daily login-reward claim (Tasks 22–28, 36).</em>
 </p>
 
 ---
@@ -46,19 +46,20 @@ FROM  C  A  T            FROM  S  T  O  N  E
 
 > Live captures (iPhone 13 Pro Max portrait). The UI follows the **true-black, outline ("ghost")** identity in [§5](#5-visual-identity) / [§15](#15-design-tokens) — colored rounded outlines over a black pixel-space backdrop (a swappable full-screen layer), each action in its own color, with subtle **ReduceMotion-gated** menu motion (floating cyan title, button cascade, press feedback).
 >
-> ⚠️ **Note:** the **Main Menu** thumbnail reflects the current look; the other thumbnails still show the earlier dark, gold-accented design and will be refreshed in a later pass.
+> ⚠️ **Note:** the **Main Menu, Classic, Daily, and Shop** thumbnails are current; **Puzzle Show / Time Attack / Puzzle Library / Stats / Settings** still show the earlier dark, gold-accented design and will be refreshed in a later pass.
 
 | Screen | |
 |---|---|
-| **Main Menu** — white `WORD LADDER` masthead on black. Buttons are **colored rounded outlines** (transparent centers): **DAILY** is the hero — a thicker, brighter **orange** ring (primary call-to-action; shows the streak once today is solved). The modes each carry their own color — **Classic** green, **Puzzle Show** violet, **Time Attack** red, **Resume** (only with an in-progress save) teal. **Puzzle Library / Stats** are a muted side-by-side row (Settings lives in the shared top-right gear). | <img src="docs/screenshots/main-menu.png" width="250"> |
+| **Main Menu** — white `WORD LADDER` masthead on black. Buttons are **colored rounded outlines** (transparent centers): **DAILY** is the hero — a thicker, brighter **orange** ring (primary call-to-action; shows the streak once today is solved). The modes each carry their own color — **Classic** green, **Puzzle Show** violet, **Time Attack** red, **Resume** (only with an in-progress save) teal. **Puzzle Library / Stats** are a muted side-by-side row (Settings lives in the shared top-right gear). A gold **coin pill** (top-left) shows the balance and opens the Shop; the **Daily Rewards** overlay (shown here) surfaces the daily login claim + streak repair ([§3](#3-economy--monetization)). | <img src="docs/screenshots/main-menu.png" width="250"> |
 | **Classic Mode** — the core word ladder on black. The **start** word is a row of **teal see-through outline tiles** (the origin), the **target** is **orange** outline tiles (the goal), and the played **chain** rows are **cyan** see-through outlines; only the **active input row stays solid** (the "fill here" zone, gold-edged as you type). Tiles carry **bold ~7px rings** and **ladder-feel motion** (letters drop in, accepted rows climb). Below: the Hint / Undo / Reveal **power-up bar** over a **rounded** QWERTY keyboard (red `DEL`, green `GO`) **floating on a transparent panel** — the space backdrop runs edge-to-edge. An icon **HOME** (top-left) and the shared **Settings** gear (top-right) flank a calm score header. Random 3–7-letter puzzles; on a solve a **compact win panel** ("Next Puzzle" / "Home") keeps you in the loop ([§1](#1-game-modes)). | <img src="docs/screenshots/classic-mode.png" width="250"> |
+| **Daily 2.0** (Task 36) — one shared puzzle a day, now **par-scored with stakes**. Same start (teal) → input → target (orange) board as Classic, plus a **"Par N · Mistakes left M"** HUD. You get a **3-mistake budget** (an invalid guess spends one; running out **fails** the run) while **detours** (valid but non-progress moves) cost your **grade**, not the run. Finishing scores **Perfect / Good / Solved / Failed** (★★★–☆) + par-scaled coins, advances your **played-streak** (a *failed* day still counts — only a missed calendar day breaks it), and logs a trailing-365 **W/L record + win%**. Results add a spoiler-free **path-shape share card** and a **watch-to-double** reward ([§1](#1-game-modes)). | <img src="docs/screenshots/daily.png" width="250"> |
 | **Puzzle Show** — tier-progression play on the same gameplay screen, with a `Tier X / Y` indicator under the score. **350 curated ladders (7 tiers × 50)** on a length/difficulty curve (Tier 1 easy 3-letter → Tier 7 hard 7-letter, up to 8-step ladders). Solving shows a stat screen offering **Next Puzzle / Tier N ▸ / Home** ([§7](#7-puzzle-show-tiers)). | <img src="docs/screenshots/puzzle-show.png" width="250"> |
 | **Time Attack** — a countdown timer + the **+Time** power-up; chosen as 60s/120s × Timed/Survival on a setup screen. Ladders **auto-advance** as you solve them; the full results screen (puzzles solved + **Play Again** → new run) appears only when the **timer hits 0**. | <img src="docs/screenshots/time-attack.png" width="250"> |
 | **Puzzle Library → Tier Select** (level 1) — the entry to Puzzle Show: a list of **7 tiers**, each with its theme (e.g. "3-letter words"), progress (`X/50`) and lock state (**gold** = current tier; **padlock + "Clear N in Tier M"** = locked). Tap an unlocked tier to open its grid. | <img src="docs/screenshots/puzzle-library.png" width="250"> |
 | **Puzzle Library → Tier Grid** (level 2) — the selected tier's **50** puzzle cards with a **Back** to tier-select (only the active tier renders, for performance). Cards reflect saved progress: **Completed** (green + ✓), **Unplayed** (surface grey), **Locked** (padlock). Tapping a card launches that exact puzzle. | <img src="docs/screenshots/puzzle-library-tier.png" width="250"> |
 | **Stats** — current & longest daily **streak**, dailies completed, total **coins**, total puzzles, and per-mode played/won (Classic, Time Attack best round). | <img src="docs/screenshots/stats.png" width="250"> |
 | **Settings** — audio sliders (master / SFX / music), accessibility toggles (mute, reduce-motion, haptics, colorblind mode, high-contrast, large-text), **Reset Progress** (confirm-gated; preserves settings + tutorial flag), **Replay Tutorial**, and the build version. | <img src="docs/screenshots/settings.png" width="250"> |
-| **Shop** (Task 33) — opened by tapping the **gold coin pill** on the menu. A black overlay with a **cyan** title and **gold** balance: **Power-Ups** (Hint / Undo / Reveal / Time in ×5 / ×15 / ×40, bought with coins), **Coins** (real-money bundles via a mockable store — billing stubbed), and **Remove Ads** (one-time). Buys update the balance + owned counts live; unaffordable bundles disable ([§3](#3-economy--monetization)). | _reached from the menu coin pill_ |
+| **Shop** (Tasks 33, 36) — opened by the **gold coin pill**. A pinned **Starter Pack** ($1.99 one-time → 1000 coins + 5 of each power-up + 3 ad-free days) and a **Restore Purchases** button sit up top, then **Power-Ups** (Hint / Undo / Reveal / Time in **×5 / ×15 / ×40** tiered coin prices), a **Free Coins · watch an ad** row (capped 3/day), real-money **coin packs** with names + merchandising badges (**Pouch / Stack / Chest "MOST POPULAR" / Vault / Hoard "BEST VALUE"**), and **Remove Ads**. Rebuilds from live state after each buy; unaffordable bundles disable; real billing is stubbed ([§3](#3-economy--monetization)). | <img src="docs/screenshots/shop.png" width="250"> |
 
 > **Global chrome:** one shared **Settings** gear (icon-only, top-right, ~HOME-sized) shows on every screen *except* Settings itself and opens it — `UIManager.CreateGlobalSettingsButton` → `OnGlobalSettingsRequested` → `GameBootstrap.ShowSettings` (which populates then shows). On the gameplay screen a house **HOME** (top-left) and the gear (top-right) flank the header. Icon assets: `Assets/UI/Icons/*.svg` (Vector Graphics) + `Assets/Resources/Icons/*.png`.
 
@@ -69,11 +70,18 @@ FROM  C  A  T            FROM  S  T  O  N  E
 | Mode | Timer | Puzzles | Win condition |
 |---|---|---|---|
 | **Classic** | None | Random, BFS-generated; start/end restricted to a common-words subset | Reach the end word → **compact win panel** ("Next Puzzle" stays in Classic). First-ever launch routes into the tutorial. |
-| **Daily** | None | One puzzle per day, identical for every player (no server) | Reach the end word → full results (streak + share, **Home** only) |
+| **Daily 2.0** | None | One puzzle/day, identical for everyone (no server) | **Par-scored with stakes** — a 3-mistake budget, detours cost grade; finishing (solve OR fail) → full results: grade/★, par-scaled coins, played-streak, W/L record, share card, watch-to-double (**Home** only) |
 | **Puzzle Show** | None | **350 curated ladders (50 × 7 tiers)**, two-level library | Reach end word → stat screen (Next Puzzle / Tier N ▸ / Home); tap any unlocked card to play it |
 | **Time Attack** | 60s or 120s, Timed or Survival | Random words back-to-back | Solve as many as possible before time runs out → full results + **Play Again** (new run) |
 
-**Daily puzzle + streak** — Today's puzzle is derived from the player's **local date** with no network call: `index = (Today − 2025-01-01).Days mod N`, where `N` = pool size in `Assets/Resources/Data/daily_puzzles.json` (all entries pre-validated Hamming-1 + dictionary). Streak rules (`DailyStreakRules`, pure/testable): completing today increments `currentStreak` iff yesterday was completed; a missed day resets to 1; same-day re-completion never double-counts; `longestStreak = max(longestStreak, currentStreak)`. Persisted under `daily_v1`.
+**Daily 2.0 — par scoring, stakes, played-streak, W/L record, repair, share (Task 36).** Today's puzzle is derived from the **local date**, no network: `index = (Today − 2025-01-01).Days mod N` (`N` = pool size in `daily_puzzles.json`, all pre-validated Hamming-1 + dictionary). Daily runs reuse Classic mechanics but arm a **two-resource scored run** via `GameStateManager.ConfigureDailyRun(mistakeBudget, par)` (called after `StartNewPuzzle`; par = the puzzle's validated `optimalSteps`):
+- **Mistakes (the stake):** an invalid guess spends one of `DailyMistakeBudget` (3); running out **fails** the run. A wrong-length/empty entry is malformed (not a mistake).
+- **Detours (the score):** an accepted move that isn't *progress* (`!validation.isProgress` — not strictly closer to the target) is a **detour**; detours set the grade but never end the run. Undo decrements the detour count (floored; no mistake refund).
+- **Grade** — pure `PathScoring.Score(par, steps, detours, mistakesUsed, ranOutOfMistakes, usedPowerUp)` → `PathGrade` where `(int)grade == stars`: **Perfect** (★★★, 0 detours) / **Good** (★★, ≤ `GoodMaxDetours` = 2) / **Solved** (★) / **Failed** (☆, out of mistakes). Surfaced on `ResultsScreen.ShowDailyResult` as "grade ★ · Par N · You got X".
+
+**Played-streak** (`DailyStreakRules.ApplyPlayed`, pure/testable — the streak authority, replacing completion-only `ApplyCompletion`; never call both): a **played** day (solve OR fail) advances `currentStreak` iff yesterday was played; only a **missed calendar day** resets it; same-day replay never double-counts. A **trailing-365-day W/L record** (`outcomes` ledger of `DayOutcome{dateIso,won}`; `Wins`/`Losses`/`WinRatePct`, `RecordWindowDays = 365`) tracks skill alongside the habit streak. **Streak repair** (`CanRepair`/`ApplyRepair`): if *only yesterday* was missed, bridge the gap for `StreakRepairCoinCost` (150) coins **or** a rewarded ad, once per `StreakRepairCooldownDays` (7) — a bridge only (does **not** auto-play today). One-and-done: the menu **DAILY** button locks once today is played. Persisted under `daily_v1`.
+
+**Path-shape share card** (`ShareCardBuilder.BuildDailyShapeCard`) — a **spoiler-free** daily result: a header (`Word Ladder Daily #n · Par p · X/p · ★★☆`), one glyph row per step (`🟩` progress / `🟨` detour / `⬛` mistake-step), and the streak line — **no words**. Copied via `ClipboardShareService`.
 
 **Time Attack sub-modes** — **Timed**: fixed countdown (60s/120s), no rewards. **Survival**: each solve grants `BalanceConfig.SurvivalRewardSeconds` (15s) so a skilled player can sustain. Configured via `TimeAttackConfig` (factories `Default60`/`Default120`/`DefaultSurvival`, all read `BalanceConfig`).
 
@@ -103,25 +111,38 @@ FROM  C  A  T            FROM  S  T  O  N  E
 
 ## 3. Economy & monetization
 
-**Coins → power-ups (Task 33).** One `EconomyManager : IEconomyManager` (constructed + initialized in `GameBootstrap`) persists everything through `DataManager` → `PlayerProgress`: the coin balance **and** the owned power-up inventory (hint/undo/reveal/time), plus the `removeAds` flag and the starting/daily-grant bookkeeping. All amounts/prices live in `BalanceConfig`. (A legacy `CoinSystem` MonoBehaviour also exists but is orphaned — see [§13](#13-known-tech-debt--candidate-tasks).)
+**Coins → power-ups (Tasks 33, 36).** One `EconomyManager : IEconomyManager` (constructed + initialized in `GameBootstrap`) persists everything through `DataManager` → `PlayerProgress`: the coin balance **and** the owned power-up inventory (hint/undo/reveal/time), the `removeAds` flag + starting/daily-grant bookkeeping, and the **Task 36** faucet/sink state — the one-time **Starter Pack** flag, a temporary **ad-free window**, the **login-reward** cycle position, the **watch-for-coins** daily counter, and the highest **streak milestone** paid. All amounts/prices live in `BalanceConfig`. (A legacy `CoinSystem` MonoBehaviour also exists but is orphaned — see [§13](#13-known-tech-debt--candidate-tasks).)
 
 **Two currencies, one direction — real money buys coins; coins buy power-ups:**
 
 | Layer | What | Bought with |
 |---|---|---|
-| 💎 Coin bundles | `coins_50` / `coins_150` / `coins_500` (from `coin_shop.json`) | **real money** via `IStoreService` |
-| 🎟️ Power-up bundles | Hint / Undo / Reveal / Time, each in **×5 / ×15 / ×40** | **coins** (`SpendCoinsAsync` → `Add*Async`) |
-| 🚫 Remove Ads | one-time, sets the persisted `removeAds` flag | **real money** via `IStoreService` |
+| 🎁 **Starter Pack** (36J) | one-time **$1.99** → 1000 coins + 5 of each power-up + a 3-day ad-free window (`StoreProductType.StarterPack`) | **real money** via `IStoreService` |
+| 💎 Coin packs | **Pouch** 150/$0.99 · **Stack** 500/$2.49 · **Chest** 1200/$4.99 *(MOST POPULAR)* · **Vault** 3000/$9.99 · **Hoard** 7000/$19.99 *(BEST VALUE)* — `coin_shop.json` (names + badges) | **real money** via `IStoreService` |
+| 🎟️ Power-up bundles | Hint/Undo **50·135·320** · Reveal **120·320·800** · Time **60·160·400**, each as **×5 / ×15 / ×40** (tiered, bulk-discounted) | **coins** (`SpendCoinsAsync` → `Add*Async`) |
+| 🚫 Remove Ads | one-time **$4.99**, sets the persisted `removeAds` flag | **real money** via `IStoreService` |
 
-**Free grants:** every new player starts with **5 each** power-up (`ApplyStartingInventoryIfNeeded` — idempotent, *tops up* and never reduces a richer save) and receives **+2 each per local day** (`GrantDailyIfDue` — idempotent, no missed-day stacking, reuses the `DailyPuzzleService` clock). Coins still faucet from play: `PuzzleCompletionReward` = +10, `DailyBonusReward` = +25, rewarded video = +1 Hint.
+**Free grants:** every new player starts with **5 each** power-up (`ApplyStartingInventoryIfNeeded` — idempotent, *tops up*, never reduces a richer save) and gets **+2 each per local day** (`GrantDailyIfDue` — idempotent, no missed-day stacking, reuses the `DailyPuzzleService` clock).
 
-**The Shop** (`ShopScreen` — a runtime overlay: black bg, cyan title, gold balance, colored rounded-outline buttons) is opened by tapping the **gold coin pill** on the main menu (`UIManager` coin pill → `OnShopRequested` → `GameBootstrap`). It rebuilds from live state after each purchase; unaffordable bundles are disabled; Remove-Ads flips to **"Owned."**
+**Coin faucets & sinks (Task 36 Phase 5 — numbers in `BalanceConfig`, all clock-free + idempotent per local day):**
 
-**Mockable store — real billing is stubbed, not faked:** `IStoreService` abstracts real-money purchases. The Editor/tests use `MockStoreService` (grants immediately so the flow is testable); the real platform impl is `PlatformStoreServiceStub` — a clearly-marked TODO that **always returns `Failed`** until Unity IAP + store-console products + a device are wired (it never grants from a non-functional path). Granting happens **only on `Success`**; `Cancelled`/`Failed` grant nothing; Remove-Ads is a non-consumable (owned once).
+| Faucet / sink | Amount | Where it surfaces |
+|---|---|---|
+| **Par-scaled daily reward** | Perfect **60** / Good **40** / Solved **25** / Failed **10** (`DailyCoinReward(stars, failed)`) | granted on daily finish (replaces the old flat +25) |
+| **Login reward** (7-day cycle) | `{25, 25, 50, 50, 75, 75, 150}` then wraps (`ClaimLoginRewardAsync`) | the **Daily Rewards** popup on the menu |
+| **Watch for coins** | **35** coins, cap **3/day** (`GrantWatchCoinsAsync`) | a row in the Shop's coin section |
+| **Streak milestones** | **+100** at a **7 / 30 / 100**-day streak, each once ever (`AwardStreakMilestonesAsync`) | a toast on the daily results |
+| **Reward doubler** | watch an ad → **2×** today's daily reward, once per result | a button on the daily results |
+| **Streak repair** (sink) | spend **150** coins *or* watch an ad | the **Daily Rewards** popup |
+| Classic / Puzzle-Show completion | **+10** (`PuzzleCompletionReward`); rewarded video = +1 Hint | gameplay |
+
+**The Shop** (`ShopScreen` — a runtime overlay: black bg, cyan title, gold balance, colored rounded-outline buttons) is opened by the **gold coin pill** (`UIManager` → `OnShopRequested` → `GameBootstrap`). Top to bottom: a **pinned Starter Pack** + **Restore Purchases**, the coins-priced **Power-Up** bundles, a **Free Coins · watch an ad** row, the real-money **coin packs** (names + MOST POPULAR / BEST VALUE badges), and **Remove Ads**. It rebuilds from live state after each purchase; unaffordable bundles disable; Remove-Ads / Starter-Pack flip to **"Owned."** The **Daily Rewards** popup (`DailyRewardPopup`, same runtime-overlay idiom) is a separate menu surface for the login claim + streak repair, shown when either is available.
+
+**Mockable store — real billing is stubbed, not faked:** `IStoreService` abstracts real-money purchases (coin packs, Remove-Ads, Starter-Pack) + **`RestorePurchasesAsync`**. The Editor/tests use `MockStoreService` (grants immediately so the flow is testable); the real platform impl is `PlatformStoreServiceStub` — a clearly-marked TODO that **always returns `Failed`** until Unity IAP + store-console products + a device are wired. Granting happens **only on `Success`**; `Cancelled`/`Failed` grant nothing. **Non-consumables** (Remove-Ads, Starter-Pack) are owned once and **idempotent** — `GrantStarterPackAsync` no-ops if already owned, and **Restore re-applies entitlements without re-granting the consumable coins**. The 3-day ad-free window is a Unix timestamp (`adFreeUntilUnix`); `GameBootstrap` recomputes `AdPolicyService.AdsRemoved = removeAds || ad-free-active` at boot and on purchase.
 
 **Anti-deadlock:** no fail/lives gate + the free starting + daily grants mean a broke player can always finish; power-ups accelerate, never gate — no pay-to-win.
 
-**Ads (Google Mobile Ads, integrated):** `IAdService` (low-dep `Puzzle` assembly so tests mock it) → `AdService` (real AdMob) + `NullAdService` (Editor). Unit IDs are AdMob **TEST IDs** as `[SerializeField]` placeholders — never real IDs in source. **Rewarded video is opt-in only**, granted exactly once on the SDK reward callback, never on dismiss/failure. `AdPolicyService` enforces the **interstitial frequency cap** (time cooldown `InterstitialCooldownSeconds` = 300 **and** `InterstitialPuzzleCap` = 5 puzzles, between-session only) — and **`AdsRemoved` is now wired to the persisted `removeAds` flag** (set at boot + on the Remove-Ads purchase), so the one-time IAP genuinely suppresses interstitials.
+**Ads (Google Mobile Ads, integrated):** `IAdService` (low-dep `Puzzle` assembly so tests mock it) → `AdService` (real AdMob) + `NullAdService` (Editor). Unit IDs are AdMob **TEST IDs** as `[SerializeField]` placeholders — never real IDs in source. **Rewarded video is opt-in only**, granted exactly once on the SDK reward callback, never on dismiss/failure. `AdPolicyService` enforces the **interstitial frequency cap** (time cooldown `InterstitialCooldownSeconds` = 300 **and** `InterstitialPuzzleCap` = 5 puzzles, between-session only) — and **`AdsRemoved` is wired to `removeAds` *and* the Starter-Pack 3-day ad-free window** (recomputed at boot + on purchase), so the IAPs genuinely suppress interstitials. **Task 36's rewarded-ad faucets** (watch-for-coins, the daily reward doubler, ad-based streak repair) are fully wired to `IAdService` but **dormant under `NullAdService`** (the Editor default, `IsRewardedReady == false`) — their UI shows "ads not available yet" until a real rewarded SDK is present, exactly like the billing stub. **Login reward and coin-based repair work today**, no ad needed.
 
 ---
 
@@ -226,7 +247,16 @@ Generation:  MaxBfsDepth=10  MaxGenerationAttempts=20
              AbsoluteMinMoves=2   MinMovesForLength(len): 3→2 4→2 5→3 6→3 7→4
 Tiers:       MaxTier=7  PuzzlesPerTier=50  PuzzlesRequiredToAdvanceTier=10 (base)
              PuzzlesRequiredToAdvance(tier): 10/15/20/25/30/35/40 (rises with depth)
-Economy:     PuzzleCompletionReward=10  DailyBonusReward=25  RewardedAdHintGrant=1
+Economy:     PuzzleCompletionReward=10  RewardedAdHintGrant=1
+             StartingPowerUpGrant=5  DailyPowerUpGrant=2
+Daily 2.0:   DailyMistakeBudget=3  PerfectMaxDetours=0  GoodMaxDetours=2
+             DailyCoinReward(stars,failed): Perfect=60 Good=40 Solved=25 Failed=10
+             StreakRepairCoinCost=150  StreakRepairCooldownDays=7
+Faucets:     LoginRewardCycle={25,25,50,50,75,75,150}  WatchCoinsReward=35 (WatchCoinsDailyCap=3)
+             StreakMilestones={7,30,100} @ StreakMilestoneReward=100
+Shop:        PowerUpBundleSizes={5,15,40} + tiered price arrays:
+             Hint/UndoBundlePrices={50,135,320}  RevealBundlePrices={120,320,800}  TimeBundlePrices={60,160,400}
+             (coin packs + Remove-Ads + Starter-Pack are defined in coin_shop.json, NOT BalanceConfig)
 Ads:         InterstitialCooldownSeconds=300  InterstitialPuzzleCap=5
 ```
 
@@ -243,7 +273,8 @@ Ads:         InterstitialCooldownSeconds=300  InterstitialPuzzleCap=5
 Assets/Scripts/
 ├── Core/
 │   ├── Engine/        WordPuzzle.State    GameState (immutable), GameStateManager (reducer/Dispatch),
-│   │                                      GameAction, Constants, EconomyManager, IEconomyManager
+│   │                                      GameAction, Constants, EconomyManager, IEconomyManager,
+│   │                                      IStoreService/MockStoreService/PlatformStoreServiceStub, ShopCatalog
 │   └── Persistence/   WordPuzzle.Persistence  IDataManager, DataManager, PlayerProgress, SaveData,
 │                                          SettingsData, DailyProgress, OnboardingData, TierDataLoader
 ├── Game/             WordPuzzle.Game      GameBootstrap (DI wiring), BootstrapInitializer,
@@ -253,15 +284,15 @@ Assets/Scripts/
 │   └── Modes/         WordPuzzle.Modes    ClassicMode, PuzzleShowMode, TimeAttackMode(+Config),
 │                                          IGameMode, ModeController
 ├── Puzzle/           WordPuzzle.Puzzle    WordGraph, WordValidator (IWordValidator), PuzzleGenerator,
-│                                          WordOps, BalanceConfig, IAdService, WordPuzzle (model),
-│                                          PuzzleDefinition, TierData, Difficulty, ValidationResult
+│                                          WordOps, BalanceConfig, PathScoring (daily grade/stars), IAdService,
+│                                          WordPuzzle (model), PuzzleDefinition, TierData, Difficulty, ValidationResult
 └── UI/               WordPuzzle.UI        UIManager, UIAnimations, TimerDisplay, Themes/UITheme,
                                            Audio/SfxManager, Haptics/(IHaptics,HandheldHaptics,NullHaptics),
                                            TutorialOverlay, Components/(LetterTile, OnScreenKeyboard, …),
                                            Screens/(MainMenu, Gameplay, PuzzleLibrary, Results,
-                                           Settings, TimeAttackSetup)
+                                           Settings, TimeAttackSetup, Shop, Stats, DailyRewardPopup)
 
-Assets/Resources/Data/  word_library.json (12,183), tier_definitions.json (350 = 7×50), daily_puzzles.json (450), common_words.json (6,582)
+Assets/Resources/Data/  word_library.json (12,183), tier_definitions.json (350 = 7×50), daily_puzzles.json (450), common_words.json (6,582), coin_shop.json (coin packs + Remove-Ads + Starter-Pack)
 Assets/Scenes/          GameUI.unity  ← the ONLY live scene. MainMenu/ClassicMode/PuzzleShowMode/
                                         TimeAttackMode/SampleScene are legacy and never LoadScene'd.
 Assets/Tests/           Unit/ + Integration/  (NUnit; TestMocks.cs has Mock* doubles)
@@ -270,7 +301,7 @@ Assets/Editor/          SceneBuilder*.cs + Verify* menu-item tools
 Assembly dependency direction: `Puzzle` (lowest) ← `Persistence`/`State` ← `Modes` ← `Game`/`UI`. **`Puzzle` must never reference `State`/`UI`** (circular). Put shared low-level types in `Puzzle`.
 
 ### State flow (immutable + Dispatch — DO NOT change this shape)
-`GameStateManager` owns an immutable `GameState` snapshot plus a private `MutableGameState`. UI subscribes to state; `GameAction` instances go through `Dispatch()`, which routes to handlers: `HandlePressLetter`, `HandleDeleteLetter`, `HandleSubmitWord`, `HandleUseHint`, `HandleUseReveal`, `HandleUseAddTime`, `HandleUndo`. Each handler mutates the working state, then notifies subscribers and persists. Events: `OnWordSubmissionResult` (accept/reject + reason), `OnTimeAdded` (AddTime/Survival seconds).
+`GameStateManager` owns an immutable `GameState` snapshot plus a private `MutableGameState`. UI subscribes to state; `GameAction` instances go through `Dispatch()`, which routes to handlers: `HandlePressLetter`, `HandleDeleteLetter`, `HandleSubmitWord`, `HandleUseHint`, `HandleUseReveal`, `HandleUseAddTime`, `HandleUndo`. Each handler mutates the working state, then notifies subscribers and persists. Events: `OnWordSubmissionResult` (accept/reject + reason), `OnTimeAdded` (AddTime/Survival seconds). **Daily 2.0 (Task 36)** adds daily fields on the *internal* `MutableGameState` (mistakes/detours/par/per-step classes), armed by `ConfigureDailyRun(mistakeBudget, par)` after `StartNewPuzzle` and read via getters (`GetDailyResult`/`GetMistakesRemaining`/`GetDetourCount`/`GetDailyStepClasses`/`IsDailyRun`) — the immutable `GameState` shape is unchanged.
 
 ### Public interfaces to preserve (method names/signatures)
 `IWordValidator`, `IDataManager`, `IGameMode`, `IEconomyManager`. (You may change a *return payload* if a task explicitly says so, but keep the method surface.)
@@ -291,15 +322,15 @@ All via `PlayerPrefs` (JSON values). `DataManager` owns them.
 | Key | Holds | Cleared by Reset Progress? |
 |---|---|---|
 | `puzzle_progress_v1` | `PuzzleProgressData` (tiers, completed IDs) | ✅ yes |
-| `wordpuzzle_progress` | `PlayerProgress` (coins, **owned power-up inventory**, `removeAds`, starting/daily-grant flags, stats) | ✅ yes |
+| `wordpuzzle_progress` | `PlayerProgress` (coins, **owned power-up inventory**, `removeAds`, starting/daily-grant flags, stats; **Task 36:** `starterPackOwned`, `adFreeUntilUnix`, login-reward cycle pos, watch-for-coins counter, milestone-paid marker) | ✅ yes |
 | `wordpuzzle_save` | in-flight `GameStateSnapshot` | ✅ yes |
-| `daily_v1` | `DailyProgress` (streak) | ✅ yes |
+| `daily_v1` | `DailyProgress` — streak + **Daily 2.0:** `lastPlayedDateIso`, `lastRepairDateIso`, `todayPlayed`, and the trailing-365 `outcomes` ledger (`DayOutcome{dateIso,won}`) | ✅ yes |
 | `settings_v1` | `SettingsData` (volumes, mute, reduceMotion, hapticsEnabled) | ❌ preserved |
 | `onboarding_v1` | `OnboardingData` (tutorial done/skipped) | ❌ preserved (only Replay clears) |
 
 `DataManager.ResetAllAsync` clears the four "yes" keys and preserves settings + onboarding. (`"Coins"` is a legacy key written only by the orphaned `CoinSystem`/`PlayerDataManager` — see [§13](#13-known-tech-debt--candidate-tasks).)
 
-**Migration (Task 33):** `PlayerProgress`/`PlayerProgressData` gained `totalTimeEarned`, `removeAds`, `startingGrantApplied`, `lastDailyGrantDate`. They serialize through the `PlayerProgressData` DTO via `DataManager`'s converters, and **JsonUtility auto-defaults missing fields** — so pre-Task-33 saves load cleanly (new fields = 0/false/""), and `startingGrantApplied = false` makes the **5-each starting grant apply once** on the next boot.
+**Migration (Tasks 33, 36):** `PlayerProgress`/`PlayerProgressData` gained `totalTimeEarned`, `removeAds`, `startingGrantApplied`, `lastDailyGrantDate` (33), then `starterPackOwned`, `adFreeUntilUnix`, `lastLoginRewardDate`, `loginRewardIndex`, `lastWatchCoinsDate`, `watchCoinsCountToday`, `highestStreakMilestoneAwarded` (36). `DailyProgress` gained `lastPlayedDateIso`, `lastRepairDateIso`, `todayPlayed`, `outcomes` + a `Normalize()` (the Q6 seed `lastPlayedDate ← lastCompletedDate`, run in the **Persistence** assembly by `DataManager.LoadDailyProgressAsync` since it can't reference the Game asm). Everything serializes through the DTO + `DataManager` converters, and **JsonUtility auto-defaults missing fields**, so pre-update saves load cleanly (new fields = 0/false/"") and one-time grants (e.g. `startingGrantApplied = false`) fire once on the next boot.
 
 ---
 
@@ -308,7 +339,7 @@ All via `PlayerPrefs` (JSON values). `DataManager` owns them.
 - **NUnit EditMode** tests under `Assets/Tests/Unit/{Engine,Persistence,UI}` and `Assets/Tests/Integration`. The `Unit.Tests` asmdef references the `Game.*` assemblies (incl. `Game.Puzzle`, `Game.UI`, `Game.Persistence`); UI-folder tests use a separate `Tests` asmdef. Most new tests need **no asmdef change**.
 - **Mocks** in `Assets/Tests/TestMocks.cs`: `MockDataManager`, `MockWordValidator`, `MockEconomyManager`, `MockAdService`. Extend these rather than inventing new doubles.
 - **Conventions:** pure-logic classes (e.g. `DailyStreakRules`, `OnboardingRules`, `WordOps`, `BalanceConfig`, `SfxManager.EffectiveSfxVolume`) are tested standalone; `GameStateManager` tests build it with the mocks; persistence tests use `new DataManager()` against PlayerPrefs with `[SetUp]/[TearDown]` key cleanup.
-- **Run:** Window → General → Test Runner → EditMode → Run All. (See [§17](#17-notes-for-ai-agents-working-in-this-repo) for the MCP test-runner caveat.)
+- **Run (human):** Window → General → Test Runner → **PlayMode** → Run All. **MCP agents:** `run_tests(mode="PlayMode")` — it works (full suite 274/274); EditMode returns 0 (see [§17](#17-notes-for-ai-agents-working-in-this-repo)).
 - **Editor tools** (`Tools/` menu): `Verify*` probes (library/ladder/polish), `SceneBuilder*` idempotent scene builders.
 - **Key data-integrity tests:** `MinMovesFloorTests` (no sub-2-move puzzle anywhere; generated puzzles meet the length curve, by *true* BFS distance), `PuzzleShowTierTests` (7×50 structure, Hamming-1 ladders, non-decreasing min steps, `ResolveState` mapping, progressive unlock), `GenerationQualityTests` (junk-blocklist absence, curated-word presence, min long-word counts), `PostWinRouterTests` (per-mode surface routing), `BalanceConfigWiringTests`.
 
@@ -334,8 +365,11 @@ The word data is **machine-generated and validated**, not hand-edited — re-run
 6. **Native image share** — `IShareService`/`ShareCardBuilder.RenderPng` seam is ready; wiring the OS share sheet needs an approved plugin (e.g. NativeShare).
 7. **AudioMixer + real SFX clips** — `SfxManager` has slots but no clips/mixer in the repo yet.
 8. **Full Classic resume** — Resume restores tier/daily puzzles (id-resolvable); random Classic isn't reconstructable from the current save snapshot (no end-word/solution stored), so it hides Resume. A snapshot-schema extension would enable full Classic resume.
+9. **Real IAP billing** — `PlatformStoreServiceStub` always returns `Failed`. Activating the Starter Pack / coin packs / Remove-Ads / **Restore** for real money needs Unity IAP + store-console products (`starter_pack`, `coins_150…coins_7000`, `premium_no_ads`) + receipt validation + a device build. The shop UI/flow are already written against `IStoreService`, so this is a swap-in with no UI changes.
+10. **Rewarded-ad SDK for the Task 36 faucets** — watch-for-coins, the daily reward doubler, and ad-based streak repair are wired to `IAdService` but no-op under `NullAdService` (they show "ads not available yet"). A real rewarded provider (AdMob is already integrated for the hint ad) activates them; login reward + coin-based repair already work.
+11. **Daily-HUD scope + Stats label polish (verify visually)** — confirm the "Par N · Mistakes left M" HUD shows **only** in Daily, not Classic/tutorial (`GameplayScreen.SetDailyPar` writes the `stepsRemainingText` slot — check it's reset for non-daily runs). The Stats **W/L record** is a runtime-synthesized label (`StatsScreen.EnsureDailyRecordLabel`) placed beneath Daily-Completed — its position/style is a quick portrait-eyeball nudge, not yet a scene-authored row.
 
-> **Verification caveat (important for any agent):** the unityMCP EditMode test runner is currently **non-functional** — it collapses to the assembly root and never invokes NUnit, reporting `"Passed"` even for a deliberately-failing canary. Treat its summary as "not run." Verify changes by **clean compile + reading test assertions against the implementation** until the runner is fixed (see [§17](#17-notes-for-ai-agents-working-in-this-repo)).
+> **Verification note (important for any agent):** the unityMCP **`run_tests(mode="PlayMode")` path works** and reports real pass/fail — the full suite runs green at **274/274** and genuine failures surface correctly. Two caveats: **(a)** `mode="EditMode"` with a filter returns `total:0` (a false `"Passed"`) because this project's test assembly is **PlayMode-registered** — always run PlayMode; **(b)** PlayMode occasionally "fails to initialize (timeout)" — retry, and if a timed-out run left the editor in Play Mode, `manage_editor(stop)` first. See [§17](#17-notes-for-ai-agents-working-in-this-repo) for the full workflow.
 
 ---
 
@@ -347,7 +381,7 @@ Tasks here are driven by a consistent **meta-prompt** format — paste the whole
 - **Definition of done** — concrete and outcome-based; *"a tool reported success" is NOT done.* Spell out exactly what must be true (every screen, all tests green, editor left **OUT of Play mode**).
 - **Ask before assuming** — STOP and surface assumptions in the PLAN rather than guessing.
 - **Scope discipline** — do ONLY this task; list everything else at the end as *"Observations for later."*
-- **Verification honesty** — the unityMCP test runner is unreliable ([§17](#17-notes-for-ai-agents-working-in-this-repo)): verify by **reading the assertions**, running a **must-fail canary**, and a **human-in-Editor Simulator eyeball** (MCP can't screenshot the portrait Simulator, so hand visual/feel sign-off to the user).
+- **Verification honesty** — run the suite via `run_tests(mode="PlayMode")` (it works; EditMode returns 0 — [§17](#17-notes-for-ai-agents-working-in-this-repo)), confirm a **must-fail canary** actually fails, and hand the **portrait Simulator eyeball** to the user (MCP can't screenshot it). "A tool reported success" is still not done.
 - **Single-editor reality** — only one process writes the Unity project at once; specialists PLAN in parallel, a **named Lead** integrates, resolves shared-file conflicts, and verifies editor state.
 
 **2. [Shared Context Block](#shared-context-block-paste-into-every-task-prompt)** — paste it; tell the agent to **verify it against the live tree** (this README drifts).
@@ -386,14 +420,31 @@ Post-win surface routing: pure PostWinRouter.Decide(...) called by GameBootstrap
 Persistence: PlayerPrefs JSON via DataManager (keys: puzzle_progress_v1, wordpuzzle_progress,
 wordpuzzle_save, daily_v1, settings_v1, onboarding_v1). New persisted PlayerProgress fields serialize
 through the PlayerProgressData DTO + DataManager converters; JsonUtility auto-defaults missing fields.
-Economy (Task 33): EconomyManager : IEconomyManager owns the persisted coin balance + the OWNED power-up
-inventory (PlayerProgress.total{Hints,Reveals,Undos,Time}Earned) + removeAds + starting/daily-grant flags.
-Hint/Reveal charges SEED each puzzle from owned (GameStateManager.SetOwnedPowerUpProvider, wired in
-GameBootstrap; using one persists via Use*Async; null in unit tests => BalanceConfig defaults stand). New
-players get 5 each; +2 each/day (GrantDailyIfDue). Shop = ShopScreen runtime overlay opened by the UIManager
-coin pill (OnShopRequested). Real-money buys go through IStoreService (MockStoreService in editor;
-PlatformStoreServiceStub = real billing, NOT implemented). removeAds wires AdPolicyService.AdsRemoved.
-Prices/grants in BalanceConfig (the UI assembly does NOT reference Puzzle, so shop pricing is INJECTED).
+Daily 2.0 (Task 36): par-scored stakes. GameStateManager.ConfigureDailyRun(mistakeBudget, par) AFTER
+StartNewPuzzle (par = puzzleDefinition.optimalSteps). An invalid guess spends a mistake (DailyMistakeBudget=3;
+0 => FAIL); an accepted !validation.isProgress move is a DETOUR (sets grade, never fails). Pure
+PathScoring.Score(...) -> PathGrade (Perfect/Good/Solved/Failed; (int)grade==stars). Streak authority =
+DailyStreakRules.ApplyPlayed (a PLAYED day, solve OR fail, advances the streak; only a missed calendar day
+resets) — NOT ApplyCompletion (never call both). Trailing-365 W/L = outcomes ledger (Wins/Losses/WinRatePct,
+RecordWindowDays=365). Repair = CanRepair/ApplyRepair (yesterday-only, once/StreakRepairCooldownDays=7; coins
+StreakRepairCoinCost=150 or rewarded ad; bridge only, does NOT auto-play today). Share =
+ShareCardBuilder.BuildDailyShapeCard (spoiler-free: header + glyph rows + streak, NO words).
+Economy (Tasks 33+36): EconomyManager : IEconomyManager owns persisted coins + the OWNED power-up inventory
+(PlayerProgress.total{Hints,Reveals,Undos,Time}Earned) + removeAds + starting/daily-grant flags + Task-36
+faucet state (starterPackOwned, adFreeUntilUnix, login cycle pos, watch counter, milestone marker). Hint/Reveal
+SEED each puzzle from owned (GameStateManager.SetOwnedPowerUpProvider, wired in GameBootstrap; null in unit
+tests => BalanceConfig defaults stand). New players get 5 each; +2/day (GrantDailyIfDue). Faucets/sinks
+(numbers in BalanceConfig, clock-free, idempotent/local-day): DailyCoinReward(stars,failed) 60/40/25/10;
+ClaimLoginRewardAsync cycle {25,25,50,50,75,75,150}; GrantWatchCoinsAsync 35 cap 3/day;
+AwardStreakMilestonesAsync 100 @ 7/30/100; reward doubler (ad => 2x); repair sink (150 coins or ad). Shop =
+ShopScreen runtime overlay (coin pill -> OnShopRequested): pinned Starter Pack + Restore, tiered power-up
+bundles (Hint/Undo 50/135/320, Reveal 120/320/800, Time 60/160/400 for x5/x15/x40 — INJECTED since UI can't
+ref Puzzle), a Free-Coins watch row, named coin packs (coin_shop.json). DailyRewardPopup = a SEPARATE menu
+overlay (login claim + repair). Real-money buys + RestorePurchasesAsync go through IStoreService
+(MockStoreService in editor; PlatformStoreServiceStub = real billing, NOT implemented; StoreProductType
+{Coins, RemoveAds, StarterPack}). removeAds || ad-free-window wires AdPolicyService.AdsRemoved. Rewarded-ad
+faucets (watch-coins, doubler, ad-repair) are DORMANT under NullAdService (IsRewardedReady=false) until a real
+ad SDK; login reward + coin-repair work now.
 Tests live in Assets/Tests/Unit/ (NOT Assets/Scripts/Tests).
 Assemblies (dep direction): Puzzle (lowest; BalanceConfig, WordGraph, WordValidator, IAdService) <-
 Persistence/State <- Modes <- Game/UI. Puzzle must NOT reference State/UI.
@@ -408,8 +459,9 @@ Hard constraints (ALL prompts):
 - Preserve the immutable GameState + Dispatch architecture and the public interfaces
   IWordValidator, IDataManager, IGameMode, IEconomyManager (extended additively in Task 33),
   IStoreService unless a task says otherwise.
-- All existing EditMode/PlayMode tests stay green. Delete the .meta when you delete a Unity asset,
-  and GUID-check scenes/prefabs before deleting any MonoBehaviour script.
+- All tests stay green — run via run_tests(mode="PlayMode") (PlayMode-registered suite, ~274 tests;
+  EditMode returns total:0). Delete the .meta when you delete a Unity asset, and GUID-check
+  scenes/prefabs before deleting any MonoBehaviour script.
 - Never commit Library/Temp/obj. Minimal, surgical diffs.
 - PLAN FIRST: confirm exact method seams against the real files before editing; state assumptions
   where ambiguous. Tunables go in BalanceConfig, never as new magic-number literals.
@@ -457,14 +509,14 @@ Hard constraints (ALL prompts):
 
 1. Clone, open the root folder via Unity Hub → *Add project from disk*.
 2. Open `Assets/Scenes/GameUI.unity` and press **Play**.
-3. Tests: Window → General → Test Runner → EditMode → Run All.
+3. Tests: Window → General → Test Runner → **PlayMode** → Run All (the suite is PlayMode-registered, ~274 tests).
 
 ---
 
 ## 17. Notes for AI agents working in this repo
 
 Environment quirks learned the hard way — relevant when an agent verifies its own work:
-- **The unityMCP `run_tests` runner is unreliable for pass/fail.** It reports `summary.total=0`, collapses results to a single root node, and has reported `"Passed"` for a suite containing a must-fail test. Treat `"Passed"` as *compiles + discovered*, **not** runtime-green — verify by reading test-source assertions against the implementation. EditMode runs require the editor **not** in Play Mode (`manage_editor stop` first).
+- **The unityMCP `run_tests` runner works in PlayMode** (verified: full suite **274/274**, real failures surface). Gotchas: **(1)** the suite is **PlayMode-registered**, so `mode="EditMode"` with a filter returns `summary.total:0` — a *false* `"Passed"`; always use `mode="PlayMode"`. **(2)** PlayMode sometimes returns *"failed to initialize (tests did not start within timeout)"* — **retry**; a timed-out init can leave the editor IN Play Mode, after which the next run errors *"Cannot start … in Play Mode"* → `manage_editor(action="stop")`, then re-run. **(3)** `get_test_job.progress.completed` can exceed `total` (double-counted) — trust `result.summary.{total,passed,failed}`. **(4)** new `.cs` files written outside Unity need `refresh_unity(scope="all", mode="force")` to import before they compile (a `scope="scripts"` refresh can miss a brand-new file → `CS0234`). **(5)** running PlayMode tests leaves a temp `InitTestScene<guid>` loaded (Game view then shows *"No camera rendering"*) → reload `Assets/Scenes/GameUI.unity` afterward.
 - **`execute_code` (in-editor C#) is broken here** (mono "filename or extension is too long"; Roslyn not installed). You cannot script Play-mode drives or screenshots — visual/feel acceptance is a human-in-Editor check.
 - **`manage_camera` screenshots can't see the portrait game.** The capture returns a blank ~2:1 landscape Game-view rendered via the Main Camera (which **excludes** the Screen Space - Overlay UI canvas); the real frame is the portrait Device Simulator on display 0, which MCP can't read (`scene_view` capture needs an open Scene View). Verify UI **numerically** instead — `manage_scene get_hierarchy` with `include_transform` for positions, `ReadMcpResourceTool` on `mcpforunity://scene/gameobject/{id}/component/{name}` for rects/colors/refs — and hand the portrait eyeball to a human. Also: Play mode boots straight to **MainMenu** (you can't script into a specific mode), `manage_gameobject`/`set_property` edits are **blocked during Play**, and **instance IDs churn on every domain reload** — re-query, never cache them.
 - **Confirm scene context before/after agent work.** Loading a scene in the editor replaces the open one; agents have left the editor on a non-`GameUI` scene and/or in Play mode. Re-open `GameUI.unity` and stop Play mode to restore the expected view.
@@ -476,4 +528,4 @@ Environment quirks learned the hard way — relevant when an agent verifies its 
 
 ## Project history
 
-Built iteratively through AI-orchestrated swarms, one concern each: word library & ladder semantics → modern tile/keyboard polish → library cards & tier gate → HOME/settings → hint/reveal semantics → per-mode behaviors & AddTime → TimeAttack UI → share result → daily + streak → **balance config & common-words generation** → **economy & rewarded ads** → **tactile juice (motion/haptics/sound)** → **premium visual identity (gold focus, ascent, motion vocabulary)** → **UI polish pass** (main-menu hierarchy with a gold DAILY hero, gameplay spacing, a keyboard-anchored power-up bar, a reliable visible HOME, and a properly clipping/scrolling word-chain) → **icon chrome** (SVG-via-Vector-Graphics + PNG icons: a house HOME and one shared, icon-only top-right Settings gear on every screen) → **Time Attack setup polish** (fit/styling/header, HOME aligned to the shared gear) → **dictionary expansion & cleanup** (reproducible ENABLE+Norvig tool: junk removed, 8,626→12,183 words, dense common 6/7-letter coverage) → **Puzzle Show 7×50** (350 curated ladders, two-level tier-select→grid navigation, completion coloring, progressive unlock) → **post-win flow** (compact win panel for endless Classic, auto-advancing Time Attack with results on timeout, Puzzle Show stat screen, Daily Home-only; "Play Again" re-routes into the mode) → **minimum-move floor** (no 1-move puzzles anywhere; min scales with word length, enforced by true full-dictionary shortest path in the generator and across all curated data) → **Classic-mode polish** (bolder tile outlines, rounded keyboard keys, subtle ladder-feel drop-in/climb animations) → **see-through cyan chain rows** with even rung spacing → **Reveal flicker fix** (idempotent per-frame render guards; Reveal/Hint decoupled) → **transparent keyboard panel** (space background edge-to-edge) → **shop & coins economy** (real-money coin bundles + coins-for-power-ups, a persisted owned inventory that seeds gameplay, 5-each starting + +2/day grants, a remove-ads IAP, a mockable store with real billing stubbed, and a `ShopScreen` reached from a live coin pill). The git log captures the progression.
+Built iteratively through AI-orchestrated swarms, one concern each: word library & ladder semantics → modern tile/keyboard polish → library cards & tier gate → HOME/settings → hint/reveal semantics → per-mode behaviors & AddTime → TimeAttack UI → share result → daily + streak → **balance config & common-words generation** → **economy & rewarded ads** → **tactile juice (motion/haptics/sound)** → **premium visual identity (gold focus, ascent, motion vocabulary)** → **UI polish pass** (main-menu hierarchy with a gold DAILY hero, gameplay spacing, a keyboard-anchored power-up bar, a reliable visible HOME, and a properly clipping/scrolling word-chain) → **icon chrome** (SVG-via-Vector-Graphics + PNG icons: a house HOME and one shared, icon-only top-right Settings gear on every screen) → **Time Attack setup polish** (fit/styling/header, HOME aligned to the shared gear) → **dictionary expansion & cleanup** (reproducible ENABLE+Norvig tool: junk removed, 8,626→12,183 words, dense common 6/7-letter coverage) → **Puzzle Show 7×50** (350 curated ladders, two-level tier-select→grid navigation, completion coloring, progressive unlock) → **post-win flow** (compact win panel for endless Classic, auto-advancing Time Attack with results on timeout, Puzzle Show stat screen, Daily Home-only; "Play Again" re-routes into the mode) → **minimum-move floor** (no 1-move puzzles anywhere; min scales with word length, enforced by true full-dictionary shortest path in the generator and across all curated data) → **Classic-mode polish** (bolder tile outlines, rounded keyboard keys, subtle ladder-feel drop-in/climb animations) → **see-through cyan chain rows** with even rung spacing → **Reveal flicker fix** (idempotent per-frame render guards; Reveal/Hint decoupled) → **transparent keyboard panel** (space background edge-to-edge) → **shop & coins economy** (real-money coin bundles + coins-for-power-ups, a persisted owned inventory that seeds gameplay, 5-each starting + +2/day grants, a remove-ads IAP, a mockable store with real billing stubbed, and a `ShopScreen` reached from a live coin pill) → **Daily 2.0** (a par-scored daily with stakes: a 3-mistake budget + detour-based grade via pure `PathScoring`, a *played*-streak that survives a loss, a trailing-365 W/L record + win%, coins-or-ad streak repair, and a spoiler-free path-shape share card) → **Phase 5 economy** (tiered power-up bundles + reloaded/named coin packs with badges, a one-time **Starter Pack** + **Restore Purchases** + a 3-day ad-free window, par-scaled daily coin rewards, and the faucet/sink surfaces — a 7-day **login-reward** popup, **watch-for-coins**, **streak-milestone** pops, a **reward doubler**, and the Stats W/L line — all wired to `IAdService`/`IStoreService` ahead of a real ad SDK & billing). The git log captures the progression.
