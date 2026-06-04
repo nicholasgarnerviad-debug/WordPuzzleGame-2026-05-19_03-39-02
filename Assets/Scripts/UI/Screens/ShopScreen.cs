@@ -74,8 +74,21 @@ namespace WordPuzzle.UI
 
             var bg = gameObject.GetComponent<Image>();
             if (bg == null) bg = gameObject.AddComponent<Image>();
-            bg.color = C_BLACK;                 // opaque — fully covers whatever screen is behind
             bg.raycastTarget = true;            // swallow taps so they don't fall through to the menu
+            // Task 34A — paint the shared pixel-space backdrop (opaque) so the Shop matches every other
+            // screen while fully covering the menu/gear behind this overlay. Falls back to flat black.
+            var spaceSprite = Resources.Load<Sprite>("UI/SpaceBackground");
+            if (spaceSprite != null)
+            {
+                bg.sprite = spaceSprite;
+                bg.type = Image.Type.Simple;
+                bg.preserveAspect = false;      // stretch to fill — no gaps on any aspect ratio
+                bg.color = Color.white;         // untinted so the image shows its true colours
+            }
+            else
+            {
+                bg.color = C_BLACK;
+            }
 
             // Title — cyan, matches the menu header.
             var title = MakeText(transform, "SHOP", 56f, MenuPalette.TitleColor, FontStyles.Bold, TextAlignmentOptions.Center);
@@ -98,11 +111,14 @@ namespace WordPuzzle.UI
             var scrollGO = new GameObject("ShopScroll", typeof(RectTransform), typeof(Image), typeof(ScrollRect), typeof(RectMask2D));
             scrollGO.transform.SetParent(transform, false);
             var srt = (RectTransform)scrollGO.transform;
-            srt.anchorMin = new Vector2(0.5f, 0.5f);
-            srt.anchorMax = new Vector2(0.5f, 0.5f);
+            // Task 34B — fill the area BETWEEN the header (title+balance) and the feedback line, with 60px
+            // side margins. Stretch anchors + offsets give a correct viewport width (no horizontal overflow)
+            // and remove the big empty gap under the title.
+            srt.anchorMin = new Vector2(0f, 0f);
+            srt.anchorMax = new Vector2(1f, 1f);
             srt.pivot = new Vector2(0.5f, 0.5f);
-            srt.sizeDelta = new Vector2(960f, 1180f);
-            srt.anchoredPosition = new Vector2(0f, -40f);
+            srt.offsetMin = new Vector2(60f, 110f);     // left margin, bottom (above feedback)
+            srt.offsetMax = new Vector2(-60f, -260f);   // right margin, top (below the balance)
             scrollGO.GetComponent<Image>().color = new Color(0f, 0f, 0f, 0f); // transparent viewport
             var scroll = scrollGO.GetComponent<ScrollRect>();
             scroll.horizontal = false;
@@ -114,6 +130,11 @@ namespace WordPuzzle.UI
             contentRoot.anchorMin = new Vector2(0f, 1f);
             contentRoot.anchorMax = new Vector2(1f, 1f);
             contentRoot.pivot = new Vector2(0.5f, 1f);
+            // Task 34B — pin the content to the viewport's FULL width (sizeDelta.x = 0 with stretched-x
+            // anchors) and centre it (anchoredPosition.x = 0), so labels aren't clipped left and the Buy
+            // buttons don't overflow right. Height is driven by the ContentSizeFitter below.
+            contentRoot.sizeDelta = new Vector2(0f, contentRoot.sizeDelta.y);
+            contentRoot.anchoredPosition = new Vector2(0f, contentRoot.anchoredPosition.y);
             var vlg = contentGO.GetComponent<VerticalLayoutGroup>();
             vlg.childControlWidth = true; vlg.childForceExpandWidth = true;
             vlg.childControlHeight = true; vlg.childForceExpandHeight = false;
@@ -173,7 +194,7 @@ namespace WordPuzzle.UI
         {
             var row = MakeRow(150f);
             var label = MakeText(row, $"{name}\n<size=22><color=#8A93A1>owned {owned}</color></size>", 30f, C_CREAM, FontStyles.Bold, TextAlignmentOptions.Left);
-            var lle = label.gameObject.AddComponent<LayoutElement>(); lle.preferredWidth = 240f; lle.flexibleWidth = 0f;
+            var lle = label.gameObject.AddComponent<LayoutElement>(); lle.preferredWidth = 220f; lle.minWidth = 200f; lle.flexibleWidth = 1f;
             label.richText = true;
 
             int[] sizes = bundleSizes;
