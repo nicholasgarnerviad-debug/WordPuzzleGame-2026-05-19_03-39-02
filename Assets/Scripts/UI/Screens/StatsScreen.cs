@@ -69,6 +69,11 @@ namespace WordPuzzle.UI
         [SerializeField] private TextMeshProUGUI timeAttackPlayedValue;
         [SerializeField] private TextMeshProUGUI timeAttackBestRoundValue;
 
+        // Task 36 (36G/36K) — daily trailing-365 W/L record + win%. The values are computed in the
+        // view-model but the prefab has no slot for them, so this label is synthesized at RUNTIME next to
+        // the Daily-Completed stat (no scene edit needed; matches the project's runtime-driven UI idiom).
+        private TextMeshProUGUI dailyRecordValue;
+
         // --- Navigation ---
         [SerializeField] private Button homeButton;
 
@@ -162,6 +167,15 @@ namespace WordPuzzle.UI
             // Secondary: text-primary
             SetLabel(longestStreakValue,     vm.longestStreak.ToString(),   TextPrimary);
             SetLabel(dailyCompletedValue,    vm.dailyCompleted.ToString(),  TextPrimary);
+
+            // Daily 2.0 (Task 36) — trailing-365 W/L record + win%, on a runtime-synthesized label.
+            EnsureDailyRecordLabel();
+            if (dailyRecordValue != null)
+            {
+                dailyRecordValue.text = vm.dailyGamesPlayed > 0
+                    ? $"Daily W-L  <color=#E7E1C4>{vm.dailyWins}-{vm.dailyLosses}</color>  <color=#8A93A1>({vm.dailyWinRatePct}% wins)</color>"
+                    : "Daily W-L  <color=#8A93A1>—</color>";
+            }
             SetLabel(totalCoinsValue,        vm.totalCoins.ToString(),      TextPrimary);
             SetLabel(totalPuzzlesValue,      vm.totalPuzzlesCompleted.ToString(), TextPrimary);
 
@@ -177,6 +191,41 @@ namespace WordPuzzle.UI
             if (label == null) return;
             label.text  = text;
             label.color = color;
+        }
+
+        /// <summary>
+        /// Synthesize the daily W/L record label at runtime, styled after the Daily-Completed value and
+        /// placed just beneath it. Idempotent (created once). No-op if that anchor label isn't wired.
+        /// Placed after the anchor in sibling order so a VerticalLayoutGroup flows it directly below; for
+        /// an absolutely-positioned stats panel it also offsets one row down from the anchor.
+        /// </summary>
+        private void EnsureDailyRecordLabel()
+        {
+            if (dailyRecordValue != null) return;
+            var anchor = dailyCompletedValue;
+            if (anchor == null || anchor.transform.parent == null) return;
+
+            var go = new GameObject("DailyRecordValue", typeof(RectTransform));
+            go.transform.SetParent(anchor.transform.parent, false);
+
+            var t = go.AddComponent<TextMeshProUGUI>();
+            t.font        = anchor.font;
+            t.fontSize    = anchor.fontSize * 0.8f;
+            t.fontStyle   = anchor.fontStyle;
+            t.alignment   = anchor.alignment;
+            t.richText    = true;
+            t.raycastTarget = false;
+            t.enableWordWrapping = false;
+            t.color = TextMuted;
+
+            var src = anchor.rectTransform;
+            var rt  = t.rectTransform;
+            rt.anchorMin = src.anchorMin; rt.anchorMax = src.anchorMax; rt.pivot = src.pivot;
+            rt.sizeDelta = src.sizeDelta; rt.localScale = Vector3.one;
+            go.transform.SetSiblingIndex(anchor.transform.GetSiblingIndex() + 1);
+            rt.anchoredPosition = src.anchoredPosition + new Vector2(0f, -(src.rect.height + 10f));
+
+            dailyRecordValue = t;
         }
 
         private void OnHomeClicked() => OnBackToMenu?.Invoke();
