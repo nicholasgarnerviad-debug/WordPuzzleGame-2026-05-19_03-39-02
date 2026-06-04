@@ -186,6 +186,15 @@ public static class BalanceConfig
     /// </summary>
     public const int GoodMaxDetours = 2;
 
+    /// <summary>Local-day cooldown between streak repairs (yesterday-only window). Default 7.</summary>
+    public const int StreakRepairCooldownDays = 7;
+
+    /// <summary>
+    /// Coin cost to repair a missed streak day (the free alternative is a rewarded ad).
+    /// PROVISIONAL — finalized with the rest of the economy in Phase 5 (Task 36 Q5).
+    /// </summary>
+    public const int StreakRepairCoinCost = 150;
+
     // ─── Ad policy (Task 6B) ─────────────────────────────────────────────────
 
     /// <summary>Minimum real-time seconds that must elapse between interstitial impressions.</summary>

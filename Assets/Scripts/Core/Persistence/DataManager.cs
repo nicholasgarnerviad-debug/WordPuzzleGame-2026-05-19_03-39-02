@@ -271,7 +271,7 @@ namespace WordPuzzle.Persistence
         DailyProgress data = null;
         try { data = JsonUtility.FromJson<DailyProgress>(json); } catch { data = null; }
         if (data == null) data = new DailyProgress();
-        if (data.completedDates == null) data.completedDates = new System.Collections.Generic.List<string>();
+        data.Normalize();   // Task 36 — default new collections + Q6 forward migration (seed played-date)
         dailyProgress = data;
         await Task.Delay(0);
         return dailyProgress;
