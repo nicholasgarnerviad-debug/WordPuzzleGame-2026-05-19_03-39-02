@@ -234,8 +234,12 @@ namespace WordPuzzle.State
                 // Daily 2.0 — an accepted move that did NOT get strictly closer to the target is
                 // a DETOUR (costs score, not the run). The final winning move is always progress
                 // (distance-to-target hits 0), so it never counts as a detour.
-                if (workingState.isDaily && !validation.isProgress)
-                    workingState.detourCount++;
+                if (workingState.isDaily)
+                {
+                    if (!validation.isProgress) workingState.detourCount++;
+                    // Phase 4 — record the row class for the share card (0 = optimal, 1 = detour).
+                    workingState.dailyStepClasses.Add(validation.isProgress ? 0 : 1);
+                }
 
                 // Check win condition
                 if (word == currentPuzzle.endWord)
@@ -265,6 +269,8 @@ namespace WordPuzzle.State
                 // (one-and-done). The wrong-LENGTH path above is malformed input, not a mistake.
                 if (workingState.isDaily)
                 {
+                    // Phase 4 — record the mistake row for the share card (2 = mistake).
+                    workingState.dailyStepClasses.Add(2);
                     workingState.mistakesRemaining = Mathf.Max(0, workingState.mistakesRemaining - 1);
                     if (workingState.mistakesRemaining <= 0)
                     {
@@ -546,6 +552,7 @@ namespace WordPuzzle.State
             workingState.detourCount = 0;
             workingState.usedPowerUpThisRun = false;
             workingState.dailyResult = null;
+            workingState.dailyStepClasses = new List<int>();
             NotifySubscribers();
         }
 
@@ -760,6 +767,7 @@ namespace WordPuzzle.State
         public int GetMistakesRemaining() => workingState?.mistakesRemaining ?? 0;
         public int GetDailyPar() => workingState?.dailyPar ?? 0;
         public PathScoreResult? GetDailyResult() => workingState?.dailyResult;
+        public IReadOnlyList<int> GetDailyStepClasses() => workingState?.dailyStepClasses;
     }
 
     /// <summary>
@@ -809,6 +817,9 @@ namespace WordPuzzle.State
         public int dailyPar = 0;
         public bool usedPowerUpThisRun = false;
         public PathScoreResult? dailyResult = null;
+        // Per-step shape for the path-shape share card (Task 36 Phase 4): one entry per accepted step
+        // AND per invalid attempt, in order. 0 = optimal (🟩), 1 = detour (🟨), 2 = mistake (⬛).
+        public List<int> dailyStepClasses = new List<int>();
     }
 
     internal class Unsubscriber : IDisposable

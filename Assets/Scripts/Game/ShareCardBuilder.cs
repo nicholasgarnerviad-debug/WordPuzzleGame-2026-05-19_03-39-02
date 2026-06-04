@@ -12,8 +12,9 @@ namespace WordPuzzle.Game
     /// </summary>
     public static class ShareCardBuilder
     {
-        public const string CHANGED_GLYPH    = "\U0001F7E9"; // 🟩
-        public const string UNCHANGED_GLYPH  = "⬛";     // ⬛
+        public const string CHANGED_GLYPH    = "\U0001F7E9"; // 🟩 optimal move
+        public const string UNCHANGED_GLYPH  = "⬛";     // ⬛ mistake (also "unchanged" in the classic grid)
+        public const string DETOUR_GLYPH     = "\U0001F7E8"; // 🟨 detour
 
         public enum ModeKind { Classic, Daily, PuzzleShow, TimeAttack }
 
@@ -30,11 +31,25 @@ namespace WordPuzzle.Game
             public float totalTimeSeconds;    // only shown for timed modes
             public int? streakCurrent;
             public int? streakBest;
+
+            // Daily 2.0 (Task 36 Phase 4) — path-shape card. When dailyStepClasses is non-null the
+            // daily renders SHAPE-ONLY (one glyph row per entry: 0=🟩 optimal, 1=🟨 detour, 2=⬛ mistake)
+            // and NEVER the words. par/playerSteps/stars/dailyFailed drive the header.
+            public List<int> dailyStepClasses;
+            public int? par;
+            public int? playerSteps;
+            public int? stars;
+            public bool dailyFailed;
         }
 
         public static string Build(ShareInput input)
         {
             if (input == null) return string.Empty;
+
+            // Daily 2.0 (Task 36) — a daily with recorded step classes renders the SHAPE-ONLY card.
+            if (input.mode == ModeKind.Daily && input.dailyStepClasses != null)
+                return BuildDailyShapeCard(input);
+
             var sb = new StringBuilder(256);
 
             sb.Append("Word Ladder — ");
@@ -78,7 +93,47 @@ namespace WordPuzzle.Game
                   .Append(input.streakBest.Value);
             }
 
-            return sb.ToString().TrimEnd('\r', '\n');
+            return sb.ToString().Replace("\r\n", "\n").TrimEnd('\r', '\n');
+        }
+
+        /// <summary>
+        /// Daily 2.0 (Task 36) — the path-shape share card: a header, then one glyph row per recorded
+        /// step (🟩 optimal / 🟨 detour / ⬛ mistake), then the streak line. SHAPE ONLY — never the
+        /// words, so it can be pasted into chat without spoiling the puzzle. LF newlines for clean paste.
+        /// </summary>
+        private static string BuildDailyShapeCard(ShareInput input)
+        {
+            var sb = new StringBuilder(160);
+            int n = (input.dailyIndex ?? 0) + 1;
+            int par = input.par ?? 0;
+            int stars = Mathf.Clamp(input.stars ?? 0, 0, 3);
+            string starGlyphs = new string('★', stars) + new string('☆', 3 - stars); // ★ filled / ☆ empty
+            string score = input.dailyFailed ? "X" : (input.playerSteps ?? 0).ToString();
+
+            sb.Append("Word Ladder Daily #").Append(n)
+              .Append(" · Par ").Append(par)
+              .Append(" · ").Append(score).Append('/').Append(par)
+              .Append(" · ").Append(starGlyphs).Append('\n');
+
+            if (input.dailyStepClasses != null)
+                foreach (int cls in input.dailyStepClasses)
+                    sb.Append(GlyphForClass(cls)).Append('\n');
+
+            if (input.streakCurrent.HasValue && input.streakBest.HasValue)
+                sb.Append("\U0001F525 Streak ").Append(input.streakCurrent.Value)
+                  .Append(" · Best ").Append(input.streakBest.Value);
+
+            return sb.ToString().Replace("\r\n", "\n").TrimEnd('\r', '\n');
+        }
+
+        private static string GlyphForClass(int cls)
+        {
+            switch (cls)
+            {
+                case 0:  return CHANGED_GLYPH;    // 🟩 optimal
+                case 1:  return DETOUR_GLYPH;     // 🟨 detour
+                default: return UNCHANGED_GLYPH;  // ⬛ mistake
+            }
         }
 
         /// <summary>

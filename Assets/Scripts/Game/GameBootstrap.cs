@@ -1668,6 +1668,20 @@ namespace WordPuzzle
                         input.streakCurrent = cachedDailyProgress.currentStreak;
                         input.streakBest = cachedDailyProgress.longestStreak;
                     }
+
+                    // Phase 4 — capture the path-shape data (still live before teardown): per-step row
+                    // classes + the par-scored result. Drives the SHAPE-ONLY daily card (no words).
+                    var stepClasses = stateManager?.GetDailyStepClasses();
+                    if (stepClasses != null)
+                        input.dailyStepClasses = new System.Collections.Generic.List<int>(stepClasses);
+                    var dr = stateManager?.GetDailyResult();
+                    if (dr.HasValue)
+                    {
+                        input.par = dr.Value.par;
+                        input.playerSteps = dr.Value.playerSteps;
+                        input.stars = dr.Value.stars;
+                        input.dailyFailed = dr.Value.failed;
+                    }
                 }
                 else if (activeMode is PuzzleShowMode psm)
                 {
