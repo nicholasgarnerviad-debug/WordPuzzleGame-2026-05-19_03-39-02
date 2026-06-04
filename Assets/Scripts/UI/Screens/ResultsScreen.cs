@@ -228,6 +228,34 @@ namespace WordPuzzle.UI
         }
 
         /// <summary>
+        /// Daily 2.0 (Task 36) — headline the par-scored result: grade + stars, or "Failed today",
+        /// then "Par N · You got X". Reuses the words-found line (falls back to the mode-name line).
+        /// </summary>
+        public void ShowDailyResult(int stars, int par, int playerSteps, bool failed, int dailyNumber, int streak)
+        {
+            int s = Mathf.Clamp(stars, 0, 3);
+            string starGlyphs = new string('★', s) + new string('☆', 3 - s);
+            string headline = failed
+                ? "Failed today"
+                : $"{DailyGradeName(s)}  <color=#C9B458>{starGlyphs}</color>";
+            string line = $"{headline}  ·  Par {par}  ·  You got {playerSteps}";
+
+            if (wordsFoundText != null)
+            {
+                wordsFoundText.richText = true;
+                wordsFoundText.text = line;
+            }
+            else if (modeNameText != null)
+            {
+                modeNameText.richText = true;
+                modeNameText.text += $"\n<size=70%>{line}</size>";
+            }
+        }
+
+        private static string DailyGradeName(int stars) =>
+            stars >= 3 ? "Perfect" : stars == 2 ? "Good" : stars == 1 ? "Solved" : "Failed";
+
+        /// <summary>
         /// Puzzle Show: "Next Puzzle" (another in the current tier) + optional "Tier N ▸"
         /// (when the next tier is unlocked) + Home.
         /// </summary>

@@ -24,6 +24,12 @@ namespace WordPuzzle.UI
         public int longestStreak;
         public int dailyCompleted;
 
+        // Daily 2.0 (Task 36) — trailing-365 Win/Loss record (skill, alongside the habit streak).
+        public int dailyGamesPlayed;
+        public int dailyWins;
+        public int dailyLosses;
+        public int dailyWinRatePct;
+
         // Overall
         public int totalCoins;
         public int totalPuzzlesCompleted;
@@ -114,6 +120,17 @@ namespace WordPuzzle.UI
                 vm.currentStreak   = daily.currentStreak;
                 vm.longestStreak   = daily.longestStreak;
                 vm.dailyCompleted  = daily.completedDates?.Count ?? 0;
+
+                // Daily 2.0 — trailing-365 W/L record, computed inline from the persisted ledger
+                // (UI cannot reference the Game assembly, so we count daily.outcomes directly here).
+                int dailyGames = daily.outcomes?.Count ?? 0;
+                int dailyWins = 0;
+                if (daily.outcomes != null)
+                    foreach (var o in daily.outcomes) if (o.won) dailyWins++;
+                vm.dailyGamesPlayed = dailyGames;
+                vm.dailyWins        = dailyWins;
+                vm.dailyLosses      = dailyGames - dailyWins;
+                vm.dailyWinRatePct  = dailyGames > 0 ? (int)System.Math.Round(100.0 * dailyWins / dailyGames) : 0;
             }
 
             if (player != null)

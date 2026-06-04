@@ -59,6 +59,8 @@ namespace WordPuzzle.UI
         [SerializeField] private TextMeshProUGUI startWordLabel;
         [SerializeField] private TextMeshProUGUI endWordLabel;
         [SerializeField] private TextMeshProUGUI stepsRemainingText;
+        // Daily 2.0 (Task 36) — when true, the daily HUD owns stepsRemainingText (SetStepsRemaining yields).
+        private bool _dailyHudActive;
 
         // ---------- Spec §3.2 palette ----------
         private static readonly Color C_TILE_DEFAULT_FILL    = HexToColor("#2A2D3A");
@@ -910,6 +912,8 @@ namespace WordPuzzle.UI
         public void SetStepsRemaining(int stepsRemaining, int optimalSteps)
         {
             if (stepsRemainingText == null) return;
+            // Daily 2.0 (Task 36) — the daily HUD owns this slot (Par · Mistakes left); don't clobber it.
+            if (_dailyHudActive) return;
             if (stepsRemaining <= 0)
             {
                 stepsRemainingText.text = string.Empty;
@@ -922,6 +926,17 @@ namespace WordPuzzle.UI
             {
                 stepsRemainingText.text = $"{stepsRemaining} steps to go  ·  optimal {optimalSteps}";
             }
+        }
+
+        /// <summary>
+        /// Daily 2.0 (Task 36) — show "Par N  ·  Mistakes left: M" in the steps slot during a daily run.
+        /// Call with par &lt; 0 to release the slot back to SetStepsRemaining (non-daily modes).
+        /// </summary>
+        public void SetDailyPar(int par, int mistakesLeft)
+        {
+            _dailyHudActive = par >= 0;
+            if (stepsRemainingText == null || !_dailyHudActive) return;
+            stepsRemainingText.text = $"Par {par}  ·  Mistakes left: {mistakesLeft}";
         }
 
         public void SetWordLabels(string fromText = "FROM", string toText = "TO")

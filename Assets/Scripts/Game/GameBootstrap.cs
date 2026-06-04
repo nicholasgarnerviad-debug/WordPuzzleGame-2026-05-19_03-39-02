@@ -549,7 +549,9 @@ namespace WordPuzzle
                 return;
             }
             DailyStreakRules.RefreshTodayFlag(cachedDailyProgress, dailyClock.TodayIso);
-            menu.SetDailyState(cachedDailyProgress.todayCompleted, cachedDailyProgress.currentStreak);
+            DailyStreakRules.RefreshPlayedFlag(cachedDailyProgress, dailyClock.TodayIso);
+            // Daily 2.0 — one-and-done: lock the daily once it has been PLAYED (win OR loss), not only solved.
+            menu.SetDailyState(cachedDailyProgress.todayPlayed, cachedDailyProgress.currentStreak);
         }
 
         private void ShowLibrary()
@@ -854,6 +856,7 @@ namespace WordPuzzle
             }
             if (cachedDailyProgress == null) cachedDailyProgress = new DailyProgress();
             DailyStreakRules.RefreshTodayFlag(cachedDailyProgress, dailyClock.TodayIso);
+            DailyStreakRules.RefreshPlayedFlag(cachedDailyProgress, dailyClock.TodayIso);
         }
 
         // Task 3A — load OnboardingData at boot (mirrors LoadDailyProgressBlocking).
@@ -1212,6 +1215,12 @@ namespace WordPuzzle
             );
 
             modeController.StartGame(puzzle);
+
+            // Daily 2.0 (Task 36) — arm the par-scored daily AFTER StartNewPuzzle (which resets the
+            // working state). par = the puzzle's validated optimal step count.
+            if (isDailyRun)
+                stateManager.ConfigureDailyRun(BalanceConfig.DailyMistakeBudget, puzzleDefinition.optimalSteps);
+
             uiManager.ShowGameplay();
 
             var state = stateManager.GetCurrentState();
@@ -1350,6 +1359,12 @@ namespace WordPuzzle
             gameplay.SetTimerVisible(isTimeAttack);
             gameplay.SetAddTimeVisible(isTimeAttack);
 
+            // Daily 2.0 (Task 36) — show "Par N · Mistakes left: M" during the daily; release otherwise.
+            if (isDailyRun)
+                gameplay.SetDailyPar(stateManager.GetDailyPar(), stateManager.GetMistakesRemaining());
+            else
+                gameplay.SetDailyPar(-1, -1);
+
             if (activeMode is TimeAttackMode tam)
             {
                 gameplay.SetTimer(tam.GetTimeRemaining());
@@ -1411,6 +1426,14 @@ namespace WordPuzzle
             else kind = ModeKind.Classic;
 
             bool puzzleComplete = IsCurrentPuzzleComplete();
+
+            // Daily 2.0 (Task 36) — running out of mistakes FAILS the daily (not a win, but the run is
+            // over). The pure router only knows win/timeUp, so detect the fail here and end the run.
+            if (isDailyRun)
+            {
+                var dailyResult = stateManager?.GetDailyResult();
+                if (dailyResult.HasValue && dailyResult.Value.failed) { EndGame(); return; }
+            }
 
             switch (PostWinRouter.Decide(kind, isDailyRun, puzzleComplete, timeUp))
             {
@@ -1523,7 +1546,7 @@ namespace WordPuzzle
 
             if (wasDailyRun)
             {
-                RecordDailyCompletionAndSurface(dailyIndex);
+                RecordDailyCompletionAndSurface(dailyIndex, isWin);
             }
 
             // Task 6A — Award puzzle-completion coins. Daily run stacks an extra bonus.
@@ -1695,13 +1718,16 @@ namespace WordPuzzle
         }
 
         // Task 1B/1C — apply streak rules + persist + drive the ResultsScreen daily widgets.
-        private async void RecordDailyCompletionAndSurface(int puzzleIndex)
+        private async void RecordDailyCompletionAndSurface(int puzzleIndex, bool solved)
         {
             string todayIso = dailyClock.TodayIso;
             if (cachedDailyProgress == null) cachedDailyProgress = new DailyProgress();
-            bool alreadyCountedToday = cachedDailyProgress.lastCompletedDateIso == todayIso;
+            bool alreadyPlayedToday = cachedDailyProgress.lastPlayedDateIso == todayIso;
 
-            DailyStreakRules.ApplyCompletion(cachedDailyProgress, todayIso, puzzleIndex);
+            // Daily 2.0 (Task 36) — a PLAYED day (solve OR fail) advances the streak and a fail keeps it.
+            // ApplyPlayed is the streak authority now, replacing the old completion-only ApplyCompletion.
+            DailyStreakRules.ApplyPlayed(cachedDailyProgress, todayIso, solved);
+            cachedDailyProgress.todayPuzzleIndex = puzzleIndex;
 
             if (dataManagerRef != null)
             {
@@ -1709,10 +1735,19 @@ namespace WordPuzzle
                 catch (System.Exception ex) { Debug.LogError($"[Daily] persist failed: {ex.Message}"); }
             }
 
+            // Surface the par-scored result (grade/stars or "Failed today") alongside the streak.
+            var pathScore = stateManager?.GetDailyResult();
+            if (pathScore.HasValue)
+            {
+                var ps = pathScore.Value;
+                uiManager.GetResults().ShowDailyResult(ps.stars, ps.par, ps.playerSteps, ps.failed,
+                    puzzleIndex, cachedDailyProgress.currentStreak);
+            }
+
             uiManager.GetResults().ShowDailyStreak(
                 cachedDailyProgress.currentStreak,
                 cachedDailyProgress.longestStreak,
-                alreadyCountedToday);
+                alreadyPlayedToday);
         }
 
         // Task 18E — does the player's current Puzzle Show tier still have any unplayed puzzle?
