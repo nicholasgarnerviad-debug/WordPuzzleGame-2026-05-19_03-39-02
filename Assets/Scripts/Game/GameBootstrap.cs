@@ -73,6 +73,7 @@ namespace WordPuzzle
         private WordPuzzle.UI.ShopScreen shopScreen;     // Task 33 — runtime Shop overlay
         private int lastDailyRewardCoins = 0;            // Task 36 36K — amount the daily doubler re-grants
         private bool dailyDoublerConsumed = false;       // Task 36 36K — one doubler per daily result
+        private WordPuzzle.UI.DailyRewardPopup dailyRewardPopup;  // Task 36 36K — login claim + streak repair overlay
 
         // Task 7B/7C — Juice: haptics + SFX.
         [SerializeField] private SfxManager sfxManager;
@@ -327,6 +328,7 @@ namespace WordPuzzle
                 return;
 
             SetupShop(); // Task 33 — create the runtime Shop overlay + route the coin-pill tap to it.
+            SetupDailyRewards(); // Task 36 36K — create the Daily Rewards overlay (login claim + streak repair).
 
             // Wire main menu mode selection
             uiManager.GetMainMenu().OnClassicModeSelected += StartClassicMode;
@@ -543,6 +545,7 @@ namespace WordPuzzle
             RefreshCoinPill();
             RefreshDailyButtonState();
             RefreshResumeAffordance();
+            MaybeShowDailyRewards(); // Task 36 36K — login claim / streak repair overlay when applicable
         }
 
         // Task 1C — keep the DAILY button label in sync with persisted streak state.
@@ -559,6 +562,112 @@ namespace WordPuzzle
             DailyStreakRules.RefreshPlayedFlag(cachedDailyProgress, dailyClock.TodayIso);
             // Daily 2.0 — one-and-done: lock the daily once it has been PLAYED (win OR loss), not only solved.
             menu.SetDailyState(cachedDailyProgress.todayPlayed, cachedDailyProgress.currentStreak);
+        }
+
+        // ── Task 36 36K — Daily Rewards overlay (login claim + streak repair) ──────────────
+        private void SetupDailyRewards()
+        {
+            if (dailyRewardPopup != null) return;
+            if (uiManager == null) return;
+            var menu = uiManager.GetMainMenu();
+            var canvas = menu != null ? menu.transform.parent as RectTransform : null;
+            if (canvas == null) return;
+
+            var go = new GameObject("DailyRewardPopup", typeof(RectTransform));
+            go.transform.SetParent(canvas, false);
+            dailyRewardPopup = go.AddComponent<WordPuzzle.UI.DailyRewardPopup>();
+            dailyRewardPopup.Configure(onClosed: RefreshCoinPill);
+            go.SetActive(false);
+        }
+
+        // Show the overlay when a login reward is claimable and/or a slipped streak can be repaired.
+        // No-op until the economy has loaded, so a launch race never NREs.
+        private void MaybeShowDailyRewards()
+        {
+            if (dailyRewardPopup == null || economyManager == null) return;
+            var prog = economyManager.GetCurrentProgress();
+            if (prog == null) return;   // economy still loading — retry on the next menu visit
+
+            string today = dailyClock.TodayIso;
+            bool loginAvail = economyManager.IsLoginRewardAvailable(today);
+            int loginCoins = economyManager.PeekLoginRewardCoins();
+            int loginDay = prog.loginRewardIndex + 1;   // 1-based position in the 7-day cycle
+
+            bool repairAvail = cachedDailyProgress != null && DailyStreakRules.CanRepair(
+                today, cachedDailyProgress.lastPlayedDateIso, cachedDailyProgress.lastRepairDateIso,
+                BalanceConfig.StreakRepairCooldownDays);
+
+            if (!loginAvail && !repairAvail) return;
+
+            bool affordable = prog.totalCoins >= BalanceConfig.StreakRepairCoinCost;
+            bool adReady = adService != null && adService.IsRewardedReady;
+
+            dailyRewardPopup.ShowRewards(
+                loginAvail, loginCoins, loginDay, cb => ClaimLoginReward(cb),
+                repairAvail, BalanceConfig.StreakRepairCoinCost, affordable, adReady,
+                (useAd, cb) => RepairStreak(useAd, cb));
+        }
+
+        private async void ClaimLoginReward(System.Action<int> cb)
+        {
+            int coins = 0;
+            if (economyManager != null)
+            {
+                try { coins = await economyManager.ClaimLoginRewardAsync(dailyClock.TodayIso); }
+                catch (System.Exception ex) { Debug.LogWarning($"[Economy] login reward claim failed: {ex.Message}"); }
+            }
+            RefreshCoinPill();
+            cb?.Invoke(coins);
+        }
+
+        // Repair yesterday's missed streak via coins or a rewarded ad. Bridge-only (does NOT mark today
+        // played — Q3). The coin path spends StreakRepairCoinCost; the ad path needs a real ad service.
+        private void RepairStreak(bool useAd, System.Action<bool> cb)
+        {
+            if (cachedDailyProgress == null) { cb?.Invoke(false); return; }
+            string today = dailyClock.TodayIso;
+            int cooldown = BalanceConfig.StreakRepairCooldownDays;
+            if (!DailyStreakRules.CanRepair(today, cachedDailyProgress.lastPlayedDateIso,
+                    cachedDailyProgress.lastRepairDateIso, cooldown))
+            {
+                cb?.Invoke(false);
+                return;
+            }
+
+            if (useAd)
+            {
+                if (adService == null || !adService.IsRewardedReady) { cb?.Invoke(false); return; }
+                adService.ShowRewarded(
+                    onRewarded: () => { DoRepairApply(today, cooldown); cb?.Invoke(true); },
+                    onClosed: () => { });
+            }
+            else
+            {
+                _ = RepairWithCoins(today, cooldown, cb);
+            }
+        }
+
+        private async System.Threading.Tasks.Task RepairWithCoins(string today, int cooldown, System.Action<bool> cb)
+        {
+            bool ok = false;
+            if (economyManager != null)
+            {
+                try { ok = await economyManager.SpendCoinsAsync(BalanceConfig.StreakRepairCoinCost, "streak_repair"); }
+                catch (System.Exception ex) { Debug.LogWarning($"[Economy] streak repair spend failed: {ex.Message}"); }
+            }
+            if (ok) { DoRepairApply(today, cooldown); RefreshCoinPill(); }
+            cb?.Invoke(ok);
+        }
+
+        private void DoRepairApply(string today, int cooldown)
+        {
+            DailyStreakRules.ApplyRepair(cachedDailyProgress, today, cooldown);
+            if (dataManagerRef != null)
+            {
+                try { _ = dataManagerRef.SaveDailyProgressAsync(cachedDailyProgress); }
+                catch (System.Exception ex) { Debug.LogError($"[Daily] repair persist failed: {ex.Message}"); }
+            }
+            RefreshDailyButtonState();   // reflect the bridged streak on the Daily button
         }
 
         private void ShowLibrary()
@@ -1132,6 +1241,11 @@ namespace WordPuzzle
             long nowUnix = System.DateTimeOffset.UtcNow.ToUnixTimeSeconds();
             if (adPolicy != null && prog != null && (prog.removeAds || economyManager.IsAdFreeActive(nowUnix)))
                 adPolicy.AdsRemoved = true;
+
+            // 36K — the login reward may be claimable on launch. The menu is already showing by the time the
+            // economy finishes loading, so surface the Daily Rewards overlay now if we're on the menu.
+            var menu = uiManager?.GetMainMenu();
+            if (menu != null && menu.gameObject.activeInHierarchy) MaybeShowDailyRewards();
         }
 
         // §5 — Player tapped +Time on the gameplay screen. Dispatch via state manager
