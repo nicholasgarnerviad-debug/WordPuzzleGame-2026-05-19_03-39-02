@@ -265,6 +265,89 @@ namespace WordPuzzle.State
         return currentProgress != null && currentProgress.adFreeUntilUnix > nowUnix;
     }
 
+    // ─── Login reward (Task 36 36K) — escalating 7-day cycle, one claim per local day ───
+    public bool IsLoginRewardAvailable(string todayIso)
+    {
+        return !string.IsNullOrEmpty(todayIso) && currentProgress.lastLoginRewardDate != todayIso;
+    }
+
+    public int PeekLoginRewardCoins()
+    {
+        var cycle = BalanceConfig.LoginRewardCycle;
+        if (cycle == null || cycle.Length == 0) return 0;
+        int idx = ((currentProgress.loginRewardIndex % cycle.Length) + cycle.Length) % cycle.Length;
+        return cycle[idx];
+    }
+
+    public async Task<int> ClaimLoginRewardAsync(string todayIso)
+    {
+        if (!IsLoginRewardAvailable(todayIso)) return 0;  // idempotent per local day
+        var cycle = BalanceConfig.LoginRewardCycle;
+        if (cycle == null || cycle.Length == 0) return 0;
+
+        int idx = ((currentProgress.loginRewardIndex % cycle.Length) + cycle.Length) % cycle.Length;
+        int coins = cycle[idx];
+
+        currentProgress.totalCoins += coins;
+        currentProgress.loginRewardIndex = (idx + 1) % cycle.Length;   // advance; wraps after day 7
+        currentProgress.lastLoginRewardDate = todayIso;
+
+        LogEconomyEvent("LoginReward", $"coins:{coins},nextIndex:{currentProgress.loginRewardIndex},date:{todayIso}");
+        await dataManager.UpdatePlayerProgressAsync(currentProgress);
+        return coins;
+    }
+
+    // ─── Watch-for-coins (Task 36 36K) — rewarded video, capped per local day ───
+    public int WatchCoinsRemainingToday(string todayIso)
+    {
+        int used = (currentProgress.lastWatchCoinsDate == todayIso) ? currentProgress.watchCoinsCountToday : 0;
+        int rem = BalanceConfig.WatchCoinsDailyCap - used;
+        return rem < 0 ? 0 : rem;
+    }
+
+    public async Task<int> GrantWatchCoinsAsync(string todayIso)
+    {
+        if (string.IsNullOrEmpty(todayIso)) return 0;
+        if (currentProgress.lastWatchCoinsDate != todayIso)   // a new local day rolls the counter over
+        {
+            currentProgress.lastWatchCoinsDate = todayIso;
+            currentProgress.watchCoinsCountToday = 0;
+        }
+        if (currentProgress.watchCoinsCountToday >= BalanceConfig.WatchCoinsDailyCap) return 0;
+
+        int coins = BalanceConfig.WatchCoinsReward;
+        currentProgress.totalCoins += coins;
+        currentProgress.watchCoinsCountToday++;
+
+        LogEconomyEvent("WatchCoins", $"coins:{coins},usedToday:{currentProgress.watchCoinsCountToday},date:{todayIso}");
+        await dataManager.UpdatePlayerProgressAsync(currentProgress);
+        return coins;
+    }
+
+    // ─── Streak milestones (Task 36 36K) — one-time coin pop at each milestone length ───
+    public async Task<int> AwardStreakMilestonesAsync(int currentStreak)
+    {
+        var milestones = BalanceConfig.StreakMilestones;
+        if (milestones == null) return 0;
+
+        int paid = 0;
+        foreach (int m in milestones)   // ascending; "highest awarded" gate makes this once-ever per milestone
+        {
+            if (m <= currentStreak && m > currentProgress.highestStreakMilestoneAwarded)
+            {
+                currentProgress.totalCoins += BalanceConfig.StreakMilestoneReward;
+                currentProgress.highestStreakMilestoneAwarded = m;
+                paid += BalanceConfig.StreakMilestoneReward;
+            }
+        }
+        if (paid > 0)
+        {
+            LogEconomyEvent("StreakMilestone", $"streak:{currentStreak},paid:{paid},highest:{currentProgress.highestStreakMilestoneAwarded}");
+            await dataManager.UpdatePlayerProgressAsync(currentProgress);
+        }
+        return paid;
+    }
+
     public PlayerProgress GetCurrentProgress()
     {
         return currentProgress;

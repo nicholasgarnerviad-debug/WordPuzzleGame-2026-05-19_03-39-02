@@ -38,6 +38,11 @@ namespace WordPuzzle.Persistence
         public string lastDailyGrantDate;    // Task 33 — ISO date of last daily grant ("" = never)
         public bool starterPackOwned;        // Task 36 36J — one-time Starter Pack purchased
         public long adFreeUntilUnix;         // Task 36 36J — Unix seconds; ad-free window expiry (0 = none)
+        public string lastLoginRewardDate;   // Task 36 36K — ISO date of last login-reward claim
+        public int loginRewardIndex;         // Task 36 36K — position in the 7-day login cycle
+        public string lastWatchCoinsDate;    // Task 36 36K — ISO date the watch counter applies to
+        public int watchCoinsCountToday;     // Task 36 36K — rewarded watches used today
+        public int highestStreakMilestoneAwarded; // Task 36 36K — largest streak milestone paid
         public ClassicModeStatsData classicStats;
         public TimeAttackModeStatsData timeAttackStats;
     }

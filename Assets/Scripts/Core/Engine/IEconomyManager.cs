@@ -60,6 +60,20 @@ namespace WordPuzzle.State
         /// <summary>True when the temporary ad-free window is still active at <paramref name="nowUnix"/>.</summary>
         bool IsAdFreeActive(long nowUnix);
 
+        // Faucets / sinks (Task 36 36K) — all clock-free: the caller supplies the local-day ISO string.
+        /// <summary>True when today's login reward has not yet been claimed.</summary>
+        bool IsLoginRewardAvailable(string todayIso);
+        /// <summary>Coins the NEXT login claim would grant (UI preview; no mutation).</summary>
+        int PeekLoginRewardCoins();
+        /// <summary>Claim today's login reward (idempotent per day). Returns coins granted (0 if already claimed). Advances the 7-day cycle.</summary>
+        Task<int> ClaimLoginRewardAsync(string todayIso);
+        /// <summary>Watch-for-coins watches still available today (resets at local midnight).</summary>
+        int WatchCoinsRemainingToday(string todayIso);
+        /// <summary>Grant a watch-for-coins reward (call after the ad completes). Returns coins granted (0 if the daily cap is hit).</summary>
+        Task<int> GrantWatchCoinsAsync(string todayIso);
+        /// <summary>Pay any streak milestone newly reached by <paramref name="currentStreak"/> (each paid once ever). Returns total coins paid.</summary>
+        Task<int> AwardStreakMilestonesAsync(int currentStreak);
+
         // Progress tracking
         PlayerProgress GetCurrentProgress();
 

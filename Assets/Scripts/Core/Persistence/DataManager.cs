@@ -372,6 +372,11 @@ namespace WordPuzzle.Persistence
             lastDailyGrantDate = progress.lastDailyGrantDate,
             starterPackOwned = progress.starterPackOwned,
             adFreeUntilUnix = progress.adFreeUntilUnix,
+            lastLoginRewardDate = progress.lastLoginRewardDate,
+            loginRewardIndex = progress.loginRewardIndex,
+            lastWatchCoinsDate = progress.lastWatchCoinsDate,
+            watchCoinsCountToday = progress.watchCoinsCountToday,
+            highestStreakMilestoneAwarded = progress.highestStreakMilestoneAwarded,
             classicStats = new ClassicModeStatsData
             {
                 gamesPlayed = progress.classicStats.gamesPlayed,
@@ -404,6 +409,11 @@ namespace WordPuzzle.Persistence
             lastDailyGrantDate = data.lastDailyGrantDate ?? "",
             starterPackOwned = data.starterPackOwned,
             adFreeUntilUnix = data.adFreeUntilUnix,
+            lastLoginRewardDate = data.lastLoginRewardDate ?? "",
+            loginRewardIndex = data.loginRewardIndex,
+            lastWatchCoinsDate = data.lastWatchCoinsDate ?? "",
+            watchCoinsCountToday = data.watchCoinsCountToday,
+            highestStreakMilestoneAwarded = data.highestStreakMilestoneAwarded,
             classicStats = new ClassicModeStats
             {
                 gamesPlayed = data.classicStats.gamesPlayed,

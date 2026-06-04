@@ -480,6 +480,30 @@ public class MockEconomyManager : IEconomyManager
 
     public bool IsAdFreeActive(long nowUnix) => adFreeUntilUnix > nowUnix;
 
+    // Task 36 36K — faucet/sink stubs (mocks don't assert economy internals).
+    public int loginClaims = 0;
+    public int watchCoinsGrants = 0;
+    public int milestoneAwards = 0;
+
+    public bool IsLoginRewardAvailable(string todayIso) => true;
+    public int PeekLoginRewardCoins() => BalanceConfig.LoginRewardCycle[0];
+    public Task<int> ClaimLoginRewardAsync(string todayIso)
+    {
+        loginClaims++;
+        return Task.FromResult(BalanceConfig.LoginRewardCycle[0]);
+    }
+    public int WatchCoinsRemainingToday(string todayIso) => BalanceConfig.WatchCoinsDailyCap;
+    public Task<int> GrantWatchCoinsAsync(string todayIso)
+    {
+        watchCoinsGrants++;
+        return Task.FromResult(BalanceConfig.WatchCoinsReward);
+    }
+    public Task<int> AwardStreakMilestonesAsync(int currentStreak)
+    {
+        milestoneAwards++;
+        return Task.FromResult(0);
+    }
+
     public PlayerProgress GetCurrentProgress()
         => new PlayerProgress();
 
