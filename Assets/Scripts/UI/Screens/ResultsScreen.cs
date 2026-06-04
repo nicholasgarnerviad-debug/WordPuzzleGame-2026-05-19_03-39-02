@@ -33,8 +33,11 @@ namespace WordPuzzle.UI
         public event Action OnShareRequested;
         // Task 16 — Puzzle Show "advance to the next unlocked tier" choice.
         public event Action OnNextTier;
+        // Task 36 36K — daily reward doubler (watch a rewarded ad to double today's daily coins).
+        public event Action OnDoubleReward;
 
         private Button nextTierButton; // Task 16 — created on demand for Puzzle Show.
+        private Button doublerButton;  // Task 36 36K — created on demand for the daily reward doubler.
 
         // Style tokens.
         // Task 8A: gold is kept for the primary streak number (focal element in streakText richtext)
@@ -292,6 +295,47 @@ namespace WordPuzzle.UI
 
             // Task 25 — gold outline emphasis on the tier-up action; light label.
             UIThemeManager.ApplyOutlineButton(nextTierButton, C_ACCENT_GOLD, new Color32(0xF5, 0xF7, 0xFA, 0xFF));
+        }
+
+        /// <summary>
+        /// Task 36 36K — show/hide the "double your daily reward" action (a rewarded-ad faucet).
+        /// Created on demand by cloning the Play Again template (same pattern as the tier button), so
+        /// it needs no scene edit. Shown even when no ad is loaded yet; the tap handler degrades to a
+        /// toast so the surface is still placeable in builds without an ad SDK.
+        /// </summary>
+        public void ConfigureDailyDoubler(bool available)
+        {
+            EnsureDoublerButton();
+            SetButtonVisible(doublerButton, available);
+            if (available) SetButtonLabel(doublerButton, "DOUBLE (WATCH AD)");
+        }
+
+        /// <summary>Hide the doubler and confirm the bonus (call after the ad grants the extra coins).</summary>
+        public void MarkDoublerClaimed(string toast)
+        {
+            SetButtonVisible(doublerButton, false);
+            if (!string.IsNullOrEmpty(toast)) ShowToast(toast);
+        }
+
+        private void EnsureDoublerButton()
+        {
+            if (doublerButton != null || playAgainButton == null) return;
+            var parent = playAgainButton.transform.parent;
+            var src = playAgainButton.GetComponent<RectTransform>();
+            if (parent == null || src == null) return;
+
+            var go = UnityEngine.Object.Instantiate(playAgainButton.gameObject, parent);
+            go.name = "DailyDoublerButton";
+            doublerButton = go.GetComponent<Button>();
+            doublerButton.onClick.RemoveAllListeners();
+            doublerButton.onClick.AddListener(() => OnDoubleReward?.Invoke());
+
+            var rt = go.GetComponent<RectTransform>();
+            rt.anchoredPosition = src.anchoredPosition + new Vector2(0f, src.sizeDelta.y + 16f);
+            go.transform.SetSiblingIndex(playAgainButton.transform.GetSiblingIndex());
+
+            // Gold outline emphasis (a bonus action); light label.
+            UIThemeManager.ApplyOutlineButton(doublerButton, C_ACCENT_GOLD, new Color32(0xF5, 0xF7, 0xFA, 0xFF));
         }
 
         private static void SetButtonVisible(Button b, bool visible)

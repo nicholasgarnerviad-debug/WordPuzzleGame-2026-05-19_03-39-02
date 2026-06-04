@@ -71,6 +71,8 @@ namespace WordPuzzle
         private AdPolicyService adPolicy;
         private IStoreService storeService;                      // Task 33 — real-money store (mock in editor)
         private WordPuzzle.UI.ShopScreen shopScreen;     // Task 33 — runtime Shop overlay
+        private int lastDailyRewardCoins = 0;            // Task 36 36K — amount the daily doubler re-grants
+        private bool dailyDoublerConsumed = false;       // Task 36 36K — one doubler per daily result
 
         // Task 7B/7C — Juice: haptics + SFX.
         [SerializeField] private SfxManager sfxManager;
@@ -390,6 +392,7 @@ namespace WordPuzzle
             uiManager.GetResults().OnMainMenu += ShowMainMenu;
             uiManager.GetResults().OnShareRequested += ShareLastResult;
             uiManager.GetResults().OnNextTier += OnResultsNextTier;
+            uiManager.GetResults().OnDoubleReward += OnDoubleDailyReward;
         }
 
         private void OnDestroy()
@@ -469,6 +472,7 @@ namespace WordPuzzle
             uiManager.GetResults().OnMainMenu -= ShowMainMenu;
             uiManager.GetResults().OnShareRequested -= ShareLastResult;
             uiManager.GetResults().OnNextTier -= OnResultsNextTier;
+            uiManager.GetResults().OnDoubleReward -= OnDoubleDailyReward;
         }
 
         private void Update()
@@ -504,7 +508,9 @@ namespace WordPuzzle
             shopScreen = go.AddComponent<WordPuzzle.UI.ShopScreen>();
             shopScreen.Configure(economyManager, storeService, RefreshCoinPill,
                 BalanceConfig.PowerUpBundleSizes, BalanceConfig.HintBundlePrices, BalanceConfig.UndoBundlePrices,
-                BalanceConfig.RevealBundlePrices, BalanceConfig.TimeBundlePrices);
+                BalanceConfig.RevealBundlePrices, BalanceConfig.TimeBundlePrices,
+                watchCoinsRemaining: () => economyManager.WatchCoinsRemainingToday(dailyClock.TodayIso),
+                watchForCoins: RequestWatchForCoins);
             go.SetActive(false);
 
             uiManager.OnShopRequested += OpenShop;
@@ -1767,8 +1773,22 @@ namespace WordPuzzle
                 // solve OR fail (Failed = consolation); GrantPuzzleReward skips the daily to avoid double-pay.
                 if (economyManager != null)
                 {
-                    try { await economyManager.AddCoinsAsync(BalanceConfig.DailyCoinReward(ps.stars, ps.failed), "daily_par"); }
-                    catch (System.Exception ex) { Debug.LogWarning($"[Economy] daily par reward failed: {ex.Message}"); }
+                    try
+                    {
+                        int reward = BalanceConfig.DailyCoinReward(ps.stars, ps.failed);
+                        await economyManager.AddCoinsAsync(reward, "daily_par");
+                        lastDailyRewardCoins = reward;      // the doubler re-grants exactly this much
+                        dailyDoublerConsumed = false;
+
+                        // 36K — one-time streak-milestone coin pop (7/30/100); surface it as a toast.
+                        int milestonePaid = await economyManager.AwardStreakMilestonesAsync(cachedDailyProgress.currentStreak);
+                        if (milestonePaid > 0)
+                            uiManager.GetResults().ShowToast($"{cachedDailyProgress.currentStreak}-day streak!  +{milestonePaid} coins");
+                    }
+                    catch (System.Exception ex) { Debug.LogWarning($"[Economy] daily reward/milestone failed: {ex.Message}"); }
+
+                    // 36K — offer the reward doubler whenever a reward was granted (rewarded-ad faucet).
+                    uiManager.GetResults().ConfigureDailyDoubler(lastDailyRewardCoins > 0);
                 }
             }
 
@@ -1776,6 +1796,47 @@ namespace WordPuzzle
                 cachedDailyProgress.currentStreak,
                 cachedDailyProgress.longestStreak,
                 alreadyPlayedToday);
+        }
+
+        // Task 36 36K — daily reward doubler: watch a rewarded ad to add today's daily reward a 2nd time.
+        private void OnDoubleDailyReward()
+        {
+            if (economyManager == null || lastDailyRewardCoins <= 0 || dailyDoublerConsumed) return;
+            if (adService == null || !adService.IsRewardedReady)
+            {
+                uiManager.GetResults().ShowToast("Rewarded ads aren't available yet");
+                return;
+            }
+            adService.ShowRewarded(
+                onRewarded: async () =>
+                {
+                    dailyDoublerConsumed = true;
+                    int bonus = lastDailyRewardCoins;
+                    try { await economyManager.AddCoinsAsync(bonus, "daily_doubler"); }
+                    catch (System.Exception ex) { Debug.LogWarning($"[Economy] doubler grant failed: {ex.Message}"); }
+                    RefreshCoinPill();
+                    uiManager.GetResults().MarkDoublerClaimed($"+{bonus} bonus coins!");
+                },
+                onClosed: () => { });
+        }
+
+        // Task 36 36K — watch-for-coins faucet (invoked from the Shop). Plays a rewarded ad, grants the
+        // capped daily watch reward, and reports the coins back so the Shop can refresh. Reports 0 when no
+        // ad is available (NullAdService) so the Shop shows a graceful "not available yet" message.
+        private void RequestWatchForCoins(System.Action<int> onResult)
+        {
+            if (economyManager == null) { onResult?.Invoke(0); return; }
+            if (adService == null || !adService.IsRewardedReady) { onResult?.Invoke(0); return; }
+            adService.ShowRewarded(
+                onRewarded: async () =>
+                {
+                    int coins = 0;
+                    try { coins = await economyManager.GrantWatchCoinsAsync(dailyClock.TodayIso); }
+                    catch (System.Exception ex) { Debug.LogWarning($"[Economy] watch-coins grant failed: {ex.Message}"); }
+                    RefreshCoinPill();
+                    onResult?.Invoke(coins);
+                },
+                onClosed: () => { });
         }
 
         // Task 18E — does the player's current Puzzle Show tier still have any unplayed puzzle?

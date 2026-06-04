@@ -19,6 +19,8 @@ namespace WordPuzzle.UI
         private IEconomyManager economy;
         private IStoreService store;
         private Action onClosed;
+        private Func<int> watchCoinsRemaining;        // Task 36 36K — watches left today (for the row label)
+        private Action<Action<int>> watchForCoins;    // Task 36 36K — play rewarded ad then grant; cb(coinsGranted)
 
         private RectTransform contentRoot;   // the scroll content that gets rebuilt
         private TMP_Text balanceText;
@@ -38,7 +40,8 @@ namespace WordPuzzle.UI
         private static readonly Color C_SECTION  = new Color(0x39 / 255f, 0x43 / 255f, 0x5A / 255f, 1f);
 
         public void Configure(IEconomyManager economy, IStoreService store, Action onClosed,
-                              int[] bundleSizes, int[] hintPrices, int[] undoPrices, int[] revealPrices, int[] timePrices)
+                              int[] bundleSizes, int[] hintPrices, int[] undoPrices, int[] revealPrices, int[] timePrices,
+                              Func<int> watchCoinsRemaining = null, Action<Action<int>> watchForCoins = null)
         {
             this.economy = economy;
             this.store = store;
@@ -48,6 +51,8 @@ namespace WordPuzzle.UI
             if (undoPrices != null) this.undoPrices = undoPrices;
             if (revealPrices != null) this.revealPrices = revealPrices;
             if (timePrices != null) this.timePrices = timePrices;
+            this.watchCoinsRemaining = watchCoinsRemaining;
+            this.watchForCoins = watchForCoins;
         }
 
         /// <summary>Show the shop on top of everything and (re)build it from current state.</summary>
@@ -183,6 +188,13 @@ namespace WordPuzzle.UI
             PowerUpRow("Reveal", prog != null ? prog.totalRevealsEarned : 0, revealPrices, AddKind.Reveal, coins);
             PowerUpRow("Time",   prog != null ? prog.totalTimeEarned    : 0, timePrices,   AddKind.Time,   coins);
 
+            // FREE COINS (watch a rewarded ad) — daily-capped faucet, shown above the paid packs.
+            if (watchForCoins != null)
+            {
+                SectionHeader("FREE COINS  ·  watch an ad");
+                WatchForCoinsRow();
+            }
+
             // COINS (real money)
             SectionHeader("COINS  ·  buy with money");
             if (store != null)
@@ -229,6 +241,29 @@ namespace WordPuzzle.UI
                 int capturedSize = size; int capturedPrice = price; AddKind capturedKind = kind;
                 btn.onClick.AddListener(() => BuyPowerUp(capturedKind, capturedSize, capturedPrice));
             }
+        }
+
+        private void WatchForCoinsRow()
+        {
+            int remaining = watchCoinsRemaining != null ? watchCoinsRemaining() : 0;
+            bool canWatch = remaining > 0;
+            var row = MakeRow(120f);
+            string sub = canWatch ? $"{remaining} left today" : "back tomorrow";
+            var label = MakeText(row, $"Watch for Coins\n<size=22><color=#8A93A1>Free  ·  {sub}</color></size>",
+                                  30f, C_CREAM, FontStyles.Bold, TextAlignmentOptions.Left);
+            label.richText = true;
+            var lle = label.gameObject.AddComponent<LayoutElement>(); lle.flexibleWidth = 1f;
+
+            var btn = MakeButton(row, canWatch ? "Watch" : "Done", 26f,
+                                 canWatch ? MenuPalette.TimeAttackFill : C_SECTION, canWatch ? C_CREAM : C_MUTED);
+            var ble = btn.gameObject.AddComponent<LayoutElement>(); ble.preferredWidth = 200f; ble.flexibleWidth = 0f;
+            btn.interactable = canWatch;
+            if (canWatch)
+                btn.onClick.AddListener(() => watchForCoins(coins =>
+                {
+                    Feedback(coins > 0 ? $"+{coins} coins!" : "Ads aren't available yet");
+                    Rebuild();
+                }));
         }
 
         private void CoinBundleRow(StoreProduct p)
