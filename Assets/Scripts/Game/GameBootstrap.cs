@@ -1591,11 +1591,13 @@ namespace WordPuzzle
         private async void GrantPuzzleReward(bool isDaily)
         {
             if (economyManager == null) return;
+            // Daily payout is the par-scaled reward (granted in RecordDailyCompletionAndSurface); skip the
+            // flat completion + bonus here so the daily isn't double-paid — and a FAILED daily (which now
+            // also reaches EndGame) never earns a completion reward.
+            if (isDaily) return;
             try
             {
                 await economyManager.AddCoinsAsync(BalanceConfig.PuzzleCompletionReward, "puzzle_completion");
-                if (isDaily)
-                    await economyManager.AddCoinsAsync(BalanceConfig.DailyBonusReward, "daily_bonus");
             }
             catch (System.Exception ex)
             {
@@ -1756,6 +1758,14 @@ namespace WordPuzzle
                 var ps = pathScore.Value;
                 uiManager.GetResults().ShowDailyResult(ps.stars, ps.par, ps.playerSteps, ps.failed,
                     puzzleIndex, cachedDailyProgress.currentStreak);
+
+                // Phase 5 (36K) — par-scaled daily coin reward (replaces the flat daily bonus). Granted on
+                // solve OR fail (Failed = consolation); GrantPuzzleReward skips the daily to avoid double-pay.
+                if (economyManager != null)
+                {
+                    try { await economyManager.AddCoinsAsync(BalanceConfig.DailyCoinReward(ps.stars, ps.failed), "daily_par"); }
+                    catch (System.Exception ex) { Debug.LogWarning($"[Economy] daily par reward failed: {ex.Message}"); }
+                }
             }
 
             uiManager.GetResults().ShowDailyStreak(

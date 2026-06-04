@@ -193,11 +193,36 @@ public static class BalanceConfig
     /// <summary>Local-day cooldown between streak repairs (yesterday-only window). Default 7.</summary>
     public const int StreakRepairCooldownDays = 7;
 
-    /// <summary>
-    /// Coin cost to repair a missed streak day (the free alternative is a rewarded ad).
-    /// PROVISIONAL — finalized with the rest of the economy in Phase 5 (Task 36 Q5).
-    /// </summary>
+    /// <summary>Coin cost to repair a missed streak day (the free alternative is a rewarded ad). Q5-confirmed.</summary>
     public const int StreakRepairCoinCost = 150;
+
+    // ─── Daily 2.0 faucets & sinks (Task 36 Phase 5, Q5-confirmed) ───────────
+
+    /// <summary>Par-scaled daily-puzzle reward by grade (Q4); replaces the flat daily bonus. Failed = consolation.</summary>
+    public const int DailyRewardPerfect = 60;
+    public const int DailyRewardGood    = 40;
+    public const int DailyRewardSolved  = 25;
+    public const int DailyRewardFailed  = 10;
+
+    /// <summary>Coins for finishing today's daily, scaled by its PathScoring grade (stars). Failed pays the consolation.</summary>
+    public static int DailyCoinReward(int stars, bool failed)
+    {
+        if (failed) return DailyRewardFailed;
+        if (stars >= 3) return DailyRewardPerfect;
+        if (stars == 2) return DailyRewardGood;
+        return DailyRewardSolved;            // 1★ solve (never 0★ on a solve)
+    }
+
+    /// <summary>Escalating 7-day login-reward cycle (resets weekly); index 0..6.</summary>
+    public static readonly int[] LoginRewardCycle = { 25, 25, 50, 50, 75, 75, 150 };
+
+    /// <summary>Watch-for-coins rewarded slot: coins granted per watch, capped per local day.</summary>
+    public const int WatchCoinsReward   = 35;
+    public const int WatchCoinsDailyCap = 3;
+
+    /// <summary>Streak-milestone coin pops awarded when the daily streak first reaches each length.</summary>
+    public static readonly int[] StreakMilestones = { 7, 30, 100 };
+    public const int StreakMilestoneReward = 100;
 
     // ─── Ad policy (Task 6B) ─────────────────────────────────────────────────
 
