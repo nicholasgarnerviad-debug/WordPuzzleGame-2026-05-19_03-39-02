@@ -502,8 +502,8 @@ namespace WordPuzzle
             go.transform.SetParent(canvas, false);
             shopScreen = go.AddComponent<WordPuzzle.UI.ShopScreen>();
             shopScreen.Configure(economyManager, storeService, RefreshCoinPill,
-                BalanceConfig.PowerUpBundleSizes, BalanceConfig.HintShopUnitCoins, BalanceConfig.UndoShopUnitCoins,
-                BalanceConfig.RevealShopUnitCoins, BalanceConfig.TimeShopUnitCoins);
+                BalanceConfig.PowerUpBundleSizes, BalanceConfig.HintBundlePrices, BalanceConfig.UndoBundlePrices,
+                BalanceConfig.RevealBundlePrices, BalanceConfig.TimeBundlePrices);
             go.SetActive(false);
 
             uiManager.OnShopRequested += OpenShop;

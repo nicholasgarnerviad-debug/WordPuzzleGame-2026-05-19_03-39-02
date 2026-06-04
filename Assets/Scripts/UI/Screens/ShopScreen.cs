@@ -28,7 +28,8 @@ namespace WordPuzzle.UI
         // Task 33 — shop pricing, injected via Configure. Lives in BalanceConfig but is passed in because
         // the UI assembly doesn't reference the Puzzle assembly directly. Defaults mirror BalanceConfig.
         private int[] bundleSizes = { 5, 15, 40 };
-        private int hintUnit = 8, undoUnit = 8, revealUnit = 20, timeUnit = 12;
+        private int[] hintPrices = { 50, 135, 320 }, undoPrices = { 50, 135, 320 },
+                      revealPrices = { 120, 320, 800 }, timePrices = { 60, 160, 400 };
 
         private static readonly Color C_BLACK   = new Color(0x0A / 255f, 0x0A / 255f, 0x0A / 255f, 1f);
         private static readonly Color C_GOLD     = new Color(0xC9 / 255f, 0xB4 / 255f, 0x58 / 255f, 1f);
@@ -37,14 +38,16 @@ namespace WordPuzzle.UI
         private static readonly Color C_SECTION  = new Color(0x39 / 255f, 0x43 / 255f, 0x5A / 255f, 1f);
 
         public void Configure(IEconomyManager economy, IStoreService store, Action onClosed,
-                              int[] bundleSizes, int hintUnit, int undoUnit, int revealUnit, int timeUnit)
+                              int[] bundleSizes, int[] hintPrices, int[] undoPrices, int[] revealPrices, int[] timePrices)
         {
             this.economy = economy;
             this.store = store;
             this.onClosed = onClosed;
             if (bundleSizes != null && bundleSizes.Length > 0) this.bundleSizes = bundleSizes;
-            this.hintUnit = hintUnit; this.undoUnit = undoUnit;
-            this.revealUnit = revealUnit; this.timeUnit = timeUnit;
+            if (hintPrices != null) this.hintPrices = hintPrices;
+            if (undoPrices != null) this.undoPrices = undoPrices;
+            if (revealPrices != null) this.revealPrices = revealPrices;
+            if (timePrices != null) this.timePrices = timePrices;
         }
 
         /// <summary>Show the shop on top of everything and (re)build it from current state.</summary>
@@ -159,10 +162,10 @@ namespace WordPuzzle.UI
 
             // POWER-UPS (coins)
             SectionHeader("POWER-UPS  ·  buy with coins");
-            PowerUpRow("Hint",   prog != null ? prog.totalHintsEarned   : 0, hintUnit,   AddKind.Hint,   coins);
-            PowerUpRow("Undo",   prog != null ? prog.totalUndosEarned   : 0, undoUnit,   AddKind.Undo,   coins);
-            PowerUpRow("Reveal", prog != null ? prog.totalRevealsEarned : 0, revealUnit, AddKind.Reveal, coins);
-            PowerUpRow("Time",   prog != null ? prog.totalTimeEarned    : 0, timeUnit,   AddKind.Time,   coins);
+            PowerUpRow("Hint",   prog != null ? prog.totalHintsEarned   : 0, hintPrices,   AddKind.Hint,   coins);
+            PowerUpRow("Undo",   prog != null ? prog.totalUndosEarned   : 0, undoPrices,   AddKind.Undo,   coins);
+            PowerUpRow("Reveal", prog != null ? prog.totalRevealsEarned : 0, revealPrices, AddKind.Reveal, coins);
+            PowerUpRow("Time",   prog != null ? prog.totalTimeEarned    : 0, timePrices,   AddKind.Time,   coins);
 
             // COINS (real money)
             SectionHeader("COINS  ·  buy with money");
@@ -190,7 +193,7 @@ namespace WordPuzzle.UI
             t.margin = new Vector4(8f, 0f, 0f, 0f);
         }
 
-        private void PowerUpRow(string name, int owned, int unitCoins, AddKind kind, int coins)
+        private void PowerUpRow(string name, int owned, int[] bundlePrices, AddKind kind, int coins)
         {
             var row = MakeRow(150f);
             var label = MakeText(row, $"{name}\n<size=22><color=#8A93A1>owned {owned}</color></size>", 30f, C_CREAM, FontStyles.Bold, TextAlignmentOptions.Left);
@@ -198,9 +201,10 @@ namespace WordPuzzle.UI
             label.richText = true;
 
             int[] sizes = bundleSizes;
-            foreach (int size in sizes)
+            for (int i = 0; i < sizes.Length; i++)
             {
-                int price = size * unitCoins;
+                int size = sizes[i];
+                int price = (bundlePrices != null && i < bundlePrices.Length) ? bundlePrices[i] : size;
                 bool canAfford = coins >= price;
                 var btn = MakeButton(row, $"x{size}\n<size=20>{price}c</size>", 24f, canAfford ? MenuPalette.ClassicFill : C_SECTION, canAfford ? C_CREAM : C_MUTED);
                 var ble = btn.gameObject.AddComponent<LayoutElement>(); ble.preferredWidth = 150f; ble.flexibleWidth = 0f;

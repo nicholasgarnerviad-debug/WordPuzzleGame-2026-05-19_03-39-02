@@ -159,11 +159,15 @@ public static class BalanceConfig
     /// <summary>Power-up shop bundle sizes (coins-priced). Each power-up is sold in these quantities.</summary>
     public static readonly int[] PowerUpBundleSizes = { 5, 15, 40 };
 
-    /// <summary>Coin price per single power-up in the shop (bundle price = size × unit). Reveal is premium.</summary>
-    public const int HintShopUnitCoins   = 8;
-    public const int UndoShopUnitCoins   = 8;
-    public const int RevealShopUnitCoins = 20;
-    public const int TimeShopUnitCoins   = 12;
+    /// <summary>
+    /// Task 36 Phase 5 — tiered coin prices per power-up bundle, index-aligned to PowerUpBundleSizes
+    /// (x5 / x15 / x40). NON-linear: the bulk tiers give a per-unit discount. Reveal is the premium.
+    /// INVARIANT: the cheapest coin pack (150) must comfortably afford a mid bundle (Hint x15 = 135).
+    /// </summary>
+    public static readonly int[] HintBundlePrices   = { 50, 135, 320 };
+    public static readonly int[] UndoBundlePrices   = { 50, 135, 320 };
+    public static readonly int[] RevealBundlePrices = { 120, 320, 800 };
+    public static readonly int[] TimeBundlePrices   = { 60, 160, 400 };
 
     // ─── Daily 2.0 — par scoring + stakes (Task 36) ──────────────────────────
 

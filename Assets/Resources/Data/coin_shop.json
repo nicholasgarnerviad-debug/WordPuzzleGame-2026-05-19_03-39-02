@@ -1,28 +1,15 @@
 {
   "coinPacks": [
-    {
-      "id": "coins_50",
-      "coins": 50,
-      "price": 0.99,
-      "currency": "USD"
-    },
-    {
-      "id": "coins_150",
-      "coins": 150,
-      "price": 2.49,
-      "currency": "USD"
-    },
-    {
-      "id": "coins_500",
-      "coins": 500,
-      "price": 4.99,
-      "currency": "USD"
-    }
+    { "id": "coins_150",  "coins": 150,  "price": 0.99,  "currency": "USD" },
+    { "id": "coins_500",  "coins": 500,  "price": 2.49,  "currency": "USD" },
+    { "id": "coins_1200", "coins": 1200, "price": 4.99,  "currency": "USD" },
+    { "id": "coins_3000", "coins": 3000, "price": 9.99,  "currency": "USD" },
+    { "id": "coins_7000", "coins": 7000, "price": 19.99, "currency": "USD" }
   ],
   "premium": {
     "id": "premium_no_ads",
     "name": "Remove Ads",
-    "price": 2.99,
+    "price": 4.99,
     "currency": "USD"
   }
 }
