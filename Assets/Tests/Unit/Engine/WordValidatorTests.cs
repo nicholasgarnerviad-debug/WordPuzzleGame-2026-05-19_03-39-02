@@ -85,18 +85,30 @@ public class WordValidatorTests
 
     // ----------------------------------------------------------------------
     // TASK 2 — distStart / distEnd / progress must match the old behavior.
+    // Daily's detour detection (Task 36) keys off isProgress, so this pins
+    // BOTH a genuine-progress step and a lateral (same-distance) step.
+    //
+    // Graph distances to target "map": map=0, mat=1, cat=2, bat=2, hat=2.
+    // ("cat" and "mat" share the pattern "_at", so cat↔mat is a direct edge
+    //  and cat→map = cat→mat→map = 2 — NOT 3.)
     // ----------------------------------------------------------------------
     [Test]
     public void ValidateWord_DistanceAndProgress_MatchExpectedSemantics()
     {
-        // From "cat" with target "map": valid step "bat" should report
-        // distStart == 1, distEnd == 2 (bat→mat→map), and progress true
-        // (cat→map distance is 3; bat→map distance is 2).
-        var result = validator.ValidateWord("bat");
+        // From "cat" (distance 2 to "map"):
+        //   "mat" is strictly closer (distance 1) -> PROGRESS.
+        var progressStep = validator.ValidateWord("mat");
+        Assert.IsTrue(progressStep.isValid);
+        Assert.AreEqual(1, progressStep.distanceToStart);
+        Assert.AreEqual(1, progressStep.distanceToEnd);
+        Assert.IsTrue(progressStep.isProgress, "mat (dist 1) is closer than cat (dist 2)");
 
-        Assert.IsTrue(result.isValid);
-        Assert.AreEqual(1, result.distanceToStart);
-        Assert.AreEqual(2, result.distanceToEnd);
-        Assert.IsTrue(result.isProgress);
+        //   "bat" is the SAME distance (2) -> a valid step but NOT progress.
+        //   This is exactly what Daily counts as a detour.
+        var lateralStep = validator.ValidateWord("bat");
+        Assert.IsTrue(lateralStep.isValid);
+        Assert.AreEqual(1, lateralStep.distanceToStart);
+        Assert.AreEqual(2, lateralStep.distanceToEnd);
+        Assert.IsFalse(lateralStep.isProgress, "bat (dist 2) is not closer than cat (dist 2)");
     }
 }
