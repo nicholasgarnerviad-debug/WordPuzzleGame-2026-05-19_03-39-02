@@ -231,28 +231,51 @@ namespace WordPuzzle.State
                 workingState.currentStreak++;
                 workingState.longestStreak = Mathf.Max(workingState.longestStreak, workingState.currentStreak);
 
+                // Daily 2.0 — an accepted move that did NOT get strictly closer to the target is
+                // a DETOUR (costs score, not the run). The final winning move is always progress
+                // (distance-to-target hits 0), so it never counts as a detour.
+                if (workingState.isDaily && !validation.isProgress)
+                    workingState.detourCount++;
+
                 // Check win condition
                 if (word == currentPuzzle.endWord)
                 {
                     workingState.isWon = true;
+
+                    // Daily 2.0 — solved: score the path against par (the one-and-done result).
+                    if (workingState.isDaily)
+                        workingState.dailyResult = ComputeDailyResult(ranOutOfMistakes: false);
                 }
 
                 // Reset validator with current state
                 wordValidator.Initialize(word, currentPuzzle.endWord, workingState.wordChain.ToArray());
 
-                // §1 — fire success result.
-                FireSubmissionResult(true, word, "Nice!", SubmissionRejectReason.None);
+                // §1 — fire success result (carries the daily result on the winning move; null otherwise).
+                FireSubmissionResult(true, word, "Nice!", SubmissionRejectReason.None, workingState.dailyResult);
             }
             else
             {
-                // Track invalid attempt — NO lives decrement, NO isLost flip per §1.
+                // Track invalid attempt — NO lives decrement, NO isLost flip per §1 (Classic).
                 workingState.invalidAttempts++;
                 workingState.currentInput = "";
                 workingState.currentStreak = 0;
 
+                // Daily 2.0 — an invalid guess (correct length, but not a valid next step) is a
+                // MISTAKE: it costs the run, not the score. Exhausting the budget FAILS the daily
+                // (one-and-done). The wrong-LENGTH path above is malformed input, not a mistake.
+                if (workingState.isDaily)
+                {
+                    workingState.mistakesRemaining = Mathf.Max(0, workingState.mistakesRemaining - 1);
+                    if (workingState.mistakesRemaining <= 0)
+                    {
+                        workingState.isLost = true;
+                        workingState.dailyResult = ComputeDailyResult(ranOutOfMistakes: true);
+                    }
+                }
+
                 // Map the validator's typed RejectReason to SubmissionRejectReason + user text.
                 var (reason, userReason) = MapWordRejectReason(validation?.RejectReason ?? WordRejectReason.None);
-                FireSubmissionResult(false, word, userReason, reason);
+                FireSubmissionResult(false, word, userReason, reason, workingState.dailyResult);
             }
         }
 
@@ -273,7 +296,7 @@ namespace WordPuzzle.State
             }
         }
 
-        private void FireSubmissionResult(bool accepted, string word, string reason, SubmissionRejectReason rejectReason)
+        private void FireSubmissionResult(bool accepted, string word, string reason, SubmissionRejectReason rejectReason, PathScoreResult? pathScore = null)
         {
             try
             {
@@ -282,13 +305,32 @@ namespace WordPuzzle.State
                     accepted = accepted,
                     word = word,
                     reason = reason,
-                    rejectReason = rejectReason
+                    rejectReason = rejectReason,
+                    pathScore = pathScore
                 });
             }
             catch (Exception ex)
             {
                 Debug.LogError($"Error invoking OnWordSubmissionResult: {ex.Message}");
             }
+        }
+
+        /// <summary>
+        /// Daily 2.0 (Task 36) — build the par-scored result for the current run through the
+        /// single PathScoring entry point. Called once, on the terminal submission (solve OR
+        /// fail). On a fail, mistakesRemaining is 0 so mistakesUsed == the full budget.
+        /// </summary>
+        private PathScoreResult ComputeDailyResult(bool ranOutOfMistakes)
+        {
+            int playerSteps = Mathf.Max(0, workingState.wordChain.Count - 1);
+            int mistakesUsed = workingState.dailyMistakeBudget - workingState.mistakesRemaining;
+            return PathScoring.Score(
+                workingState.dailyPar,
+                playerSteps,
+                workingState.detourCount,
+                mistakesUsed,
+                ranOutOfMistakes,
+                workingState.usedPowerUpThisRun);
         }
 
         /// <summary>
@@ -417,6 +459,7 @@ namespace WordPuzzle.State
 
             workingState.hintLetterIndex = changedIndex;
             workingState.hintsRemaining--;
+            workingState.usedPowerUpThisRun = true;   // Daily 2.0 — recorded only (does not change the grade).
         }
 
         private void HandleUseReveal()
@@ -444,6 +487,7 @@ namespace WordPuzzle.State
             // (ComputeChangedIndex from chain tail vs revealedNextWord), so this doesn't affect it.
             workingState.revealedNextWord = nextTarget;
             workingState.revealsRemaining--;
+            workingState.usedPowerUpThisRun = true;   // Daily 2.0 — recorded only (does not change the grade).
         }
 
         /// <summary>
@@ -459,6 +503,7 @@ namespace WordPuzzle.State
             if (workingState.addTimeGrantSeconds <= 0f) return;
 
             workingState.addTimesRemaining--;
+            workingState.usedPowerUpThisRun = true;   // Daily 2.0 — recorded only (does not change the grade).
             var grant = workingState.addTimeGrantSeconds;
 
             try
@@ -481,6 +526,26 @@ namespace WordPuzzle.State
             if (workingState == null) return;
             workingState.addTimesRemaining = Mathf.Max(0, charges);
             workingState.addTimeGrantSeconds = Mathf.Max(0f, grantSeconds);
+            NotifySubscribers();
+        }
+
+        /// <summary>
+        /// Daily 2.0 (Task 36) — promote the current run to a par-scored daily with stakes.
+        /// Called by the daily launcher AFTER StartNewPuzzle (mirrors ConfigureAddTimePowerUp).
+        /// <paramref name="par"/> is the WordGraph shortest distance start->end (the daily caller
+        /// computes it once); <paramref name="mistakeBudget"/> is BalanceConfig.DailyMistakeBudget.
+        /// Idempotent: re-arming resets the two resources for a fresh run.
+        /// </summary>
+        public void ConfigureDailyRun(int mistakeBudget, int par)
+        {
+            if (workingState == null) return;
+            workingState.isDaily = true;
+            workingState.dailyMistakeBudget = Mathf.Max(0, mistakeBudget);
+            workingState.mistakesRemaining = workingState.dailyMistakeBudget;
+            workingState.dailyPar = Mathf.Max(0, par);
+            workingState.detourCount = 0;
+            workingState.usedPowerUpThisRun = false;
+            workingState.dailyResult = null;
             NotifySubscribers();
         }
 
@@ -508,6 +573,12 @@ namespace WordPuzzle.State
             // §1.3 — chain rewound, so any active hint/reveal preview is stale.
             workingState.hintLetterIndex = -1;
             workingState.revealedNextWord = string.Empty;
+
+            // Daily 2.0 — undo steps back one detour (floor 0). A spent MISTAKE is NOT refunded
+            // (a bad guess stays spent). Deliberate simplification: this decrements even if the
+            // undone step was progress; see the Phase 1 report note on per-step detour accounting.
+            if (workingState.isDaily)
+                workingState.detourCount = Mathf.Max(0, workingState.detourCount - 1);
         }
 
         private void NotifySubscribers()
@@ -682,6 +753,13 @@ namespace WordPuzzle.State
             if (workingState == null || deltaTime <= 0f) return;
             workingState.elapsedTime += deltaTime;
         }
+
+        // ── Daily 2.0 (Task 36) — read-only daily run state for the HUD, results panel, and tests ──
+        public bool IsDailyRun() => workingState?.isDaily ?? false;
+        public int GetDetourCount() => workingState?.detourCount ?? 0;
+        public int GetMistakesRemaining() => workingState?.mistakesRemaining ?? 0;
+        public int GetDailyPar() => workingState?.dailyPar ?? 0;
+        public PathScoreResult? GetDailyResult() => workingState?.dailyResult;
     }
 
     /// <summary>
@@ -719,6 +797,18 @@ namespace WordPuzzle.State
         // TimeAttack §4 AddTime economy: per-run charges and grant size.
         public int addTimesRemaining = 0;
         public float addTimeGrantSeconds = 0f;
+
+        // Daily 2.0 (Task 36) — two-resource run state. Inert unless isDaily (set by
+        // ConfigureDailyRun after StartNewPuzzle). detourCount = accepted non-progress moves
+        // (cost score); mistakesRemaining = invalid guesses left (cost the run). dailyResult is
+        // computed once, on the terminal submission (solve OR fail), via the PathScoring entry point.
+        public bool isDaily = false;
+        public int detourCount = 0;
+        public int mistakesRemaining = 0;
+        public int dailyMistakeBudget = 0;
+        public int dailyPar = 0;
+        public bool usedPowerUpThisRun = false;
+        public PathScoreResult? dailyResult = null;
     }
 
     internal class Unsubscriber : IDisposable
@@ -761,6 +851,8 @@ namespace WordPuzzle.State
         public string word;
         public string reason;
         public SubmissionRejectReason rejectReason;
+        // Daily 2.0 (Task 36) — populated only on the terminal submission (solve OR fail); null otherwise.
+        public PathScoreResult? pathScore;
     }
 
     /// <summary>Spec §1 — typed rejection categories for failed submissions.</summary>

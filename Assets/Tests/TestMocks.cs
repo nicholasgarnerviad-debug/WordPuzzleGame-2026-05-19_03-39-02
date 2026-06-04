@@ -13,6 +13,7 @@ public class MockWordValidator : IWordValidator
 {
     private bool isValid = true;
     private bool isNextStep = true;
+    private bool isProgress = true;   // Daily 2.0 — controllable so tests can drive a DETOUR (accepted but NOT progress).
 
     // Task 9C — controllable typed rejection reason + arbitrary Message.
     // Lets QA drive the enum-driven reject path and prove that the user-facing
@@ -20,10 +21,11 @@ public class MockWordValidator : IWordValidator
     private WordPuzzle.Puzzle.WordRejectReason rejectReason = WordPuzzle.Puzzle.WordRejectReason.None;
     private string message = "";
 
-    public void SetValidResult(bool valid, bool nextStep)
+    public void SetValidResult(bool valid, bool nextStep, bool progress = true)
     {
         isValid = valid;
         isNextStep = nextStep;
+        isProgress = progress;
     }
 
     /// <summary>
@@ -43,7 +45,7 @@ public class MockWordValidator : IWordValidator
 
     public WordPuzzle.Puzzle.ValidationResult ValidateWord(string word)
     {
-        return new WordPuzzle.Puzzle.ValidationResult(isValid, message, isNextStep, true, -1, -1, rejectReason);
+        return new WordPuzzle.Puzzle.ValidationResult(isValid, message, isNextStep, isProgress, -1, -1, rejectReason);
     }
 
     public bool IsValidNextWord(string word, string previousWord)

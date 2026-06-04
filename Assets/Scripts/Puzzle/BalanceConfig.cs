@@ -165,6 +165,27 @@ public static class BalanceConfig
     public const int RevealShopUnitCoins = 20;
     public const int TimeShopUnitCoins   = 12;
 
+    // ─── Daily 2.0 — par scoring + stakes (Task 36) ──────────────────────────
+
+    /// <summary>
+    /// Invalid submissions a player may make in one daily run before it is FAILED.
+    /// A "mistake" is an invalid guess (correct length but not a valid step); a wrong-LENGTH
+    /// or empty entry is malformed (not a mistake), and a DETOUR costs score, not the run.
+    /// </summary>
+    public const int DailyMistakeBudget = 3;
+
+    /// <summary>
+    /// Max detours (accepted, non-progress moves) allowed for a PERFECT (3★) daily grade.
+    /// 0 => only an optimal-length path scores Perfect (any route of par length qualifies).
+    /// </summary>
+    public const int PerfectMaxDetours = 0;
+
+    /// <summary>
+    /// Max detours (inclusive) for a GOOD (2★) daily grade; above this => Solved (1★).
+    /// INVARIANT: GoodMaxDetours >= PerfectMaxDetours (keeps the grade monotonic in detours).
+    /// </summary>
+    public const int GoodMaxDetours = 2;
+
     // ─── Ad policy (Task 6B) ─────────────────────────────────────────────────
 
     /// <summary>Minimum real-time seconds that must elapse between interstitial impressions.</summary>

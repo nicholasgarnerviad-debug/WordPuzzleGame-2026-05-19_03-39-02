@@ -413,4 +413,115 @@ public class GameStateManagerTests
             "AddTime must not consume a charge when grant size is zero.");
         Assert.AreEqual(0, callCount);
     }
+
+    // ── Daily 2.0 (Task 36) — two-resource reducer (detour = score, mistake = run) ──
+
+    private static PuzzleType DailyPuzzle() => new PuzzleType(1, "cat", "dog", 3,
+        new[] { "cat", "bat", "bag", "dog" }, 0, Diff.Easy);
+
+    [Test]
+    public void Daily_DetourThenInvalid_TracksDetourAndSpendsOneMistake()
+    {
+        manager.StartNewPuzzle(DailyPuzzle());
+        manager.ConfigureDailyRun(BalanceConfig.DailyMistakeBudget, 4);
+
+        // Accepted but NOT progress => a DETOUR (costs score, not the run).
+        mockValidator.SetValidResult(true, true, progress: false);
+        manager.Dispatch(new SubmitWordAction("bat"));
+
+        // Invalid guess (correct length, not a valid step) => a MISTAKE (costs the run).
+        mockValidator.SetValidResult(false, false);
+        manager.Dispatch(new SubmitWordAction("zzz"));
+
+        Assert.AreEqual(1, manager.GetDetourCount(), "one detour recorded");
+        Assert.AreEqual(BalanceConfig.DailyMistakeBudget - 1, manager.GetMistakesRemaining(),
+            "one mistake spent, run not failed");
+        Assert.IsFalse(manager.GetDailyResult().HasValue, "run still in progress");
+    }
+
+    [Test]
+    public void Daily_ProgressMove_IsFree_NoDetour_NoMistake()
+    {
+        manager.StartNewPuzzle(DailyPuzzle());
+        manager.ConfigureDailyRun(BalanceConfig.DailyMistakeBudget, 4);
+
+        mockValidator.SetValidResult(true, true, progress: true);
+        manager.Dispatch(new SubmitWordAction("bat"));
+
+        Assert.AreEqual(0, manager.GetDetourCount());
+        Assert.AreEqual(BalanceConfig.DailyMistakeBudget, manager.GetMistakesRemaining());
+    }
+
+    [Test]
+    public void Daily_ExhaustMistakeBudget_FailsWithFailedResult()
+    {
+        manager.StartNewPuzzle(DailyPuzzle());
+        manager.ConfigureDailyRun(BalanceConfig.DailyMistakeBudget, 4);
+
+        mockValidator.SetValidResult(false, false);
+        var bad = new[] { "zzz", "yyy", "www", "qqq", "vvv" };
+        for (int i = 0; i < BalanceConfig.DailyMistakeBudget; i++)
+            manager.Dispatch(new SubmitWordAction(bad[i]));
+
+        Assert.AreEqual(0, manager.GetMistakesRemaining());
+        var result = manager.GetDailyResult();
+        Assert.IsTrue(result.HasValue, "a failed daily produces a result");
+        Assert.IsTrue(result.Value.failed);
+        Assert.AreEqual(0, result.Value.stars, "Failed = 0 stars");
+    }
+
+    [Test]
+    public void Daily_UndoAfterDetour_DecrementsDetourToZero_NoMistakeRefund()
+    {
+        manager.StartNewPuzzle(DailyPuzzle());
+        manager.ConfigureDailyRun(BalanceConfig.DailyMistakeBudget, 4);
+
+        // Spend a mistake first, then take a detour.
+        mockValidator.SetValidResult(false, false);
+        manager.Dispatch(new SubmitWordAction("zzz"));
+        mockValidator.SetValidResult(true, true, progress: false);
+        manager.Dispatch(new SubmitWordAction("bat"));
+        Assert.AreEqual(1, manager.GetDetourCount());
+
+        manager.Dispatch(new UndoStepAction());
+
+        Assert.AreEqual(0, manager.GetDetourCount(), "undo steps back the detour");
+        Assert.AreEqual(BalanceConfig.DailyMistakeBudget - 1, manager.GetMistakesRemaining(),
+            "a spent mistake is NOT refunded by undo");
+    }
+
+    [Test]
+    public void Daily_SolveAtPar_ZeroDetours_PerfectResult()
+    {
+        manager.StartNewPuzzle(DailyPuzzle());
+        manager.ConfigureDailyRun(BalanceConfig.DailyMistakeBudget, 3); // par 3
+
+        mockValidator.SetValidResult(true, true, progress: true);
+        manager.Dispatch(new SubmitWordAction("bat"));
+        manager.Dispatch(new SubmitWordAction("bag"));
+        manager.Dispatch(new SubmitWordAction("dog")); // reaches endWord => win
+
+        var result = manager.GetDailyResult();
+        Assert.IsTrue(result.HasValue, "a solved daily produces a result");
+        Assert.IsFalse(result.Value.failed);
+        Assert.AreEqual(0, result.Value.detours);
+        Assert.AreEqual(3, result.Value.playerSteps);
+        Assert.AreEqual(3, result.Value.stars, "optimal-length path => Perfect (3 stars)");
+    }
+
+    [Test]
+    public void Classic_NotDaily_IgnoresDetoursAndMistakes()
+    {
+        manager.StartNewPuzzle(DailyPuzzle()); // NOT promoted to a daily run
+
+        mockValidator.SetValidResult(false, false);
+        manager.Dispatch(new SubmitWordAction("zzz"));
+        mockValidator.SetValidResult(true, true, progress: false);
+        manager.Dispatch(new SubmitWordAction("bat"));
+
+        Assert.IsFalse(manager.IsDailyRun());
+        Assert.AreEqual(0, manager.GetDetourCount(), "non-daily run never tracks detours");
+        Assert.AreEqual(0, manager.GetMistakesRemaining(), "non-daily run never seeds mistakes");
+        Assert.IsFalse(manager.GetDailyResult().HasValue);
+    }
 }
