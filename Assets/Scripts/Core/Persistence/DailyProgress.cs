@@ -25,6 +25,15 @@ namespace WordPuzzle.Persistence
         public bool todayPlayed = false;         // one-and-done lock: today already attempted
         public List<DayOutcome> outcomes = new List<DayOutcome>();   // trailing-365 Win/Loss ledger
 
+        // Daily 2.0 (Task 38) — today's stored par-scored result, so re-tapping an already-played daily
+        // RE-SHOWS it instead of starting a fresh run. Only meaningful while todayPlayed (the read is gated
+        // on it); overwritten on each new play. Legacy saves default todayResultValid=false (no re-show).
+        public bool todayResultValid = false;
+        public int todayResultStars = 0;          // 0–3
+        public int todayResultPar = 0;
+        public int todayResultPlayerSteps = 0;
+        public bool todayResultFailed = false;
+
         public DailyProgress() { }
 
         /// <summary>

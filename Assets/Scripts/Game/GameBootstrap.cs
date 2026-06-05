@@ -812,7 +812,9 @@ namespace WordPuzzle
             DailyStreakRules.RefreshPlayedFlag(cachedDailyProgress, dailyClock.TodayIso);
             if (cachedDailyProgress != null && cachedDailyProgress.todayPlayed)
             {
-                Debug.Log("[Daily] Already played today — one-and-done; ignoring re-entry.");
+                // One-and-done: re-SHOW today's stored result instead of starting a fresh scored run
+                // (no replay, no reward re-grant).
+                ShowStoredDailyResult();
                 return;
             }
             pendingDailyPuzzle = dailyPuzzleService.GetTodayPuzzle();
@@ -826,6 +828,30 @@ namespace WordPuzzle
             activeMode = new ClassicMode();
             modeController.SetMode(activeMode);
             StartNewGame();
+        }
+
+        // Task 38 — re-show today's STORED daily result (one-and-done) instead of replaying. No fresh run,
+        // no reward re-grant, no doubler. No-op when there's no stored result (e.g. a pre-Task-38 save).
+        private void ShowStoredDailyResult()
+        {
+            if (cachedDailyProgress == null || !cachedDailyProgress.todayResultValid)
+            {
+                Debug.Log("[Daily] Already played today; no stored result to re-show.");
+                return;
+            }
+            var results = uiManager.GetResults();
+            results.ConfigureForDaily();            // Home only, no Play Again
+            results.ConfigureDailyDoubler(false);   // already finalized — never offer the doubler on a re-show
+            results.ShowDailyResult(
+                cachedDailyProgress.todayResultStars,
+                cachedDailyProgress.todayResultPar,
+                cachedDailyProgress.todayResultPlayerSteps,
+                cachedDailyProgress.todayResultFailed,
+                dailyPuzzleService != null ? dailyPuzzleService.TodayIndex() : 0,
+                cachedDailyProgress.currentStreak);
+            results.ShowDailyStreak(cachedDailyProgress.currentStreak, cachedDailyProgress.longestStreak, true);
+            lastWinContext = PostWin.Daily;         // Home routes correctly
+            uiManager.ShowResults();
         }
 
         private void StartPuzzleShowMode()
@@ -1878,6 +1904,19 @@ namespace WordPuzzle
             DailyStreakRules.ApplyPlayed(cachedDailyProgress, todayIso, solved);
             cachedDailyProgress.todayPuzzleIndex = puzzleIndex;
 
+            // Task 38 — store today's result so re-tapping the (already-played) daily RE-SHOWS it instead of
+            // starting a fresh run. Captured BEFORE the save so it persists; only read while todayPlayed.
+            var pathScore = stateManager?.GetDailyResult();
+            if (pathScore.HasValue)
+            {
+                var psr = pathScore.Value;
+                cachedDailyProgress.todayResultValid       = true;
+                cachedDailyProgress.todayResultStars       = psr.stars;
+                cachedDailyProgress.todayResultPar         = psr.par;
+                cachedDailyProgress.todayResultPlayerSteps = psr.playerSteps;
+                cachedDailyProgress.todayResultFailed      = psr.failed;
+            }
+
             if (dataManagerRef != null)
             {
                 try { await dataManagerRef.SaveDailyProgressAsync(cachedDailyProgress); }
@@ -1885,7 +1924,6 @@ namespace WordPuzzle
             }
 
             // Surface the par-scored result (grade/stars or "Failed today") alongside the streak.
-            var pathScore = stateManager?.GetDailyResult();
             if (pathScore.HasValue)
             {
                 var ps = pathScore.Value;

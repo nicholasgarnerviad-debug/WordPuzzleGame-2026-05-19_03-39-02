@@ -339,10 +339,11 @@ namespace WordPuzzle.UI
                 dailyButtonLabel.text = completedToday
                     ? $"DAILY  ·  {currentStreak}"   // streak count (· is font-safe; ✓ U+2713 may be missing)
                     : "DAILY";
-            // Daily 2.0 (Task 38) — one-and-done: lock the button once today is played (win OR loss) so the
-            // daily can't be replayed or its par reward farmed. A new local day re-enables it.
+            // Daily 2.0 (Task 38) — the button stays ENABLED when played; tapping RE-SHOWS today's result.
+            // One-and-done is enforced in GameBootstrap.StartDailyMode (shows the stored result, not a fresh
+            // scored run), so there's no replay/farm. The streak in the label signals "played today".
             if (dailyButton != null)
-                dailyButton.interactable = !completedToday;
+                dailyButton.interactable = true;
         }
 
         /// <summary>
