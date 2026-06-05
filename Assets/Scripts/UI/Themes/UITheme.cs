@@ -118,6 +118,7 @@ namespace WordPuzzle.UI
     {
         public static readonly Color Gold        = Hex("#C9B458");
         public static readonly Color CardOutline = Hex("#39435A");
+        public static readonly Color Danger      = Hex("#C9215C"); // accent-red — destructive actions (Reset Progress ring)
 
         private static Color Hex(string h) => ColorUtility.TryParseHtmlString(h, out var c) ? c : Color.magenta;
     }
