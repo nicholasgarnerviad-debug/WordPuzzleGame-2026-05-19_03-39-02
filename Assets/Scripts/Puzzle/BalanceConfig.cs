@@ -11,8 +11,11 @@ public static class BalanceConfig
     public const int DefaultHintsPerPuzzle = 3;
 
     /// <summary>
-    /// Reveal charges granted per puzzle. Scarce — Reveal is far stronger than Hint
-    /// (it shows the entire next word, not just one letter).
+    /// Reveal charges seeded into a fresh GameState. NOTE: in the Task 33 owned-inventory model this is a
+    /// PRE-LOAD FALLBACK + the unit-test seed only — at runtime GameStateManager's ownedPowerUpProvider
+    /// overrides it with the player's OWNED reveal stock every puzzle, so this is NOT a free reveal per
+    /// puzzle in production. Reveal rarity is controlled by StartingRevealGrant/DailyRevealGrant (the real
+    /// free-grant levers); kept at 1 so isolated reveal-use unit tests have a charge to spend.
     /// </summary>
     public const int DefaultRevealsPerPuzzle = 1;
 
@@ -148,14 +151,28 @@ public static class BalanceConfig
     // ─── Shop economy & grants (Task 33) ─────────────────────────────────────
 
     /// <summary>
-    /// Starting inventory: how many of EACH power-up (hint/undo/reveal/time) a player owns
+    /// Starting inventory: how many of each of the GENEROUS power-ups (hint/undo/time) a player owns
     /// out of the gate. Granted exactly once (startingGrantApplied) — new players and existing
     /// saves alike are topped up to at least this amount on first run after the update.
+    /// Reveal is the premium exception and uses <see cref="StartingRevealGrant"/> (smaller).
     /// </summary>
     public const int StartingPowerUpGrant = 5;
 
-    /// <summary>Daily grant: each power-up is topped up by this much, once per local day.</summary>
+    /// <summary>Daily grant: each generous power-up (hint/undo/time) is topped up by this much, once per
+    /// local day. Reveal uses the smaller <see cref="DailyRevealGrant"/>.</summary>
     public const int DailyPowerUpGrant = 2;
+
+    // ─── Reveal rarity (Classic polish pass) ─────────────────────────────────
+    // Reveal shows a CORRECT optimal-path word — the strongest assist — so it must stay the rarest,
+    // most-premium power-up. It is granted LESS for free than hint/undo/time (which stay generous),
+    // while keeping its premium in-run cost + highest bundle prices below. INVARIANTS (asserted by
+    // RevealRarityTests): StartingRevealGrant < StartingPowerUpGrant and DailyRevealGrant < DailyPowerUpGrant.
+
+    /// <summary>Starting Reveal inventory (smaller than the other power-ups' 5 — a couple to learn the feature).</summary>
+    public const int StartingRevealGrant = 3;
+
+    /// <summary>Daily Reveal top-up (smaller than the other power-ups' +2 — a slow trickle; mostly earned/bought).</summary>
+    public const int DailyRevealGrant = 1;
 
     /// <summary>Power-up shop bundle sizes (coins-priced). Each power-up is sold in these quantities.</summary>
     public static readonly int[] PowerUpBundleSizes = { 5, 15, 40 };

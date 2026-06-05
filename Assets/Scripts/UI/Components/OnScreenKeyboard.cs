@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using WordPuzzle.UI; // KeyboardPalette + UIAnimations live in WordPuzzle.UI (UIThemeManager is global)
 
 namespace WordPuzzle.UI.Components
 {
@@ -26,11 +27,12 @@ namespace WordPuzzle.UI.Components
         // the baked 44px corner down to a tidy key-sized radius (the wide menu buttons use multiplier 1).
         private const float KeyCornerPpuMultiplier = 2.5f;
 
-        // Dark premium palette — matches design tokens
-        private static readonly Color C_KEY_FILL    = new Color(0x24 / 255f, 0x29 / 255f, 0x36 / 255f, 1f); // #242936 surface-2
-        private static readonly Color C_KEY_TEXT    = new Color(0xE7 / 255f, 0xE1 / 255f, 0xC4 / 255f, 1f); // #E7E1C4 text-primary
-        private static readonly Color C_DEL_FILL    = new Color(0xC9 / 255f, 0x21 / 255f, 0x5C / 255f, 1f); // #C9215C accent-red
-        private static readonly Color C_GO_FILL     = new Color(0x6A / 255f, 0xAA / 255f, 0x64 / 255f, 1f); // #6AAA64 accent-green
+        // Key palette — centralized in UITheme.KeyboardPalette (no inline hex here). KeyFill is the deep
+        // indigo-purple (Classic polish pass); letters stay cream, DEL red, GO green.
+        private static readonly Color C_KEY_FILL    = KeyboardPalette.KeyFill;
+        private static readonly Color C_KEY_TEXT    = KeyboardPalette.KeyText;
+        private static readonly Color C_DEL_FILL    = KeyboardPalette.DelFill;
+        private static readonly Color C_GO_FILL     = KeyboardPalette.GoFill;
 
         private readonly Dictionary<char, Button> _letterButtons = new Dictionary<char, Button>();
         private bool _built;
@@ -153,6 +155,11 @@ namespace WordPuzzle.UI.Components
             var btn = obj.GetComponent<Button>();
             btn.targetGraphic = image; // wire targetGraphic so Button.interactable state transitions are reliable
 
+            // Classic polish (W5) — subtle press squish on every key (letters + DEL + GO). Routed through the
+            // shared UIAnimations.ScaleButtonTap: ReduceMotion-gated (instant when motion is off) + a short
+            // coroutine (no per-frame GC). Manual key layout (no LayoutGroup), so animating localScale is safe.
+            btn.onClick.AddListener(() => { if (isActiveAndEnabled) StartCoroutine(UIAnimations.ScaleButtonTap(rt)); });
+
             var textObj = new GameObject("Label", typeof(RectTransform), typeof(TextMeshProUGUI));
             textObj.transform.SetParent(obj.transform, false);
 
@@ -189,9 +196,9 @@ namespace WordPuzzle.UI.Components
         private IEnumerator FlashButton(Button btn)
         {
             var image = btn.GetComponent<Image>();
-            image.color = new Color(0xC9 / 255f, 0xB4 / 255f, 0x58 / 255f, 1f); // #C9B458 accent-gold flash
+            image.color = KeyboardPalette.KeyFlash; // gold highlight pulse (centralized token)
             yield return new WaitForSeconds(0.3f);
-            image.color = C_KEY_FILL; // restore dark key fill
+            image.color = C_KEY_FILL; // restore key fill (deep indigo, KeyboardPalette.KeyFill)
         }
     }
 }

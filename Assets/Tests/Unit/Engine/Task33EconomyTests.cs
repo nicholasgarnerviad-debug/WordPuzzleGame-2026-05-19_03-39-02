@@ -35,7 +35,8 @@ public class Task33EconomyTests
 
         int g = BalanceConfig.StartingPowerUpGrant;
         Assert.AreEqual(g, await manager.GetHintsAsync());
-        Assert.AreEqual(g, await manager.GetRevealsAsync());
+        Assert.AreEqual(BalanceConfig.StartingRevealGrant, await manager.GetRevealsAsync(),
+            "Reveal is the premium exception — granted fewer at start than hint/undo/time.");
         Assert.AreEqual(g, await manager.GetUndosAsync());
         Assert.AreEqual(g, await manager.GetTimePowerUpsAsync());
         Assert.IsTrue(manager.GetCurrentProgress().startingGrantApplied);
@@ -63,8 +64,8 @@ public class Task33EconomyTests
         await manager.ApplyStartingInventoryIfNeeded();
 
         Assert.AreEqual(10, await manager.GetHintsAsync(), "Richer counts must not be reduced.");
-        Assert.AreEqual(BalanceConfig.StartingPowerUpGrant, await manager.GetRevealsAsync(),
-            "Empty counts must be topped up to the starting amount.");
+        Assert.AreEqual(BalanceConfig.StartingRevealGrant, await manager.GetRevealsAsync(),
+            "Empty reveal count must be topped up to the (smaller, premium) starting reveal amount.");
     }
 
     // ── Daily grant ───────────────────────────────────────────────────────────
@@ -73,11 +74,15 @@ public class Task33EconomyTests
     {
         await manager.InitializeAsync();
         int baseHints = await manager.GetHintsAsync();
-        int g = BalanceConfig.DailyPowerUpGrant;
+        int baseReveals = await manager.GetRevealsAsync();
+        int g  = BalanceConfig.DailyPowerUpGrant;
+        int gr = BalanceConfig.DailyRevealGrant;
 
         await manager.GrantDailyIfDue("2026-06-03");
         Assert.AreEqual(baseHints + g, await manager.GetHintsAsync());
         Assert.AreEqual(baseHints + g, await manager.GetTimePowerUpsAsync());
+        Assert.AreEqual(baseReveals + gr, await manager.GetRevealsAsync(),
+            "Reveal tops up by the smaller daily reveal grant, not the generous one.");
 
         await manager.GrantDailyIfDue("2026-06-03"); // same day — no-op
         Assert.AreEqual(baseHints + g, await manager.GetHintsAsync(), "Daily grant must not stack same day.");

@@ -121,6 +121,24 @@ namespace WordPuzzle.UI
 
         private static Color Hex(string h) => ColorUtility.TryParseHtmlString(h, out var c) ? c : Color.magenta;
     }
+
+    /// <summary>
+    /// On-screen keyboard key palette (Classic polish pass). Centralizes the keyboard's colours so
+    /// OnScreenKeyboard stops carrying inline hex. <see cref="KeyFill"/> is the darker deep-indigo key
+    /// background that ties to the nebula/space palette; the cream <see cref="KeyText"/> letters stay
+    /// crisp on it (~9:1 contrast). DEL keeps the accent red, GO the accent green; <see cref="KeyFlash"/>
+    /// is the brief gold highlight pulse.
+    /// </summary>
+    public static class KeyboardPalette
+    {
+        public static readonly Color KeyFill  = Hex("#2A2440"); // deep indigo-purple key background (NEW)
+        public static readonly Color KeyText  = Hex("#E7E1C4"); // cream "white" letters (kept)
+        public static readonly Color DelFill  = Hex("#C9215C"); // accent red (DEL)
+        public static readonly Color GoFill   = Hex("#6AAA64"); // accent green (GO)
+        public static readonly Color KeyFlash = Hex("#C9B458"); // gold highlight pulse
+
+        private static Color Hex(string h) => ColorUtility.TryParseHtmlString(h, out var c) ? c : Color.magenta;
+    }
 }
 
 /// <summary>

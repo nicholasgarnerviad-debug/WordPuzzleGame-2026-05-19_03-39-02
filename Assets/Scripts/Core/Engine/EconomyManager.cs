@@ -200,15 +200,16 @@ namespace WordPuzzle.State
     {
         if (currentProgress.startingGrantApplied) return;
 
-        int g = BalanceConfig.StartingPowerUpGrant;
+        int g  = BalanceConfig.StartingPowerUpGrant;       // hint/undo/time — generous
+        int gr = BalanceConfig.StartingRevealGrant;        // reveal — premium, fewer free
         // Top up to AT LEAST the starting amount — never reduce a save that already has more.
         currentProgress.totalHintsEarned   = Mathf.Max(currentProgress.totalHintsEarned, g);
-        currentProgress.totalRevealsEarned = Mathf.Max(currentProgress.totalRevealsEarned, g);
+        currentProgress.totalRevealsEarned = Mathf.Max(currentProgress.totalRevealsEarned, gr);
         currentProgress.totalUndosEarned   = Mathf.Max(currentProgress.totalUndosEarned, g);
         currentProgress.totalTimeEarned    = Mathf.Max(currentProgress.totalTimeEarned, g);
         currentProgress.startingGrantApplied = true;
 
-        LogEconomyEvent("StartingInventoryGranted", $"each:{g}");
+        LogEconomyEvent("StartingInventoryGranted", $"each:{g},reveal:{gr}");
         await dataManager.UpdatePlayerProgressAsync(currentProgress);
     }
 
@@ -217,14 +218,15 @@ namespace WordPuzzle.State
         if (string.IsNullOrEmpty(todayIso)) return;
         if (currentProgress.lastDailyGrantDate == todayIso) return; // already granted today — idempotent
 
-        int g = BalanceConfig.DailyPowerUpGrant;
+        int g  = BalanceConfig.DailyPowerUpGrant;          // hint/undo/time — generous
+        int gr = BalanceConfig.DailyRevealGrant;           // reveal — premium, slower trickle
         currentProgress.totalHintsEarned   += g;
-        currentProgress.totalRevealsEarned += g;
+        currentProgress.totalRevealsEarned += gr;
         currentProgress.totalUndosEarned   += g;
         currentProgress.totalTimeEarned    += g;
         currentProgress.lastDailyGrantDate = todayIso; // missed days do NOT stack — one grant per visited day
 
-        LogEconomyEvent("DailyGrant", $"each:{g},date:{todayIso}");
+        LogEconomyEvent("DailyGrant", $"each:{g},reveal:{gr},date:{todayIso}");
         await dataManager.UpdatePlayerProgressAsync(currentProgress);
     }
 

@@ -188,6 +188,13 @@ namespace WordPuzzle.UI
             if (undoButton != null) undoButton.onClick.AddListener(() => OnUndoStep?.Invoke());
             if (addTimeButton != null) addTimeButton.onClick.AddListener(() => OnAddTimeUsed?.Invoke());
 
+            // Classic polish (W5) — subtle press squish on the power-up buttons (same calm vocabulary as the
+            // keys). Cleared with the rest in OnDisable; re-added here on each enable (no double-subscribe).
+            AddPressFeedback(hintButton);
+            AddPressFeedback(revealButton);
+            AddPressFeedback(undoButton);
+            AddPressFeedback(addTimeButton);
+
             if (keyboard != null)
             {
                 keyboard.OnLetterPressed += HandleLetterPressed;
@@ -608,6 +615,17 @@ namespace WordPuzzle.UI
                 StopCoroutine(smoothScrollRoutine);
                 smoothScrollRoutine = null;
             }
+        }
+
+        // Classic polish (W5) — attach a subtle press squish to a power-up button. Routed through the shared
+        // UIAnimations.ScaleButtonTap: ReduceMotion-gated (instant when motion is off) + a short coroutine
+        // (no per-frame GC). Buttons are centre-pivot in the manually-seated bar, so localScale won't fight layout.
+        private void AddPressFeedback(Button btn)
+        {
+            if (btn == null) return;
+            var rt = btn.GetComponent<RectTransform>();
+            if (rt == null) return;
+            btn.onClick.AddListener(() => { if (isActiveAndEnabled) StartCoroutine(UIAnimations.ScaleButtonTap(rt)); });
         }
 
         // ============================================================
