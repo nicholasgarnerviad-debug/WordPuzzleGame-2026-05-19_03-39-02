@@ -16,16 +16,16 @@ public static class BalanceConfig
     /// </summary>
     public const int DefaultRevealsPerPuzzle = 1;
 
-    /// <summary>Coin cost to use one Hint charge. Free — encourages use over frustration.</summary>
+    // NOTE (Task 38 audit): in the Task 33 OWNED-INVENTORY model a power-up is consumed as a CHARGE from the
+    // player's stock (free in coins). These per-use *Cost constants are VESTIGIAL — not charged in any
+    // handler; only Constants.cs forwards them. Kept so that forward doesn't break; NOT a live balance lever.
+    /// <summary>Legacy per-use coin cost for Hint (vestigial — Hint now consumes an owned charge).</summary>
     public const int HintCost = 0;
 
-    /// <summary>
-    /// Coin cost to use one Reveal charge. Premium power-up.
-    /// INVARIANT: RevealCost MUST stay > HintCost.
-    /// </summary>
+    /// <summary>Legacy per-use coin cost for Reveal (vestigial — Reveal now consumes an owned charge).</summary>
     public const int RevealCost = 25;
 
-    /// <summary>Coin cost to undo one ladder step.</summary>
+    /// <summary>Legacy per-use coin cost for Undo (vestigial — Undo is chain-rewind, no charge).</summary>
     public const int UndoCost = 0;
 
     // ─── Time Attack (Task 5D) ────────────────────────────────────────────────
@@ -134,7 +134,8 @@ public static class BalanceConfig
 
     /// <summary>
     /// Coins awarded on any puzzle completion (Classic, PuzzleShow, TimeAttack).
-    /// Anti-deadlock: 3 completions fund one Reveal (RevealCost=25). No gates behind coins.
+    /// Anti-deadlock: a Hint x5 bundle (50 coins) is ~5 completions, and the free 5-start + 2/day power-up
+    /// grants mean power-ups are never coin-gated. No gates behind coins.
     /// </summary>
     public const int PuzzleCompletionReward = 10;
 
