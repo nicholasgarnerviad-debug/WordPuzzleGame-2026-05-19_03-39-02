@@ -625,7 +625,7 @@ namespace WordPuzzle.UI
             if (btn == null) return;
             var rt = btn.GetComponent<RectTransform>();
             if (rt == null) return;
-            btn.onClick.AddListener(() => { if (isActiveAndEnabled) StartCoroutine(UIAnimations.ScaleButtonTap(rt)); });
+            btn.onClick.AddListener(() => { if (isActiveAndEnabled) StartCoroutine(UIAnimations.ScaleButtonTap(rt, UIAnimations.MICRO, 0.90f)); });
         }
 
         // ============================================================
@@ -652,7 +652,7 @@ namespace WordPuzzle.UI
                     var tile = currentInputRow.GetChild(idx).GetComponent<LetterTile>();
                     if (tile != null)
                     {
-                        StartCoroutine(tile.PunchScale());
+                        StartCoroutine(tile.PunchScale(1.18f)); // punchier lock-in pop so typing clearly registers
                         StartCoroutine(tile.DropInSettle()); // Task 29C — letter settles into the tile ("placing a rung")
                     }
                 }
@@ -731,6 +731,13 @@ namespace WordPuzzle.UI
             // Task 31A — skip the per-frame start/target tile rebuild when unchanged.
             if (_seenStartEnd && s == _rcStart && e == _rcEnd) return;
             _seenStartEnd = true; _rcStart = s; _rcEnd = e;
+
+            // Box-count fix: the active-input + hint rows size their tile COUNT to the target word length
+            // (currentEndWord), but their render caches key on the typed text / hint index — which stay
+            // "" / -1 across puzzles. Advancing to a puzzle of a DIFFERENT length (e.g. 3→7 letters) would
+            // otherwise keep the previous puzzle's tile count (the "boxes wrong past 3" bug). Invalidate them
+            // here so the SetCurrentInput / SetHintLetterIndex later in this same UI tick rebuild to the new length.
+            _seenInput = false; _seenHint = false;
 
             currentStartWord = s;
             currentEndWord = e;

@@ -158,7 +158,8 @@ namespace WordPuzzle.UI.Components
             // Classic polish (W5) — subtle press squish on every key (letters + DEL + GO). Routed through the
             // shared UIAnimations.ScaleButtonTap: ReduceMotion-gated (instant when motion is off) + a short
             // coroutine (no per-frame GC). Manual key layout (no LayoutGroup), so animating localScale is safe.
-            btn.onClick.AddListener(() => { if (isActiveAndEnabled) StartCoroutine(UIAnimations.ScaleButtonTap(rt)); });
+            // 0.88 trough so the key press is clearly FELT (the default 0.95 read as "nothing happening").
+            btn.onClick.AddListener(() => { if (isActiveAndEnabled) StartCoroutine(UIAnimations.ScaleButtonTap(rt, 0.20f, 0.88f)); });
 
             var textObj = new GameObject("Label", typeof(RectTransform), typeof(TextMeshProUGUI));
             textObj.transform.SetParent(obj.transform, false);

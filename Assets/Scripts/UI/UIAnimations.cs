@@ -34,16 +34,17 @@ namespace WordPuzzle.UI
 
         /// <summary>
         /// Animates a button tap with scale down then back up effect.
-        /// Animation: 1.0 → 0.95 → 1.0 with ease-out easing.
+        /// Animation: 1.0 → pressScale → 1.0 with ease-out easing.
         /// </summary>
         /// <param name="button">The RectTransform of the button to animate</param>
         /// <param name="duration">Total animation duration in seconds (default MICRO)</param>
+        /// <param name="pressScale">Trough scale at the bottom of the press (default 0.95; lower = punchier).</param>
         /// <returns>Coroutine for use with StartCoroutine()</returns>
-        public static IEnumerator ScaleButtonTap(RectTransform button, float duration = MICRO)
+        public static IEnumerator ScaleButtonTap(RectTransform button, float duration = MICRO, float pressScale = 0.95f)
         {
             if (ReduceMotion) { button.localScale = Vector3.one; yield break; }
             Vector3 originalScale = button.localScale;
-            float targetScale = 0.95f;
+            float targetScale = pressScale;
             float elapsedTime = 0f;
 
             // Scale down phase: 1.0 → 0.95
