@@ -144,15 +144,15 @@ namespace WordPuzzle.UI.Components
 
             while (t < duration)
             {
+                if (rectTransform == null) yield break; // tile destroyed mid-pop (reconcile/scene change) — bail safely
                 t += Time.unscaledDeltaTime;
                 float p = Mathf.Clamp01(t / duration);
                 float bump = Mathf.Sin(p * Mathf.PI);
-                float s = 1f + (magnitude - 1f) * (1f + EaseOutBack(bump) * 0.0f); // keep simple sin envelope
                 rectTransform.localScale = baseScale * (1f + (magnitude - 1f) * bump);
                 yield return null;
             }
 
-            rectTransform.localScale = baseScale;
+            if (rectTransform != null) rectTransform.localScale = baseScale;
         }
 
         /// <summary>

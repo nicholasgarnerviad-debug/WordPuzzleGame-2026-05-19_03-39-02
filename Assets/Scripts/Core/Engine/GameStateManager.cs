@@ -161,7 +161,12 @@ namespace WordPuzzle.State
 
         private void HandlePressLetter(PressLetterAction action)
         {
-            if (workingState.currentInput.Length >= 10 || workingState.isWon || workingState.isLost)
+            // Input can never exceed the puzzle's word length — every ladder step is the same length, so a
+            // 5-letter puzzle accepts at most 5 letters. (Falls back to a hard 10-cap only if the word is
+            // somehow unavailable.)
+            int maxLen = (currentPuzzle != null && !string.IsNullOrEmpty(currentPuzzle.endWord))
+                ? currentPuzzle.endWord.Length : 10;
+            if (workingState.currentInput.Length >= maxLen || workingState.isWon || workingState.isLost)
                 return;
 
             workingState.currentInput += char.ToLower(action.letter);

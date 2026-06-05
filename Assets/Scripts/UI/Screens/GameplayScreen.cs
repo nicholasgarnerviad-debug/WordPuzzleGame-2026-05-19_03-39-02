@@ -145,6 +145,10 @@ namespace WordPuzzle.UI
         private string _rcStart = "", _rcEnd = "", _rcChainKey = "", _rcInput = "", _rcReveal = "";
         private int _rcHintIdx = -1, _rcRevealIdx = -1;
 
+        // Active-input row tiles, reused across keystrokes (never clear+rebuilt during typing) so each
+        // letter's lock-in pop survives the next keystroke. Source of truth for the row's tile count.
+        private readonly List<LetterTile> _inputTiles = new List<LetterTile>();
+
         public event Action<string> OnWordSubmitted;
         public event Action OnBackToMenu;
         public event Action OnHintUsed;
@@ -645,12 +649,14 @@ namespace WordPuzzle.UI
             // Task 7A — tile lock-in punch on the just-filled tile (respect ReduceMotion).
             // currentInput is updated synchronously by SetCurrentInput before this runs
             // because GameBootstrap calls UpdateGameplayUI immediately after dispatch.
-            if (!UIAnimations.ReduceMotion && currentInputRow != null)
+            if (!UIAnimations.ReduceMotion)
             {
+                // Pop the just-typed tile from the reused list (it persists across keystrokes, so the pop is
+                // never cut off by a rebuild — every letter animates, not just the last one).
                 int idx = currentInput.Length - 1;
-                if (idx >= 0 && idx < currentInputRow.childCount)
+                if (idx >= 0 && idx < _inputTiles.Count)
                 {
-                    var tile = currentInputRow.GetChild(idx).GetComponent<LetterTile>();
+                    var tile = _inputTiles[idx];
                     if (tile != null)
                     {
                         StartCoroutine(tile.PunchScale(1.20f, 0.20f)); // clear lock-in pop so a single keypress visibly registers
@@ -689,7 +695,7 @@ namespace WordPuzzle.UI
 
             if (string.IsNullOrEmpty(currentEndWord))
             {
-                ClearChildren(currentInputRow);
+                ClearInputTiles();
                 return;
             }
 
@@ -1409,28 +1415,25 @@ namespace WordPuzzle.UI
             if (currentInputRow == null) return;
             if (string.IsNullOrEmpty(currentEndWord))
             {
-                ClearChildren(currentInputRow);
+                ClearInputTiles();
                 return;
             }
 
-            int targetLen = currentEndWord.Length;
+            int targetLen = currentEndWord.Length;   // the input never exceeds this — the reducer caps it
             string input = currentInput ?? string.Empty;
 
-            // Let the player keep typing PAST the target length (the reducer caps it, ~10) instead of feeling
-            // stuck when the boxes are full — extra letters get their own boxes. When over-typing, the row
-            // shrinks its tiles to stay within USABLE_WIDTH (nothing overflows); normal play (<= target) keeps
-            // the shared size so the input row stays column-aligned with the start/target rows.
-            int count = Mathf.Max(targetLen, input.Length);
-            float size = (count <= targetLen) ? _tileSize : AdaptiveTileSize(count);
-
             EnsureHorizontalLayout(currentInputRow, TILE_GAP_H, leftPad: (int)ROW_LABEL_PAD_L);
-            ClearChildren(currentInputRow);
 
-            for (int k = 0; k < count; k++)
+            // REUSE the tiles instead of clear+rebuild every keystroke. A wholesale rebuild destroyed the
+            // just-typed tile before its pop could play, so only the LAST letter ever animated. Keeping the
+            // tiles (reconciling the count to the word length) lets EVERY letter's pop run to completion.
+            ReconcileInputTiles(targetLen);
+
+            for (int k = 0; k < _inputTiles.Count; k++)
             {
-                var t = InstantiateTile(currentInputRow);
+                var t = _inputTiles[k];
                 if (t == null) continue;
-                t.SetSize(size);
+                t.SetSize(_tileSize);
 
                 bool isHintHighlight = (hintLetterIndex == k);
                 bool hasLetter = k < input.Length;
@@ -1445,6 +1448,35 @@ namespace WordPuzzle.UI
                 else
                     ApplyTileStyle(t, LadderTileStyle.InputEmpty);
             }
+        }
+
+        // Reconcile <see cref="_inputTiles"/> to exactly <paramref name="count"/> tiles WITHOUT destroying the
+        // ones that stay — so a tile's running pop survives the next keystroke's render (the list is the source
+        // of truth; we never clear+rebuild the whole row during typing).
+        private void ReconcileInputTiles(int count)
+        {
+            _inputTiles.RemoveAll(t => t == null);                    // drop any externally-destroyed refs
+            if (_inputTiles.Count == 0 && currentInputRow.childCount > 0)
+                ClearChildren(currentInputRow);                       // clear stray/untracked tiles before first build
+            while (_inputTiles.Count < count)
+            {
+                var nt = InstantiateTile(currentInputRow);
+                if (nt == null) break;
+                _inputTiles.Add(nt);
+            }
+            while (_inputTiles.Count > count)
+            {
+                int last = _inputTiles.Count - 1;
+                var rt = _inputTiles[last];
+                _inputTiles.RemoveAt(last);
+                if (rt != null) Destroy(rt.gameObject);
+            }
+        }
+
+        private void ClearInputTiles()
+        {
+            if (currentInputRow != null) ClearChildren(currentInputRow);
+            _inputTiles.Clear();
         }
 
         private void RecomputeRevealedChangedIndex()
