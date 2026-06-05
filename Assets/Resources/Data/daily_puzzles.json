@@ -5786,6 +5786,1931 @@
         "plate"
       ],
       "seedValue": 90817
+    },
+    {
+      "puzzleId": 20001,
+      "startWord": "mat",
+      "endWord": "rad",
+      "optimalSteps": 2,
+      "solution": [
+        "mat",
+        "mad",
+        "rad"
+      ],
+      "seedValue": 23718
+    },
+    {
+      "puzzleId": 20002,
+      "startWord": "way",
+      "endWord": "bot",
+      "optimalSteps": 3,
+      "solution": [
+        "way",
+        "bay",
+        "bat",
+        "bot"
+      ],
+      "seedValue": 23719
+    },
+    {
+      "puzzleId": 20003,
+      "startWord": "jaw",
+      "endWord": "car",
+      "optimalSteps": 2,
+      "solution": [
+        "jaw",
+        "jar",
+        "car"
+      ],
+      "seedValue": 23720
+    },
+    {
+      "puzzleId": 20004,
+      "startWord": "bar",
+      "endWord": "bow",
+      "optimalSteps": 3,
+      "solution": [
+        "bar",
+        "bat",
+        "bot",
+        "bow"
+      ],
+      "seedValue": 23721
+    },
+    {
+      "puzzleId": 20005,
+      "startWord": "cad",
+      "endWord": "mod",
+      "optimalSteps": 2,
+      "solution": [
+        "cad",
+        "cod",
+        "mod"
+      ],
+      "seedValue": 23722
+    },
+    {
+      "puzzleId": 20006,
+      "startWord": "yay",
+      "endWord": "bed",
+      "optimalSteps": 3,
+      "solution": [
+        "yay",
+        "bay",
+        "bad",
+        "bed"
+      ],
+      "seedValue": 23723
+    },
+    {
+      "puzzleId": 20007,
+      "startWord": "bag",
+      "endWord": "may",
+      "optimalSteps": 2,
+      "solution": [
+        "bag",
+        "bay",
+        "may"
+      ],
+      "seedValue": 23724
+    },
+    {
+      "puzzleId": 20008,
+      "startWord": "hat",
+      "endWord": "dog",
+      "optimalSteps": 3,
+      "solution": [
+        "hat",
+        "hot",
+        "dot",
+        "dog"
+      ],
+      "seedValue": 23725
+    },
+    {
+      "puzzleId": 20009,
+      "startWord": "thy",
+      "endWord": "soy",
+      "optimalSteps": 2,
+      "solution": [
+        "thy",
+        "shy",
+        "soy"
+      ],
+      "seedValue": 23726
+    },
+    {
+      "puzzleId": 20010,
+      "startWord": "fit",
+      "endWord": "gag",
+      "optimalSteps": 3,
+      "solution": [
+        "fit",
+        "fig",
+        "gig",
+        "gag"
+      ],
+      "seedValue": 23727
+    },
+    {
+      "puzzleId": 20011,
+      "startWord": "act",
+      "endWord": "ale",
+      "optimalSteps": 2,
+      "solution": [
+        "act",
+        "ace",
+        "ale"
+      ],
+      "seedValue": 23728
+    },
+    {
+      "puzzleId": 20012,
+      "startWord": "jam",
+      "endWord": "leg",
+      "optimalSteps": 3,
+      "solution": [
+        "jam",
+        "lam",
+        "lag",
+        "leg"
+      ],
+      "seedValue": 23729
+    },
+    {
+      "puzzleId": 20013,
+      "startWord": "fun",
+      "endWord": "for",
+      "optimalSteps": 2,
+      "solution": [
+        "fun",
+        "fur",
+        "for"
+      ],
+      "seedValue": 23730
+    },
+    {
+      "puzzleId": 20014,
+      "startWord": "lee",
+      "endWord": "mat",
+      "optimalSteps": 3,
+      "solution": [
+        "lee",
+        "let",
+        "lat",
+        "mat"
+      ],
+      "seedValue": 23731
+    },
+    {
+      "puzzleId": 20015,
+      "startWord": "six",
+      "endWord": "mib",
+      "optimalSteps": 2,
+      "solution": [
+        "six",
+        "mix",
+        "mib"
+      ],
+      "seedValue": 23732
+    },
+    {
+      "puzzleId": 20016,
+      "startWord": "biz",
+      "endWord": "got",
+      "optimalSteps": 3,
+      "solution": [
+        "biz",
+        "bit",
+        "bot",
+        "got"
+      ],
+      "seedValue": 23733
+    },
+    {
+      "puzzleId": 20017,
+      "startWord": "sen",
+      "endWord": "wet",
+      "optimalSteps": 2,
+      "solution": [
+        "sen",
+        "set",
+        "wet"
+      ],
+      "seedValue": 23734
+    },
+    {
+      "puzzleId": 20018,
+      "startWord": "hay",
+      "endWord": "lit",
+      "optimalSteps": 3,
+      "solution": [
+        "hay",
+        "hat",
+        "hit",
+        "lit"
+      ],
+      "seedValue": 23735
+    },
+    {
+      "puzzleId": 20019,
+      "startWord": "had",
+      "endWord": "bat",
+      "optimalSteps": 2,
+      "solution": [
+        "had",
+        "bad",
+        "bat"
+      ],
+      "seedValue": 23736
+    },
+    {
+      "puzzleId": 20020,
+      "startWord": "pal",
+      "endWord": "mis",
+      "optimalSteps": 3,
+      "solution": [
+        "pal",
+        "pas",
+        "mas",
+        "mis"
+      ],
+      "seedValue": 23737
+    },
+    {
+      "puzzleId": 20021,
+      "startWord": "din",
+      "endWord": "pen",
+      "optimalSteps": 2,
+      "solution": [
+        "din",
+        "den",
+        "pen"
+      ],
+      "seedValue": 23738
+    },
+    {
+      "puzzleId": 20022,
+      "startWord": "bis",
+      "endWord": "hay",
+      "optimalSteps": 3,
+      "solution": [
+        "bis",
+        "his",
+        "has",
+        "hay"
+      ],
+      "seedValue": 23739
+    },
+    {
+      "puzzleId": 20023,
+      "startWord": "bay",
+      "endWord": "cat",
+      "optimalSteps": 2,
+      "solution": [
+        "bay",
+        "bat",
+        "cat"
+      ],
+      "seedValue": 23740
+    },
+    {
+      "puzzleId": 20024,
+      "startWord": "ref",
+      "endWord": "but",
+      "optimalSteps": 3,
+      "solution": [
+        "ref",
+        "ret",
+        "bet",
+        "but"
+      ],
+      "seedValue": 23741
+    },
+    {
+      "puzzleId": 20025,
+      "startWord": "goo",
+      "endWord": "lot",
+      "optimalSteps": 2,
+      "solution": [
+        "goo",
+        "got",
+        "lot"
+      ],
+      "seedValue": 23742
+    },
+    {
+      "puzzleId": 20026,
+      "startWord": "bad",
+      "endWord": "dom",
+      "optimalSteps": 3,
+      "solution": [
+        "bad",
+        "dad",
+        "dam",
+        "dom"
+      ],
+      "seedValue": 23743
+    },
+    {
+      "puzzleId": 20027,
+      "startWord": "wit",
+      "endWord": "sin",
+      "optimalSteps": 2,
+      "solution": [
+        "wit",
+        "sit",
+        "sin"
+      ],
+      "seedValue": 23744
+    },
+    {
+      "puzzleId": 20028,
+      "startWord": "not",
+      "endWord": "dew",
+      "optimalSteps": 3,
+      "solution": [
+        "not",
+        "dot",
+        "dow",
+        "dew"
+      ],
+      "seedValue": 23745
+    },
+    {
+      "puzzleId": 20029,
+      "startWord": "cup",
+      "endWord": "cat",
+      "optimalSteps": 2,
+      "solution": [
+        "cup",
+        "cap",
+        "cat"
+      ],
+      "seedValue": 23746
+    },
+    {
+      "puzzleId": 20030,
+      "startWord": "lea",
+      "endWord": "die",
+      "optimalSteps": 3,
+      "solution": [
+        "lea",
+        "lee",
+        "dee",
+        "die"
+      ],
+      "seedValue": 23747
+    },
+    {
+      "puzzleId": 20031,
+      "startWord": "win",
+      "endWord": "bit",
+      "optimalSteps": 2,
+      "solution": [
+        "win",
+        "bin",
+        "bit"
+      ],
+      "seedValue": 23748
+    },
+    {
+      "puzzleId": 20032,
+      "startWord": "res",
+      "endWord": "tap",
+      "optimalSteps": 3,
+      "solution": [
+        "res",
+        "ras",
+        "rap",
+        "tap"
+      ],
+      "seedValue": 23749
+    },
+    {
+      "puzzleId": 20033,
+      "startWord": "say",
+      "endWord": "map",
+      "optimalSteps": 2,
+      "solution": [
+        "say",
+        "may",
+        "map"
+      ],
+      "seedValue": 23750
+    },
+    {
+      "puzzleId": 20034,
+      "startWord": "hmm",
+      "endWord": "rid",
+      "optimalSteps": 3,
+      "solution": [
+        "hmm",
+        "him",
+        "rim",
+        "rid"
+      ],
+      "seedValue": 23751
+    },
+    {
+      "puzzleId": 20035,
+      "startWord": "dog",
+      "endWord": "cow",
+      "optimalSteps": 2,
+      "solution": [
+        "dog",
+        "dow",
+        "cow"
+      ],
+      "seedValue": 23752
+    },
+    {
+      "puzzleId": 20036,
+      "startWord": "sat",
+      "endWord": "cor",
+      "optimalSteps": 3,
+      "solution": [
+        "sat",
+        "cat",
+        "car",
+        "cor"
+      ],
+      "seedValue": 23753
+    },
+    {
+      "puzzleId": 20037,
+      "startWord": "pad",
+      "endWord": "wan",
+      "optimalSteps": 2,
+      "solution": [
+        "pad",
+        "pan",
+        "wan"
+      ],
+      "seedValue": 23754
+    },
+    {
+      "puzzleId": 20038,
+      "startWord": "sac",
+      "endWord": "ear",
+      "optimalSteps": 3,
+      "solution": [
+        "sac",
+        "mac",
+        "mar",
+        "ear"
+      ],
+      "seedValue": 23755
+    },
+    {
+      "puzzleId": 20039,
+      "startWord": "cad",
+      "endWord": "man",
+      "optimalSteps": 2,
+      "solution": [
+        "cad",
+        "can",
+        "man"
+      ],
+      "seedValue": 23756
+    },
+    {
+      "puzzleId": 20040,
+      "startWord": "cow",
+      "endWord": "bit",
+      "optimalSteps": 3,
+      "solution": [
+        "cow",
+        "bow",
+        "bot",
+        "bit"
+      ],
+      "seedValue": 23757
+    },
+    {
+      "puzzleId": 20041,
+      "startWord": "run",
+      "endWord": "rig",
+      "optimalSteps": 2,
+      "solution": [
+        "run",
+        "rug",
+        "rig"
+      ],
+      "seedValue": 23758
+    },
+    {
+      "puzzleId": 20042,
+      "startWord": "mem",
+      "endWord": "rug",
+      "optimalSteps": 3,
+      "solution": [
+        "mem",
+        "mum",
+        "mug",
+        "rug"
+      ],
+      "seedValue": 23759
+    },
+    {
+      "puzzleId": 20043,
+      "startWord": "ton",
+      "endWord": "fan",
+      "optimalSteps": 2,
+      "solution": [
+        "ton",
+        "tan",
+        "fan"
+      ],
+      "seedValue": 23760
+    },
+    {
+      "puzzleId": 20044,
+      "startWord": "rad",
+      "endWord": "hep",
+      "optimalSteps": 3,
+      "solution": [
+        "rad",
+        "rap",
+        "rep",
+        "hep"
+      ],
+      "seedValue": 23761
+    },
+    {
+      "puzzleId": 20045,
+      "startWord": "hot",
+      "endWord": "toe",
+      "optimalSteps": 2,
+      "solution": [
+        "hot",
+        "tot",
+        "toe"
+      ],
+      "seedValue": 23762
+    },
+    {
+      "puzzleId": 20046,
+      "startWord": "the",
+      "endWord": "pet",
+      "optimalSteps": 3,
+      "solution": [
+        "the",
+        "tee",
+        "pee",
+        "pet"
+      ],
+      "seedValue": 23763
+    },
+    {
+      "puzzleId": 20047,
+      "startWord": "wap",
+      "endWord": "mat",
+      "optimalSteps": 2,
+      "solution": [
+        "wap",
+        "map",
+        "mat"
+      ],
+      "seedValue": 23764
+    },
+    {
+      "puzzleId": 20048,
+      "startWord": "don",
+      "endWord": "van",
+      "optimalSteps": 3,
+      "solution": [
+        "don",
+        "con",
+        "can",
+        "van"
+      ],
+      "seedValue": 23765
+    },
+    {
+      "puzzleId": 20049,
+      "startWord": "lam",
+      "endWord": "pac",
+      "optimalSteps": 2,
+      "solution": [
+        "lam",
+        "lac",
+        "pac"
+      ],
+      "seedValue": 23766
+    },
+    {
+      "puzzleId": 20050,
+      "startWord": "din",
+      "endWord": "mol",
+      "optimalSteps": 3,
+      "solution": [
+        "din",
+        "don",
+        "mon",
+        "mol"
+      ],
+      "seedValue": 23767
+    },
+    {
+      "puzzleId": 20051,
+      "startWord": "mare",
+      "endWord": "bore",
+      "optimalSteps": 2,
+      "solution": [
+        "mare",
+        "bare",
+        "bore"
+      ],
+      "seedValue": 23768
+    },
+    {
+      "puzzleId": 20052,
+      "startWord": "aero",
+      "endWord": "held",
+      "optimalSteps": 3,
+      "solution": [
+        "aero",
+        "hero",
+        "herd",
+        "held"
+      ],
+      "seedValue": 23769
+    },
+    {
+      "puzzleId": 20053,
+      "startWord": "vary",
+      "endWord": "vera",
+      "optimalSteps": 2,
+      "solution": [
+        "vary",
+        "very",
+        "vera"
+      ],
+      "seedValue": 23770
+    },
+    {
+      "puzzleId": 20054,
+      "startWord": "bars",
+      "endWord": "rank",
+      "optimalSteps": 3,
+      "solution": [
+        "bars",
+        "bark",
+        "bank",
+        "rank"
+      ],
+      "seedValue": 23771
+    },
+    {
+      "puzzleId": 20055,
+      "startWord": "seat",
+      "endWord": "bear",
+      "optimalSteps": 2,
+      "solution": [
+        "seat",
+        "beat",
+        "bear"
+      ],
+      "seedValue": 23772
+    },
+    {
+      "puzzleId": 20056,
+      "startWord": "raid",
+      "endWord": "lend",
+      "optimalSteps": 3,
+      "solution": [
+        "raid",
+        "laid",
+        "land",
+        "lend"
+      ],
+      "seedValue": 23773
+    },
+    {
+      "puzzleId": 20057,
+      "startWord": "tick",
+      "endWord": "rack",
+      "optimalSteps": 2,
+      "solution": [
+        "tick",
+        "rick",
+        "rack"
+      ],
+      "seedValue": 23774
+    },
+    {
+      "puzzleId": 20058,
+      "startWord": "loan",
+      "endWord": "bead",
+      "optimalSteps": 3,
+      "solution": [
+        "loan",
+        "lean",
+        "bean",
+        "bead"
+      ],
+      "seedValue": 23775
+    },
+    {
+      "puzzleId": 20059,
+      "startWord": "duke",
+      "endWord": "nude",
+      "optimalSteps": 2,
+      "solution": [
+        "duke",
+        "dude",
+        "nude"
+      ],
+      "seedValue": 23776
+    },
+    {
+      "puzzleId": 20060,
+      "startWord": "wins",
+      "endWord": "kids",
+      "optimalSteps": 3,
+      "solution": [
+        "wins",
+        "bins",
+        "bids",
+        "kids"
+      ],
+      "seedValue": 23777
+    },
+    {
+      "puzzleId": 20061,
+      "startWord": "site",
+      "endWord": "ride",
+      "optimalSteps": 2,
+      "solution": [
+        "site",
+        "rite",
+        "ride"
+      ],
+      "seedValue": 23778
+    },
+    {
+      "puzzleId": 20062,
+      "startWord": "trio",
+      "endWord": "tray",
+      "optimalSteps": 3,
+      "solution": [
+        "trio",
+        "trip",
+        "trap",
+        "tray"
+      ],
+      "seedValue": 23779
+    },
+    {
+      "puzzleId": 20063,
+      "startWord": "heap",
+      "endWord": "hell",
+      "optimalSteps": 2,
+      "solution": [
+        "heap",
+        "heal",
+        "hell"
+      ],
+      "seedValue": 23780
+    },
+    {
+      "puzzleId": 20064,
+      "startWord": "rail",
+      "endWord": "soul",
+      "optimalSteps": 3,
+      "solution": [
+        "rail",
+        "sail",
+        "soil",
+        "soul"
+      ],
+      "seedValue": 23781
+    },
+    {
+      "puzzleId": 20065,
+      "startWord": "park",
+      "endWord": "mare",
+      "optimalSteps": 2,
+      "solution": [
+        "park",
+        "mark",
+        "mare"
+      ],
+      "seedValue": 23782
+    },
+    {
+      "puzzleId": 20066,
+      "startWord": "fell",
+      "endWord": "best",
+      "optimalSteps": 3,
+      "solution": [
+        "fell",
+        "bell",
+        "belt",
+        "best"
+      ],
+      "seedValue": 23783
+    },
+    {
+      "puzzleId": 20067,
+      "startWord": "nick",
+      "endWord": "heck",
+      "optimalSteps": 2,
+      "solution": [
+        "nick",
+        "neck",
+        "heck"
+      ],
+      "seedValue": 23784
+    },
+    {
+      "puzzleId": 20068,
+      "startWord": "hack",
+      "endWord": "each",
+      "optimalSteps": 3,
+      "solution": [
+        "hack",
+        "back",
+        "bach",
+        "each"
+      ],
+      "seedValue": 23785
+    },
+    {
+      "puzzleId": 20069,
+      "startWord": "bins",
+      "endWord": "find",
+      "optimalSteps": 2,
+      "solution": [
+        "bins",
+        "bind",
+        "find"
+      ],
+      "seedValue": 23786
+    },
+    {
+      "puzzleId": 20070,
+      "startWord": "kill",
+      "endWord": "call",
+      "optimalSteps": 3,
+      "solution": [
+        "kill",
+        "bill",
+        "ball",
+        "call"
+      ],
+      "seedValue": 23787
+    },
+    {
+      "puzzleId": 20071,
+      "startWord": "done",
+      "endWord": "love",
+      "optimalSteps": 2,
+      "solution": [
+        "done",
+        "dove",
+        "love"
+      ],
+      "seedValue": 23788
+    },
+    {
+      "puzzleId": 20072,
+      "startWord": "dean",
+      "endWord": "teen",
+      "optimalSteps": 3,
+      "solution": [
+        "dean",
+        "bean",
+        "been",
+        "teen"
+      ],
+      "seedValue": 23789
+    },
+    {
+      "puzzleId": 20073,
+      "startWord": "leap",
+      "endWord": "head",
+      "optimalSteps": 2,
+      "solution": [
+        "leap",
+        "heap",
+        "head"
+      ],
+      "seedValue": 23790
+    },
+    {
+      "puzzleId": 20074,
+      "startWord": "cell",
+      "endWord": "dial",
+      "optimalSteps": 3,
+      "solution": [
+        "cell",
+        "dell",
+        "deal",
+        "dial"
+      ],
+      "seedValue": 23791
+    },
+    {
+      "puzzleId": 20075,
+      "startWord": "past",
+      "endWord": "best",
+      "optimalSteps": 2,
+      "solution": [
+        "past",
+        "pest",
+        "best"
+      ],
+      "seedValue": 23792
+    },
+    {
+      "puzzleId": 20076,
+      "startWord": "fade",
+      "endWord": "mike",
+      "optimalSteps": 3,
+      "solution": [
+        "fade",
+        "fake",
+        "make",
+        "mike"
+      ],
+      "seedValue": 23793
+    },
+    {
+      "puzzleId": 20077,
+      "startWord": "tray",
+      "endWord": "grad",
+      "optimalSteps": 2,
+      "solution": [
+        "tray",
+        "gray",
+        "grad"
+      ],
+      "seedValue": 23794
+    },
+    {
+      "puzzleId": 20078,
+      "startWord": "game",
+      "endWord": "five",
+      "optimalSteps": 3,
+      "solution": [
+        "game",
+        "fame",
+        "fave",
+        "five"
+      ],
+      "seedValue": 23795
+    },
+    {
+      "puzzleId": 20079,
+      "startWord": "swim",
+      "endWord": "slam",
+      "optimalSteps": 2,
+      "solution": [
+        "swim",
+        "slim",
+        "slam"
+      ],
+      "seedValue": 23796
+    },
+    {
+      "puzzleId": 20080,
+      "startWord": "dame",
+      "endWord": "rats",
+      "optimalSteps": 3,
+      "solution": [
+        "dame",
+        "date",
+        "rate",
+        "rats"
+      ],
+      "seedValue": 23797
+    },
+    {
+      "puzzleId": 20081,
+      "startWord": "hang",
+      "endWord": "dong",
+      "optimalSteps": 2,
+      "solution": [
+        "hang",
+        "hong",
+        "dong"
+      ],
+      "seedValue": 23798
+    },
+    {
+      "puzzleId": 20082,
+      "startWord": "lawn",
+      "endWord": "loss",
+      "optimalSteps": 3,
+      "solution": [
+        "lawn",
+        "laws",
+        "lows",
+        "loss"
+      ],
+      "seedValue": 23799
+    },
+    {
+      "puzzleId": 20083,
+      "startWord": "ways",
+      "endWord": "mars",
+      "optimalSteps": 2,
+      "solution": [
+        "ways",
+        "wars",
+        "mars"
+      ],
+      "seedValue": 23800
+    },
+    {
+      "puzzleId": 20084,
+      "startWord": "camp",
+      "endWord": "bare",
+      "optimalSteps": 3,
+      "solution": [
+        "camp",
+        "came",
+        "care",
+        "bare"
+      ],
+      "seedValue": 23801
+    },
+    {
+      "puzzleId": 20085,
+      "startWord": "gave",
+      "endWord": "five",
+      "optimalSteps": 2,
+      "solution": [
+        "gave",
+        "fave",
+        "five"
+      ],
+      "seedValue": 23802
+    },
+    {
+      "puzzleId": 20086,
+      "startWord": "take",
+      "endWord": "ball",
+      "optimalSteps": 3,
+      "solution": [
+        "take",
+        "tale",
+        "tall",
+        "ball"
+      ],
+      "seedValue": 23803
+    },
+    {
+      "puzzleId": 20087,
+      "startWord": "pets",
+      "endWord": "sits",
+      "optimalSteps": 2,
+      "solution": [
+        "pets",
+        "sets",
+        "sits"
+      ],
+      "seedValue": 23804
+    },
+    {
+      "puzzleId": 20088,
+      "startWord": "mick",
+      "endWord": "tile",
+      "optimalSteps": 3,
+      "solution": [
+        "mick",
+        "mice",
+        "mile",
+        "tile"
+      ],
+      "seedValue": 23805
+    },
+    {
+      "puzzleId": 20089,
+      "startWord": "rent",
+      "endWord": "best",
+      "optimalSteps": 2,
+      "solution": [
+        "rent",
+        "bent",
+        "best"
+      ],
+      "seedValue": 23806
+    },
+    {
+      "puzzleId": 20090,
+      "startWord": "tool",
+      "endWord": "mill",
+      "optimalSteps": 3,
+      "solution": [
+        "tool",
+        "toll",
+        "till",
+        "mill"
+      ],
+      "seedValue": 23807
+    },
+    {
+      "puzzleId": 20091,
+      "startWord": "bull",
+      "endWord": "fill",
+      "optimalSteps": 2,
+      "solution": [
+        "bull",
+        "bill",
+        "fill"
+      ],
+      "seedValue": 23808
+    },
+    {
+      "puzzleId": 20092,
+      "startWord": "pain",
+      "endWord": "mall",
+      "optimalSteps": 3,
+      "solution": [
+        "pain",
+        "main",
+        "mail",
+        "mall"
+      ],
+      "seedValue": 23809
+    },
+    {
+      "puzzleId": 20093,
+      "startWord": "coop",
+      "endWord": "look",
+      "optimalSteps": 2,
+      "solution": [
+        "coop",
+        "cook",
+        "look"
+      ],
+      "seedValue": 23810
+    },
+    {
+      "puzzleId": 20094,
+      "startWord": "wall",
+      "endWord": "main",
+      "optimalSteps": 3,
+      "solution": [
+        "wall",
+        "mall",
+        "mail",
+        "main"
+      ],
+      "seedValue": 23811
+    },
+    {
+      "puzzleId": 20095,
+      "startWord": "gays",
+      "endWord": "pals",
+      "optimalSteps": 2,
+      "solution": [
+        "gays",
+        "gals",
+        "pals"
+      ],
+      "seedValue": 23812
+    },
+    {
+      "puzzleId": 20096,
+      "startWord": "tale",
+      "endWord": "race",
+      "optimalSteps": 3,
+      "solution": [
+        "tale",
+        "pale",
+        "pace",
+        "race"
+      ],
+      "seedValue": 23813
+    },
+    {
+      "puzzleId": 20097,
+      "startWord": "care",
+      "endWord": "wore",
+      "optimalSteps": 2,
+      "solution": [
+        "care",
+        "core",
+        "wore"
+      ],
+      "seedValue": 23814
+    },
+    {
+      "puzzleId": 20098,
+      "startWord": "bank",
+      "endWord": "pant",
+      "optimalSteps": 3,
+      "solution": [
+        "bank",
+        "rank",
+        "rant",
+        "pant"
+      ],
+      "seedValue": 23815
+    },
+    {
+      "puzzleId": 20099,
+      "startWord": "goes",
+      "endWord": "ties",
+      "optimalSteps": 2,
+      "solution": [
+        "goes",
+        "toes",
+        "ties"
+      ],
+      "seedValue": 23816
+    },
+    {
+      "puzzleId": 20100,
+      "startWord": "page",
+      "endWord": "jade",
+      "optimalSteps": 3,
+      "solution": [
+        "page",
+        "wage",
+        "wade",
+        "jade"
+      ],
+      "seedValue": 23817
+    },
+    {
+      "puzzleId": 20101,
+      "startWord": "holds",
+      "endWord": "poses",
+      "optimalSteps": 3,
+      "solution": [
+        "holds",
+        "holes",
+        "poles",
+        "poses"
+      ],
+      "seedValue": 23818
+    },
+    {
+      "puzzleId": 20102,
+      "startWord": "shack",
+      "endWord": "smart",
+      "optimalSteps": 4,
+      "solution": [
+        "shack",
+        "shark",
+        "stark",
+        "start",
+        "smart"
+      ],
+      "seedValue": 23819
+    },
+    {
+      "puzzleId": 20103,
+      "startWord": "spill",
+      "endWord": "shall",
+      "optimalSteps": 3,
+      "solution": [
+        "spill",
+        "spell",
+        "shell",
+        "shall"
+      ],
+      "seedValue": 23820
+    },
+    {
+      "puzzleId": 20104,
+      "startWord": "cites",
+      "endWord": "rated",
+      "optimalSteps": 4,
+      "solution": [
+        "cites",
+        "bites",
+        "bates",
+        "rates",
+        "rated"
+      ],
+      "seedValue": 23821
+    },
+    {
+      "puzzleId": 20105,
+      "startWord": "short",
+      "endWord": "stone",
+      "optimalSteps": 3,
+      "solution": [
+        "short",
+        "shore",
+        "store",
+        "stone"
+      ],
+      "seedValue": 23822
+    },
+    {
+      "puzzleId": 20106,
+      "startWord": "sweet",
+      "endWord": "cheek",
+      "optimalSteps": 4,
+      "solution": [
+        "sweet",
+        "sheet",
+        "sheer",
+        "cheer",
+        "cheek"
+      ],
+      "seedValue": 23823
+    },
+    {
+      "puzzleId": 20107,
+      "startWord": "jerry",
+      "endWord": "carry",
+      "optimalSteps": 3,
+      "solution": [
+        "jerry",
+        "merry",
+        "marry",
+        "carry"
+      ],
+      "seedValue": 23824
+    },
+    {
+      "puzzleId": 20108,
+      "startWord": "style",
+      "endWord": "scare",
+      "optimalSteps": 4,
+      "solution": [
+        "style",
+        "stole",
+        "store",
+        "score",
+        "scare"
+      ],
+      "seedValue": 23825
+    },
+    {
+      "puzzleId": 20109,
+      "startWord": "nelly",
+      "endWord": "sells",
+      "optimalSteps": 3,
+      "solution": [
+        "nelly",
+        "belly",
+        "bells",
+        "sells"
+      ],
+      "seedValue": 23826
+    },
+    {
+      "puzzleId": 20110,
+      "startWord": "crash",
+      "endWord": "gloss",
+      "optimalSteps": 4,
+      "solution": [
+        "crash",
+        "clash",
+        "class",
+        "glass",
+        "gloss"
+      ],
+      "seedValue": 23827
+    },
+    {
+      "puzzleId": 20111,
+      "startWord": "giant",
+      "endWord": "brand",
+      "optimalSteps": 3,
+      "solution": [
+        "giant",
+        "grant",
+        "grand",
+        "brand"
+      ],
+      "seedValue": 23828
+    },
+    {
+      "puzzleId": 20112,
+      "startWord": "tools",
+      "endWord": "hills",
+      "optimalSteps": 4,
+      "solution": [
+        "tools",
+        "pools",
+        "polls",
+        "pills",
+        "hills"
+      ],
+      "seedValue": 23829
+    },
+    {
+      "puzzleId": 20113,
+      "startWord": "thick",
+      "endWord": "trace",
+      "optimalSteps": 3,
+      "solution": [
+        "thick",
+        "trick",
+        "track",
+        "trace"
+      ],
+      "seedValue": 23830
+    },
+    {
+      "puzzleId": 20114,
+      "startWord": "stake",
+      "endWord": "score",
+      "optimalSteps": 4,
+      "solution": [
+        "stake",
+        "shake",
+        "share",
+        "scare",
+        "score"
+      ],
+      "seedValue": 23831
+    },
+    {
+      "puzzleId": 20115,
+      "startWord": "loved",
+      "endWord": "likes",
+      "optimalSteps": 3,
+      "solution": [
+        "loved",
+        "lived",
+        "liked",
+        "likes"
+      ],
+      "seedValue": 23832
+    },
+    {
+      "puzzleId": 20116,
+      "startWord": "wants",
+      "endWord": "posts",
+      "optimalSteps": 4,
+      "solution": [
+        "wants",
+        "pants",
+        "parts",
+        "ports",
+        "posts"
+      ],
+      "seedValue": 23833
+    },
+    {
+      "puzzleId": 20117,
+      "startWord": "tales",
+      "endWord": "fares",
+      "optimalSteps": 3,
+      "solution": [
+        "tales",
+        "taxes",
+        "faxes",
+        "fares"
+      ],
+      "seedValue": 23834
+    },
+    {
+      "puzzleId": 20118,
+      "startWord": "bolts",
+      "endWord": "hills",
+      "optimalSteps": 4,
+      "solution": [
+        "bolts",
+        "belts",
+        "bells",
+        "bills",
+        "hills"
+      ],
+      "seedValue": 23835
+    },
+    {
+      "puzzleId": 20119,
+      "startWord": "hoped",
+      "endWord": "poles",
+      "optimalSteps": 3,
+      "solution": [
+        "hoped",
+        "hopes",
+        "holes",
+        "poles"
+      ],
+      "seedValue": 23836
+    },
+    {
+      "puzzleId": 20120,
+      "startWord": "plans",
+      "endWord": "skate",
+      "optimalSteps": 4,
+      "solution": [
+        "plans",
+        "plane",
+        "plate",
+        "slate",
+        "skate"
+      ],
+      "seedValue": 23837
+    },
+    {
+      "puzzleId": 20121,
+      "startWord": "suits",
+      "endWord": "spine",
+      "optimalSteps": 3,
+      "solution": [
+        "suits",
+        "suite",
+        "spite",
+        "spine"
+      ],
+      "seedValue": 23838
+    },
+    {
+      "puzzleId": 20122,
+      "startWord": "towel",
+      "endWord": "bones",
+      "optimalSteps": 4,
+      "solution": [
+        "towel",
+        "tower",
+        "toner",
+        "tones",
+        "bones"
+      ],
+      "seedValue": 23839
+    },
+    {
+      "puzzleId": 20123,
+      "startWord": "rants",
+      "endWord": "backs",
+      "optimalSteps": 3,
+      "solution": [
+        "rants",
+        "ranks",
+        "banks",
+        "backs"
+      ],
+      "seedValue": 23840
+    },
+    {
+      "puzzleId": 20124,
+      "startWord": "spear",
+      "endWord": "sweep",
+      "optimalSteps": 4,
+      "solution": [
+        "spear",
+        "shear",
+        "sheer",
+        "sheep",
+        "sweep"
+      ],
+      "seedValue": 23841
+    },
+    {
+      "puzzleId": 20125,
+      "startWord": "grade",
+      "endWord": "track",
+      "optimalSteps": 3,
+      "solution": [
+        "grade",
+        "grace",
+        "trace",
+        "track"
+      ],
+      "seedValue": 23842
+    },
+    {
+      "puzzleId": 20126,
+      "startWord": "steep",
+      "endWord": "swear",
+      "optimalSteps": 4,
+      "solution": [
+        "steep",
+        "sheep",
+        "sheer",
+        "shear",
+        "swear"
+      ],
+      "seedValue": 23843
+    },
+    {
+      "puzzleId": 20127,
+      "startWord": "cried",
+      "endWord": "trees",
+      "optimalSteps": 3,
+      "solution": [
+        "cried",
+        "tried",
+        "tries",
+        "trees"
+      ],
+      "seedValue": 23844
+    },
+    {
+      "puzzleId": 20128,
+      "startWord": "clash",
+      "endWord": "grams",
+      "optimalSteps": 4,
+      "solution": [
+        "clash",
+        "class",
+        "glass",
+        "grass",
+        "grams"
+      ],
+      "seedValue": 23845
+    },
+    {
+      "puzzleId": 20129,
+      "startWord": "tears",
+      "endWord": "meals",
+      "optimalSteps": 3,
+      "solution": [
+        "tears",
+        "sears",
+        "seals",
+        "meals"
+      ],
+      "seedValue": 23846
+    },
+    {
+      "puzzleId": 20130,
+      "startWord": "broke",
+      "endWord": "grade",
+      "optimalSteps": 4,
+      "solution": [
+        "broke",
+        "brake",
+        "brave",
+        "grave",
+        "grade"
+      ],
+      "seedValue": 23847
+    },
+    {
+      "puzzleId": 20131,
+      "startWord": "torah",
+      "endWord": "pouch",
+      "optimalSteps": 3,
+      "solution": [
+        "torah",
+        "torch",
+        "porch",
+        "pouch"
+      ],
+      "seedValue": 23848
+    },
+    {
+      "puzzleId": 20132,
+      "startWord": "wells",
+      "endWord": "boats",
+      "optimalSteps": 4,
+      "solution": [
+        "wells",
+        "bells",
+        "belts",
+        "beats",
+        "boats"
+      ],
+      "seedValue": 23849
+    },
+    {
+      "puzzleId": 20133,
+      "startWord": "maker",
+      "endWord": "dates",
+      "optimalSteps": 3,
+      "solution": [
+        "maker",
+        "makes",
+        "mates",
+        "dates"
+      ],
+      "seedValue": 23850
+    },
+    {
+      "puzzleId": 20134,
+      "startWord": "firms",
+      "endWord": "billy",
+      "optimalSteps": 4,
+      "solution": [
+        "firms",
+        "films",
+        "fills",
+        "bills",
+        "billy"
+      ],
+      "seedValue": 23851
+    },
+    {
+      "puzzleId": 20135,
+      "startWord": "belle",
+      "endWord": "wills",
+      "optimalSteps": 3,
+      "solution": [
+        "belle",
+        "bells",
+        "bills",
+        "wills"
+      ],
+      "seedValue": 23852
+    },
+    {
+      "puzzleId": 20136,
+      "startWord": "shelf",
+      "endWord": "still",
+      "optimalSteps": 4,
+      "solution": [
+        "shelf",
+        "shell",
+        "spell",
+        "spill",
+        "still"
+      ],
+      "seedValue": 23853
+    },
+    {
+      "puzzleId": 20137,
+      "startWord": "hacks",
+      "endWord": "marks",
+      "optimalSteps": 3,
+      "solution": [
+        "hacks",
+        "packs",
+        "parks",
+        "marks"
+      ],
+      "seedValue": 23854
+    },
+    {
+      "puzzleId": 20138,
+      "startWord": "glass",
+      "endWord": "crops",
+      "optimalSteps": 4,
+      "solution": [
+        "glass",
+        "gloss",
+        "gross",
+        "cross",
+        "crops"
+      ],
+      "seedValue": 23855
+    },
+    {
+      "puzzleId": 20139,
+      "startWord": "black",
+      "endWord": "blind",
+      "optimalSteps": 3,
+      "solution": [
+        "black",
+        "blank",
+        "blink",
+        "blind"
+      ],
+      "seedValue": 23856
+    },
+    {
+      "puzzleId": 20140,
+      "startWord": "tuned",
+      "endWord": "bonus",
+      "optimalSteps": 4,
+      "solution": [
+        "tuned",
+        "tunes",
+        "tones",
+        "bones",
+        "bonus"
+      ],
+      "seedValue": 23857
+    },
+    {
+      "puzzleId": 20141,
+      "startWord": "wines",
+      "endWord": "films",
+      "optimalSteps": 3,
+      "solution": [
+        "wines",
+        "fines",
+        "files",
+        "films"
+      ],
+      "seedValue": 23858
+    },
+    {
+      "puzzleId": 20142,
+      "startWord": "piper",
+      "endWord": "wings",
+      "optimalSteps": 4,
+      "solution": [
+        "piper",
+        "pipes",
+        "pines",
+        "wines",
+        "wings"
+      ],
+      "seedValue": 23859
+    },
+    {
+      "puzzleId": 20143,
+      "startWord": "hardy",
+      "endWord": "sands",
+      "optimalSteps": 3,
+      "solution": [
+        "hardy",
+        "handy",
+        "hands",
+        "sands"
+      ],
+      "seedValue": 23860
+    },
+    {
+      "puzzleId": 20144,
+      "startWord": "timed",
+      "endWord": "mills",
+      "optimalSteps": 4,
+      "solution": [
+        "timed",
+        "times",
+        "tiles",
+        "miles",
+        "mills"
+      ],
+      "seedValue": 23861
+    },
+    {
+      "puzzleId": 20145,
+      "startWord": "thick",
+      "endWord": "crack",
+      "optimalSteps": 3,
+      "solution": [
+        "thick",
+        "trick",
+        "track",
+        "crack"
+      ],
+      "seedValue": 23862
+    },
+    {
+      "puzzleId": 20146,
+      "startWord": "spine",
+      "endWord": "skirt",
+      "optimalSteps": 4,
+      "solution": [
+        "spine",
+        "shine",
+        "shire",
+        "shirt",
+        "skirt"
+      ],
+      "seedValue": 23863
+    },
+    {
+      "puzzleId": 20147,
+      "startWord": "grasp",
+      "endWord": "class",
+      "optimalSteps": 3,
+      "solution": [
+        "grasp",
+        "grass",
+        "glass",
+        "class"
+      ],
+      "seedValue": 23864
+    },
+    {
+      "puzzleId": 20148,
+      "startWord": "mixes",
+      "endWord": "walks",
+      "optimalSteps": 4,
+      "solution": [
+        "mixes",
+        "miles",
+        "males",
+        "wales",
+        "walks"
+      ],
+      "seedValue": 23865
+    },
+    {
+      "puzzleId": 20149,
+      "startWord": "clock",
+      "endWord": "blank",
+      "optimalSteps": 3,
+      "solution": [
+        "clock",
+        "block",
+        "black",
+        "blank"
+      ],
+      "seedValue": 23866
+    },
+    {
+      "puzzleId": 20150,
+      "startWord": "towns",
+      "endWord": "foods",
+      "optimalSteps": 4,
+      "solution": [
+        "towns",
+        "toons",
+        "tools",
+        "fools",
+        "foods"
+      ],
+      "seedValue": 23867
     }
   ]
 }

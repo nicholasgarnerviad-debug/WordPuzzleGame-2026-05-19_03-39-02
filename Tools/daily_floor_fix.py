@@ -36,17 +36,21 @@ def load(n):
 
 
 def build_graph(words):
+    """Neighbour lists SORTED -> deterministic BFS regardless of PYTHONHASHSEED."""
     words = set(words)
     buckets = collections.defaultdict(list)
     for w in words:
         for i in range(len(w)):
             buckets[w[:i] + "*" + w[i + 1:]].append(w)
-    adj = collections.defaultdict(set)
+    adj_sets = collections.defaultdict(set)
     for ws in buckets.values():
         for a in ws:
             for c in ws:
                 if a != c:
-                    adj[a].add(c)
+                    adj_sets[a].add(c)
+    adj = collections.defaultdict(list)
+    for k, vs in adj_sets.items():
+        adj[k] = sorted(vs)
     return adj
 
 

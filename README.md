@@ -22,23 +22,33 @@ FROM  C  A  T            FROM  S  T  O  N  E
 ## Table of contents
 **📱 [Screens](#screens)** — a visual tour of every screen
 
-1. [Game modes](#1-game-modes)
-2. [Power-ups](#2-power-ups)
-3. [Economy & monetization](#3-economy--monetization)
-4. [Juice: motion, haptics, sound](#4-juice-motion-haptics-sound)
-5. [Visual identity](#5-visual-identity)
-6. [First-launch tutorial](#6-first-launch-tutorial)
-7. [Puzzle Show tiers](#7-puzzle-show-tiers)
-8. [Word validation](#8-word-validation)
-9. [Balance config — the single source of truth](#9-balance-config--the-single-source-of-truth)
-10. [Architecture](#10-architecture)
-11. [Persistence keys](#11-persistence-keys)
-12. [Testing & tooling](#12-testing--tooling)
-13. [Known tech debt / candidate tasks](#13-known-tech-debt--candidate-tasks)
-14. [Writing a master prompt for this repo](#14-writing-a-master-prompt-for-this-repo)
-15. [Design tokens](#15-design-tokens)
-16. [Building & running](#16-building--running)
-17. [Notes for AI agents working in this repo](#17-notes-for-ai-agents-working-in-this-repo)
+- [Word Ladder](#word-ladder)
+  - [Table of contents](#table-of-contents)
+  - [Screens](#screens)
+  - [1. Game modes](#1-game-modes)
+  - [2. Power-ups](#2-power-ups)
+  - [3. Economy \& monetization](#3-economy--monetization)
+  - [4. Juice: motion, haptics, sound](#4-juice-motion-haptics-sound)
+  - [5. Visual identity](#5-visual-identity)
+  - [6. First-launch tutorial](#6-first-launch-tutorial)
+  - [7. Puzzle Show tiers](#7-puzzle-show-tiers)
+  - [8. Word validation](#8-word-validation)
+  - [9. Balance config — the single source of truth](#9-balance-config--the-single-source-of-truth)
+  - [10. Architecture](#10-architecture)
+    - [Module / namespace map](#module--namespace-map)
+    - [State flow (immutable + Dispatch — DO NOT change this shape)](#state-flow-immutable--dispatch--do-not-change-this-shape)
+    - [Public interfaces to preserve (method names/signatures)](#public-interfaces-to-preserve-method-namessignatures)
+    - [Mode routing (`GameBootstrap`)](#mode-routing-gamebootstrap)
+  - [11. Persistence keys](#11-persistence-keys)
+  - [12. Testing \& tooling](#12-testing--tooling)
+    - [Reproducible data pipeline (`Tools/` — Python, NOT shipped in the build)](#reproducible-data-pipeline-tools--python-not-shipped-in-the-build)
+  - [13. Known tech debt / candidate tasks](#13-known-tech-debt--candidate-tasks)
+  - [14. Writing a master prompt for this repo](#14-writing-a-master-prompt-for-this-repo)
+    - [Shared Context Block (paste into every task prompt)](#shared-context-block-paste-into-every-task-prompt)
+  - [15. Design tokens](#15-design-tokens)
+  - [16. Building \& running](#16-building--running)
+  - [17. Notes for AI agents working in this repo](#17-notes-for-ai-agents-working-in-this-repo)
+  - [Project history](#project-history)
 
 ---
 
@@ -216,7 +226,7 @@ Progress (`PuzzleProgressData`: completed IDs, in-progress IDs, current tier) pe
 ## 8. Word validation
 
 `WordValidator : IWordValidator` accepts a word onto the chain only if **all** hold:
-1. Exists in the 12,183-word curated dictionary (`word_library.json`; 3-letter 534 / 4-letter 2,234 / 5-letter 4,304 / 6-letter 2,535 / 7-letter 2,576).
+1. Exists in the 17,326-word curated dictionary (`word_library.json`; 3-letter 890 / 4-letter 2,429 / 5-letter 3,716 / 6-letter 4,882 / 7-letter 5,409).
 2. Differs from the previous chain word by **exactly one letter at the same position** (Hamming-1, via `WordOps.HaveOneLetterDifference`).
 3. Same length as the previous word.
 4. Not already used in the current chain.
@@ -262,7 +272,7 @@ Ads:         InterstitialCooldownSeconds=300  InterstitialPuzzleCap=5
 
 `Constants.cs` forwards its legacy power-up/tier fields to `BalanceConfig` to avoid drift.
 
-**Generation quality filter:** `common_words.json` (6,582 verified words = every tier/daily ladder word ∪ a curated common list, incl. ~2,500 common 6- and 7-letter words for dense long-ladder generation) restricts generated START/END (and intermediates) to fair words. Fallback chain: strict-common → relaxed-common-endpoints → known-good fallback (`cat→cot→cog→dog`). Curated tier/daily puzzles bypass the generator and are exempt.
+**Generation quality filter:** `common_words.json` (6,875 verified words — every ENABLE word inside a tighter Norvig frequency gate, dense across all lengths 3–7) restricts generated START/END (and intermediates) to fair words. Fallback chain: strict-common → relaxed-common-endpoints → known-good fallback (`cat→cot→cog→dog`). Curated tier/daily puzzles bypass the generator and are exempt.
 
 ---
 
@@ -292,7 +302,7 @@ Assets/Scripts/
                                            Screens/(MainMenu, Gameplay, PuzzleLibrary, Results,
                                            Settings, TimeAttackSetup, Shop, Stats, DailyRewardPopup)
 
-Assets/Resources/Data/  word_library.json (12,183), tier_definitions.json (350 = 7×50), daily_puzzles.json (450), common_words.json (6,582), coin_shop.json (coin packs + Remove-Ads + Starter-Pack)
+Assets/Resources/Data/  word_library.json (17,326), tier_definitions.json (350 = 7×50), daily_puzzles.json (600), common_words.json (6,875), coin_shop.json (coin packs + Remove-Ads + Starter-Pack)
 Assets/Scenes/          GameUI.unity  ← the ONLY live scene. MainMenu/ClassicMode/PuzzleShowMode/
                                         TimeAttackMode/SampleScene are legacy and never LoadScene'd.
 Assets/Tests/           Unit/ + Integration/  (NUnit; TestMocks.cs has Mock* doubles)
@@ -344,11 +354,13 @@ All via `PlayerPrefs` (JSON values). `DataManager` owns them.
 - **Key data-integrity tests:** `MinMovesFloorTests` (no sub-2-move puzzle anywhere; generated puzzles meet the length curve, by *true* BFS distance), `PuzzleShowTierTests` (7×50 structure, Hamming-1 ladders, non-decreasing min steps, `ResolveState` mapping, progressive unlock), `GenerationQualityTests` (junk-blocklist absence, curated-word presence, min long-word counts), `PostWinRouterTests` (per-mode surface routing), `BalanceConfigWiringTests`.
 
 ### Reproducible data pipeline (`Tools/` — Python, NOT shipped in the build)
-The word data is **machine-generated and validated**, not hand-edited — re-run the tool, never edit the JSON by hand (it would drift and can silently break solvability/floors). All live outside `Assets/`, fetch/cache reference lists in the OS temp dir (never committed), and **fail loudly** on any violation:
-- **`dictionary_build.py`** → rebuilds `word_library.json` + `common_words.json` from **ENABLE** (validity/cleanliness — excludes abbreviations/acronyms/proper nouns) ∩ **Norvig `count_1w.txt`** frequency (commonness). Drops junk, adds ~2,500 common 6- and 7-letter words each, re-validates all 540 curated puzzles stay solvable.
+The word data is **machine-generated and validated**, not hand-edited — re-run the tools, never edit the JSON by hand (it would drift and can silently break solvability/floors). All live outside `Assets/`, fetch/cache reference lists in the OS temp dir (never committed), and **fail loudly** on any violation. **License (verified):** shipped word content comes only from **ENABLE** (PUBLIC DOMAIN — not TWL/SOWPODS), so it is commercial-safe; the Norvig frequency list is build-time-only ranking and is not redistributed. **Run order:** `dictionary_build → puzzleshow_build → daily_floor_fix → daily_expand`, then `verify_data` (all support `--dry-run`).
+- **`dictionary_build.py`** → rebuilds `word_library.json` + `common_words.json` as a PURE function of the cited sources: `library = {ENABLE words len 3–7 with Norvig freq-rank < 60000} ∪ {permanent original-daily solution words}` MINUS a 124-term offensive/slur **blocklist**; `common = {library words with rank < 15000}`. This simultaneously **cleans** obscure-but-valid junk (e.g. `abaka`, `abmho`, `abos`) and offensive terms, and **adds** fair words across ALL lengths 3–7. Re-validates all curated puzzles stay solvable + reports multi-route counts.
 - **`puzzleshow_build.py`** → regenerates `tier_definitions.json` (7×50) on the difficulty curve; every ladder is a BFS shortest path drawn from the common subset, validated for the min-move floor by **true full-dictionary** distance, unique within tier, in-band.
 - **`daily_floor_fix.py`** → replaces only the Daily puzzles whose true shortest path < 2 moves with fresh same-length ladders, **preserving puzzleId + array order** (so `DailyPuzzleService` indexing is unchanged).
-> These use Python `set` iteration, so re-runs produce *valid, floor-compliant but not byte-identical* data. They are run via the Bash tool (`python Tools/<tool>.py`, `--dry-run` supported); their output is the committed JSON.
+- **`daily_expand.py`** → **additively** grows the Daily pool (currently 450 → 600) by appending validated puzzles in a reserved id block (≥ 20001); idempotent (re-runs rebuild the same set), preserves the original 450 byte-stable. Save-safe: daily index is `day % poolCount` and progress is keyed by ISO date.
+- **`verify_data.py`** → independent integrity verifier (mirrors `VerifyWordLibrary.cs` rules + multi-route + min-move floor + offensive-absence + counts). `--canary` injects a broken Hamming-1 edge and asserts it is **caught** (proves the checks fail when they should).
+> **Byte-reproducible:** `build_graph` returns SORTED adjacency so BFS is deterministic regardless of `PYTHONHASHSEED`; re-running the whole pipeline yields **byte-identical** JSON (SHA-256 verified). Run via the Bash tool (`python Tools/<tool>.py`); the output is the committed JSON.
 
 ---
 
@@ -412,11 +424,16 @@ HandleUseReveal/HandleUseAddTime/HandleUndo; events OnWordSubmissionResult, OnTi
 Tunable numbers live in Assets/Scripts/Puzzle/BalanceConfig.cs (single source of truth;
 incl. MinMovesForLength curve 3->2 4->2 5->3 6->3 7->4, AbsoluteMinMoves=2, MaxTier=7,
 PuzzlesPerTier=50, progressive PuzzlesRequiredToAdvance(tier) 10..40).
-Word data (Assets/Resources/Data/, all MACHINE-GENERATED by Tools/*.py — re-run, never hand-edit):
-  word_library.json (12,183) + common_words.json (6,582) <- dictionary_build.py;
+Word data (Assets/Resources/Data/, all MACHINE-GENERATED by Tools/*.py — re-run, never hand-edit;
+content from PUBLIC-DOMAIN ENABLE, Norvig freq = build-time ranking only => commercial-safe):
+  word_library.json (17,326) + common_words.json (6,875) <- dictionary_build.py
+    (library = ENABLE len 3-7 with Norvig rank<60000 + permanent orig-daily words, MINUS offensive
+     blocklist; common = library subset rank<15000);
   tier_definitions.json (7 tiers x 50 = 350) <- puzzleshow_build.py;
-  daily_puzzles.json (450, hand-curated origin, floor-fixed) <- daily_floor_fix.py.
+  daily_puzzles.json (600 = 450 hand-curated/floor-fixed + 150 appended id>=20001) <- daily_floor_fix.py
+    then daily_expand.py (additive, idempotent; daily index = day % poolCount, save-safe).
   Every puzzle's TRUE full-dictionary shortest path is >= MinMovesForLength (no 1-move puzzles).
+  Pipeline is BYTE-REPRODUCIBLE (sorted-adjacency BFS); verify with Tools/verify_data.py (+ --canary).
 Post-win surface routing: pure PostWinRouter.Decide(...) called by GameBootstrap.CheckGameOver.
 Persistence: PlayerPrefs JSON via DataManager (keys: puzzle_progress_v1, wordpuzzle_progress,
 wordpuzzle_save, daily_v1, settings_v1, onboarding_v1). New persisted PlayerProgress fields serialize
