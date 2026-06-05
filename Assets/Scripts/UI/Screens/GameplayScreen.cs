@@ -625,7 +625,8 @@ namespace WordPuzzle.UI
             if (btn == null) return;
             var rt = btn.GetComponent<RectTransform>();
             if (rt == null) return;
-            btn.onClick.AddListener(() => { if (isActiveAndEnabled) StartCoroutine(UIAnimations.ScaleButtonTap(rt, UIAnimations.MICRO, 0.90f)); });
+            // 0.24s (vs 0.16 MICRO) so the power-up squish glides smoothly into and out of the press — more polished.
+            btn.onClick.AddListener(() => { if (isActiveAndEnabled) StartCoroutine(UIAnimations.ScaleButtonTap(rt, 0.24f, 0.90f)); });
         }
 
         // ============================================================
@@ -652,7 +653,7 @@ namespace WordPuzzle.UI
                     var tile = currentInputRow.GetChild(idx).GetComponent<LetterTile>();
                     if (tile != null)
                     {
-                        StartCoroutine(tile.PunchScale(1.18f)); // punchier lock-in pop so typing clearly registers
+                        StartCoroutine(tile.PunchScale(1.20f, 0.20f)); // clear lock-in pop so a single keypress visibly registers
                         StartCoroutine(tile.DropInSettle()); // Task 29C — letter settles into the tile ("placing a rung")
                     }
                 }
@@ -710,11 +711,17 @@ namespace WordPuzzle.UI
         /// Formula: min(TILE_SIZE_DEFAULT, (USABLE_WIDTH - (N-1)*TILE_GAP_H) / N), capped at TILE_SIZE_MAX.
         /// All rows in a puzzle share this size so their tiles stay column-aligned.
         /// </summary>
+        /// <summary>Largest square tile size (clamped to [60, cap]) so <paramref name="n"/> tiles + gaps fit USABLE_WIDTH.</summary>
+        private static float AdaptiveTileSize(int n)
+        {
+            if (n <= 0) n = 1;
+            float adaptive = (USABLE_WIDTH - (n - 1) * TILE_GAP_H) / n;
+            return Mathf.Clamp(adaptive, 60f, Mathf.Min(TILE_SIZE_DEFAULT, TILE_SIZE_MAX));
+        }
+
         private void RecomputeTileSize(int wordLen)
         {
-            if (wordLen <= 0) wordLen = 1;
-            float adaptive = (USABLE_WIDTH - (wordLen - 1) * TILE_GAP_H) / wordLen;
-            _tileSize = Mathf.Clamp(adaptive, 60f, Mathf.Min(TILE_SIZE_DEFAULT, TILE_SIZE_MAX));
+            _tileSize = AdaptiveTileSize(wordLen);
             _chainRowHeight = _tileSize + 10f;
 
             // Task 10A: keep macro rows (start/input/end) the same height as chain rows and share
@@ -1407,16 +1414,23 @@ namespace WordPuzzle.UI
             }
 
             int targetLen = currentEndWord.Length;
+            string input = currentInput ?? string.Empty;
+
+            // Let the player keep typing PAST the target length (the reducer caps it, ~10) instead of feeling
+            // stuck when the boxes are full — extra letters get their own boxes. When over-typing, the row
+            // shrinks its tiles to stay within USABLE_WIDTH (nothing overflows); normal play (<= target) keeps
+            // the shared size so the input row stays column-aligned with the start/target rows.
+            int count = Mathf.Max(targetLen, input.Length);
+            float size = (count <= targetLen) ? _tileSize : AdaptiveTileSize(count);
+
             EnsureHorizontalLayout(currentInputRow, TILE_GAP_H, leftPad: (int)ROW_LABEL_PAD_L);
             ClearChildren(currentInputRow);
 
-            string input = currentInput ?? string.Empty;
-
-            for (int k = 0; k < targetLen; k++)
+            for (int k = 0; k < count; k++)
             {
                 var t = InstantiateTile(currentInputRow);
                 if (t == null) continue;
-                t.SetSize(_tileSize);
+                t.SetSize(size);
 
                 bool isHintHighlight = (hintLetterIndex == k);
                 bool hasLetter = k < input.Length;
