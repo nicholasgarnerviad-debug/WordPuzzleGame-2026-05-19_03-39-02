@@ -218,6 +218,7 @@ namespace WordPuzzle.UI
             SetButtonVisible(playAgainButton, true);
             SetButtonLabel(playAgainButton, "PLAY AGAIN");
             SetButtonVisible(nextTierButton, false);
+            HideDailyOnlyWidgets(); // Task 38 — a non-daily result shows NONE of the daily-only widgets
             if (laddersCompleted >= 0 && wordsFoundText != null)
                 wordsFoundText.text = laddersCompleted == 1
                     ? "1 puzzle solved" : $"{laddersCompleted} puzzles solved";
@@ -266,6 +267,7 @@ namespace WordPuzzle.UI
         {
             SetButtonVisible(playAgainButton, true);
             SetButtonLabel(playAgainButton, "NEXT PUZZLE");
+            HideDailyOnlyWidgets(); // Task 38 — a non-daily result shows NONE of the daily-only widgets
 
             EnsureNextTierButton();
             if (nextTierButton != null)
@@ -336,6 +338,17 @@ namespace WordPuzzle.UI
 
             // Gold outline emphasis (a bonus action); light label.
             UIThemeManager.ApplyOutlineButton(doublerButton, C_ACCENT_GOLD, new Color32(0xF5, 0xF7, 0xFA, 0xFF));
+        }
+
+        // Task 38 — the ResultsScreen is a single shared instance, so daily-only widgets persist their
+        // visibility between runs. A non-daily result (PuzzleShow / Time Attack) must therefore explicitly
+        // hide the reward doubler AND the daily streak lines, or they leak in from the last daily.
+        private void HideDailyOnlyWidgets()
+        {
+            SetButtonVisible(doublerButton, false);
+            if (streakText != null)           streakText.gameObject.SetActive(false);
+            if (longestStreakText != null)    longestStreakText.gameObject.SetActive(false);
+            if (comeBackTomorrowText != null) comeBackTomorrowText.gameObject.SetActive(false);
         }
 
         private static void SetButtonVisible(Button b, bool visible)

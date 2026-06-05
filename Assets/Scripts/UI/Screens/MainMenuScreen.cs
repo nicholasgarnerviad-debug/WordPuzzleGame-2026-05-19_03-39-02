@@ -335,10 +335,14 @@ namespace WordPuzzle.UI
         /// </summary>
         public void SetDailyState(bool completedToday, int currentStreak)
         {
-            if (dailyButtonLabel == null) return;
-            dailyButtonLabel.text = completedToday
-                ? $"DAILY  ·  {currentStreak}"   // streak count (· is font-safe; ✓ U+2713 may be missing)
-                : "DAILY";
+            if (dailyButtonLabel != null)
+                dailyButtonLabel.text = completedToday
+                    ? $"DAILY  ·  {currentStreak}"   // streak count (· is font-safe; ✓ U+2713 may be missing)
+                    : "DAILY";
+            // Daily 2.0 (Task 38) — one-and-done: lock the button once today is played (win OR loss) so the
+            // daily can't be replayed or its par reward farmed. A new local day re-enables it.
+            if (dailyButton != null)
+                dailyButton.interactable = !completedToday;
         }
 
         /// <summary>

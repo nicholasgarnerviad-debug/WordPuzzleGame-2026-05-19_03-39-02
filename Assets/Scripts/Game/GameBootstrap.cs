@@ -806,6 +806,15 @@ namespace WordPuzzle
                 Debug.LogError("[Daily] DailyPuzzleService not initialized or pool empty; aborting.");
                 return;
             }
+            // Daily 2.0 (Task 38) — one-and-done: if today was already PLAYED (win OR loss), do NOT start a
+            // fresh scored run. The menu button is disabled too, but guard here so re-entry can never replay
+            // the daily or re-grant its par reward. (Re-showing the stored result is a future nicety.)
+            DailyStreakRules.RefreshPlayedFlag(cachedDailyProgress, dailyClock.TodayIso);
+            if (cachedDailyProgress != null && cachedDailyProgress.todayPlayed)
+            {
+                Debug.Log("[Daily] Already played today — one-and-done; ignoring re-entry.");
+                return;
+            }
             pendingDailyPuzzle = dailyPuzzleService.GetTodayPuzzle();
             pendingDailyIndex = dailyPuzzleService.TodayIndex();
             if (pendingDailyPuzzle == null)

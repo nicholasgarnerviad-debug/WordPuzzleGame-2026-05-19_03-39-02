@@ -935,9 +935,15 @@ namespace WordPuzzle.UI
         public void SetDailyPar(int par, int mistakesLeft)
         {
             _dailyHudActive = par >= 0;
-            if (stepsRemainingText == null || !_dailyHudActive) return;
-            stepsRemainingText.text = $"Par {par}  ·  Mistakes left: {mistakesLeft}";
+            // ALWAYS write the slot: par < 0 RELEASES it (empty) so a finished daily's
+            // "Par · Mistakes left" can never linger into Classic/tutorial (Task 38 fix — the old early
+            // return left the stale daily HUD on screen because nothing else writes this slot).
+            if (stepsRemainingText != null) stepsRemainingText.text = ComposeDailyHud(par, mistakesLeft);
         }
+
+        /// <summary>Pure: the daily HUD string for the steps slot, or "" when released (par &lt; 0). Testable.</summary>
+        public static string ComposeDailyHud(int par, int mistakesLeft)
+            => par >= 0 ? $"Par {par}  ·  Mistakes left: {mistakesLeft}" : string.Empty;
 
         public void SetWordLabels(string fromText = "FROM", string toText = "TO")
         {
