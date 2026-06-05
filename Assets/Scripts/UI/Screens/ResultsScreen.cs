@@ -42,7 +42,7 @@ namespace WordPuzzle.UI
         // Style tokens.
         // Task 8A: gold is kept for the primary streak number (focal element in streakText richtext)
         // and for the toast confirmation. longestStreakText (Best: N) is secondary — demoted to muted.
-        private static readonly Color C_ACCENT_GOLD  = new Color32(0xC9, 0xB4, 0x58, 0xFF);
+        // Task 38 — gold now comes from the shared GameAccents.Gold token (no inline hex re-declared here).
         private static readonly Color C_TEXT_PRIMARY  = new Color32(0xE7, 0xE1, 0xC4, 0xFF);
         private static readonly Color C_TEXT_MUTED   = new Color32(0x8A, 0x93, 0xA1, 0xFF);
 
@@ -115,7 +115,7 @@ namespace WordPuzzle.UI
             if (toastText != null)
             {
                 toastText.text = message;
-                toastText.color = C_ACCENT_GOLD;
+                toastText.color = GameAccents.Gold;
                 toastText.gameObject.SetActive(true);
                 StopAllCoroutines();
                 StartCoroutine(HideToastAfter(1.6f));
@@ -296,7 +296,7 @@ namespace WordPuzzle.UI
             go.transform.SetSiblingIndex(playAgainButton.transform.GetSiblingIndex());
 
             // Task 25 — gold outline emphasis on the tier-up action; light label.
-            UIThemeManager.ApplyOutlineButton(nextTierButton, C_ACCENT_GOLD, new Color32(0xF5, 0xF7, 0xFA, 0xFF));
+            UIThemeManager.ApplyOutlineButton(nextTierButton, GameAccents.Gold, new Color32(0xF5, 0xF7, 0xFA, 0xFF));
         }
 
         /// <summary>
@@ -337,7 +337,7 @@ namespace WordPuzzle.UI
             go.transform.SetSiblingIndex(playAgainButton.transform.GetSiblingIndex());
 
             // Gold outline emphasis (a bonus action); light label.
-            UIThemeManager.ApplyOutlineButton(doublerButton, C_ACCENT_GOLD, new Color32(0xF5, 0xF7, 0xFA, 0xFF));
+            UIThemeManager.ApplyOutlineButton(doublerButton, GameAccents.Gold, new Color32(0xF5, 0xF7, 0xFA, 0xFF));
         }
 
         // Task 38 — the ResultsScreen is a single shared instance, so daily-only widgets persist their
