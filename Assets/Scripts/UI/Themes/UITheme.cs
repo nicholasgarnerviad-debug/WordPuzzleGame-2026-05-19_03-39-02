@@ -107,6 +107,20 @@ namespace WordPuzzle.UI
 
         private static Color Hex(string h) => ColorUtility.TryParseHtmlString(h, out var c) ? c : Color.magenta;
     }
+
+    /// <summary>
+    /// Non-menu / in-game accent tokens, centralized so screens stop re-declaring the same hex
+    /// (Task 38). <see cref="Gold"/> is the documented IN-GAME accent (#C9B458) — hints, active input,
+    /// the streak headline, win/tier accents (NOT a menu button colour). <see cref="CardOutline"/> is a
+    /// subtle slate ring for grouping cards on the black+outline screens (e.g. the Stats sections).
+    /// </summary>
+    public static class GameAccents
+    {
+        public static readonly Color Gold        = Hex("#C9B458");
+        public static readonly Color CardOutline = Hex("#39435A");
+
+        private static Color Hex(string h) => ColorUtility.TryParseHtmlString(h, out var c) ? c : Color.magenta;
+    }
 }
 
 /// <summary>
