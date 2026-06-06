@@ -92,6 +92,24 @@ namespace WordPuzzle.UI
         private const float CountUpDuration = 0.55f;   // numeric roll-up
         private const float RevealStartScale = 0.94f;   // cards scale up from here
 
+        // ── Layout sizing (centralized — no scattered magic numbers) ──────────────
+        private const float CONTENT_W       = 960f;  // card-stack width
+        private const float CONTENT_TOP_Y   = 300f;  // top edge just below the title
+        private const float STACK_SPACING   = 18f;   // gap between cards
+        private const float ROW_SPACING     = 16f;   // gap inside horizontal rows
+        private const int   CARD_PAD_X      = 28;     // card horizontal padding
+        private const int   CARD_PAD_TOP    = 16;
+        private const int   CARD_PAD_BOT    = 18;
+        private const float CARD_SPACING    = 8f;    // gap between a card's header and body
+        private const float SECTION_FONT    = 24f;   // card section header
+        private const float HERO_FONT       = 76f;   // DAILY streak — the focal number
+        private const float HERO_BAND_H     = 116f;  // hero + support band height (snug → no dead space)
+        private const float HERO_BLOCK_W    = 300f;  // hero column width (support stats take the rest)
+        private const float CAPTION_FONT    = 19f;   // stat captions
+        private const float SUPPORT_VALUE_FONT = 34f; // stat values (longest / mode numbers)
+        private const float MODE_CELLS_H    = 74f;   // CLASSIC / TIME ATTACK value-cell row height
+        private const float FOOTER_FONT     = 24f;   // overall footer line
+
         private void OnEnable()
         {
             UIThemeManager.ApplyScreenBackground(gameObject, UIThemeManager.ReadabilityScrimAlpha); // shared backdrop + readability scrim
@@ -344,6 +362,10 @@ namespace WordPuzzle.UI
                 if (tl != null) { tl.text = "STATS"; tl.color = MenuPalette.TitleColor; tl.fontStyle = FontStyles.Bold; }
             }
 
+            // HOME — restyle the scene-authored grey slab into the app's glowing outline button (no scene edit).
+            if (homeButton != null)
+                UIThemeManager.ApplyOutlineButton(homeButton, MenuPalette.SecondaryBorder, MenuPalette.SecondaryLabel);
+
             BuildCoinPill();
             BuildContent();
         }
@@ -359,7 +381,7 @@ namespace WordPuzzle.UI
             rt.pivot = new Vector2(1f, 1f);
             rt.anchoredPosition = new Vector2(-36f, -210f); // inset from the top-right; clears the notch
             var img = go.GetComponent<Image>(); img.raycastTarget = false;
-            UIThemeManager.ApplyOutlineButton(img, GameAccents.Gold); // gold ring
+            UIThemeManager.ApplyOutlineButton(img, Palette.AccentPeriwinkle); // theme ring (coin token + number stay gold)
             var hlg = go.GetComponent<HorizontalLayoutGroup>();
             hlg.childControlWidth = true; hlg.childForceExpandWidth = false;
             hlg.childControlHeight = true; hlg.childForceExpandHeight = false;
@@ -380,7 +402,7 @@ namespace WordPuzzle.UI
             RegisterReveal(go); // coin pill reveals first
         }
 
-        // Centered, top-anchored vertical stack of grouped cards (auto-spaced — no manual positions).
+        // Centered, top-anchored stack of grouped cards — tight, content-sized, hero-led (no dead space).
         private void BuildContent()
         {
             var go = new GameObject("Content", typeof(RectTransform), typeof(VerticalLayoutGroup), typeof(ContentSizeFitter));
@@ -388,45 +410,51 @@ namespace WordPuzzle.UI
             var rt = (RectTransform)go.transform;
             rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
             rt.pivot = new Vector2(0.5f, 1f);
-            rt.anchoredPosition = new Vector2(0f, 300f); // top edge just below the title; HOME stays at the bottom
-            rt.sizeDelta = new Vector2(960f, 0f);        // height driven by the ContentSizeFitter
+            rt.anchoredPosition = new Vector2(0f, CONTENT_TOP_Y);
+            rt.sizeDelta = new Vector2(CONTENT_W, 0f); // height driven by the ContentSizeFitter
             var vlg = go.GetComponent<VerticalLayoutGroup>();
             vlg.childControlWidth = true; vlg.childForceExpandWidth = true;
             vlg.childControlHeight = true; vlg.childForceExpandHeight = false;
-            vlg.spacing = 22f; vlg.childAlignment = TextAnchor.UpperCenter;
+            vlg.spacing = STACK_SPACING; vlg.childAlignment = TextAnchor.UpperCenter;
             go.GetComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
             var content = (RectTransform)go.transform;
 
-            // DAILY card — hero current-streak + a 3-up row (Longest / Win % / W–L).
+            // ── DAILY headline card — hero streak LEFT, support stats RIGHT, vertically centred together
+            //    in one snug band so there is no dead vertical space. ──
             var daily = MakeCard(content, 0f);
             CardHeader(daily, "DAILY");
-            _streakHero = MakeText(daily, "0", 90f, GameAccents.Gold, FontStyles.Bold, TextAlignmentOptions.Center);
-            _streakHero.gameObject.AddComponent<LayoutElement>().minHeight = 98f;
-            var heroCap = MakeText(daily, "DAY STREAK", 22f, MenuPalette.SecondaryBorder, FontStyles.Bold, TextAlignmentOptions.Center);
+            var band = MakeHRow(daily, HERO_BAND_H, expandChildHeight: true, forceExpandWidth: false);
+            var heroCol = MakeVColumn(band, HERO_BLOCK_W);
+            _streakHero = MakeText(heroCol, "0", HERO_FONT, GameAccents.Gold, FontStyles.Bold, TextAlignmentOptions.Center);
+            var heroCap = MakeText(heroCol, "DAY STREAK", CAPTION_FONT, Palette.TextMuted, FontStyles.Bold, TextAlignmentOptions.Center);
             heroCap.characterSpacing = 4f;
-            var tri = MakeHRow(daily, 92f, true);
+            var tri = MakeHRow(band, 0f, expandChildHeight: false, forceExpandWidth: true);
+            tri.GetComponent<LayoutElement>().flexibleWidth = 1f;
             _longestVal = MakeStatCell(tri, "LONGEST");
             _winRateVal = MakeStatCell(tri, "WIN %");
             _wlVal      = MakeStatCell(tri, "W–L");
             RegisterReveal(daily.gameObject);
 
-            // CLASSIC + TIME ATTACK side-by-side.
-            var modeRow = MakeHRow(content, 196f, true);
-            var classic = MakeCard(modeRow, 196f);
+            // ── CLASSIC + TIME ATTACK — matched pair, content-sized, caption-over-value cells (no sparse gap). ──
+            var modeRow = MakeHRow(content, 0f, expandChildHeight: false, forceExpandWidth: true, controlHeight: false);
+            var classic = MakeCard(modeRow, 0f);
             CardHeader(classic, "CLASSIC");
-            _classicPlayedVal = MakeKeyVal(classic, "Played");
-            _classicWonVal    = MakeKeyVal(classic, "Won");
+            var classicCells = MakeHRow(classic, MODE_CELLS_H, expandChildHeight: true, forceExpandWidth: true);
+            _classicPlayedVal = MakeStatCell(classicCells, "PLAYED");
+            _classicWonVal    = MakeStatCell(classicCells, "WON");
             RegisterReveal(classic.gameObject);
-            var timeAttack = MakeCard(modeRow, 196f);
+            var timeAttack = MakeCard(modeRow, 0f);
             CardHeader(timeAttack, "TIME ATTACK");
-            _taPlayedVal = MakeKeyVal(timeAttack, "Played");
-            _taBestVal   = MakeKeyVal(timeAttack, "Best round");
+            var taCells = MakeHRow(timeAttack, MODE_CELLS_H, expandChildHeight: true, forceExpandWidth: true);
+            _taPlayedVal = MakeStatCell(taCells, "PLAYED");
+            _taBestVal   = MakeStatCell(taCells, "BEST");
             RegisterReveal(timeAttack.gameObject);
 
-            // OVERALL footer.
-            _overallText = MakeText(content, "0 puzzles completed", 24f, MenuPalette.SecondaryBorder, FontStyles.Normal, TextAlignmentOptions.Center);
-            _overallText.gameObject.AddComponent<LayoutElement>().minHeight = 40f;
-            RegisterReveal(_overallText.gameObject);
+            // ── OVERALL footer — slim full-width card (closing rhythm). ──
+            var footer = MakeCard(content, 0f);
+            _overallText = MakeText(footer, "0 puzzles completed", FOOTER_FONT, Palette.TextMuted, FontStyles.Normal, TextAlignmentOptions.Center);
+            _overallText.gameObject.AddComponent<LayoutElement>().minHeight = 34f;
+            RegisterReveal(footer.gameObject);
         }
 
         // ── tiny builders (mirror ShopScreen) ────────────────────────────────────
@@ -450,7 +478,7 @@ namespace WordPuzzle.UI
             var vlg = go.GetComponent<VerticalLayoutGroup>();
             vlg.childControlWidth = true; vlg.childForceExpandWidth = true;
             vlg.childControlHeight = true; vlg.childForceExpandHeight = false;
-            vlg.spacing = 8f; vlg.padding = new RectOffset(28, 28, 20, 22);
+            vlg.spacing = CARD_SPACING; vlg.padding = new RectOffset(CARD_PAD_X, CARD_PAD_X, CARD_PAD_TOP, CARD_PAD_BOT);
             vlg.childAlignment = TextAnchor.UpperCenter;
             var le = go.GetComponent<LayoutElement>(); le.flexibleWidth = 1f;
             if (fixedHeight > 0f) { le.minHeight = fixedHeight; le.preferredHeight = fixedHeight; }
@@ -460,20 +488,36 @@ namespace WordPuzzle.UI
 
         private void CardHeader(Transform card, string label)
         {
-            var t = MakeText(card, label, 24f, MenuPalette.TitleColor, FontStyles.Bold, TextAlignmentOptions.Left);
+            var t = MakeText(card, label, SECTION_FONT, MenuPalette.TitleColor, FontStyles.Bold, TextAlignmentOptions.Left);
             t.characterSpacing = 3f;
             t.gameObject.AddComponent<LayoutElement>().minHeight = 34f;
         }
 
-        private RectTransform MakeHRow(Transform parent, float height, bool expandHeight)
+        private RectTransform MakeHRow(Transform parent, float height, bool expandChildHeight,
+                                       bool controlHeight = true, bool forceExpandWidth = true)
         {
             var go = new GameObject("HRow", typeof(RectTransform), typeof(HorizontalLayoutGroup), typeof(LayoutElement));
             go.transform.SetParent(parent, false);
             var hlg = go.GetComponent<HorizontalLayoutGroup>();
-            hlg.childControlWidth = true; hlg.childForceExpandWidth = true;
-            hlg.childControlHeight = true; hlg.childForceExpandHeight = expandHeight;
-            hlg.spacing = 14f; hlg.childAlignment = TextAnchor.MiddleCenter;
-            var le = go.GetComponent<LayoutElement>(); le.minHeight = height; le.preferredHeight = height;
+            hlg.childControlWidth = true; hlg.childForceExpandWidth = forceExpandWidth;
+            hlg.childControlHeight = controlHeight; hlg.childForceExpandHeight = expandChildHeight;
+            hlg.spacing = ROW_SPACING; hlg.childAlignment = TextAnchor.MiddleCenter;
+            var le = go.GetComponent<LayoutElement>();
+            if (height > 0f) { le.minHeight = height; le.preferredHeight = height; }
+            return (RectTransform)go.transform;
+        }
+
+        // A content-sized vertical column with an optional fixed width (used for the DAILY hero block).
+        private RectTransform MakeVColumn(Transform parent, float fixedWidth)
+        {
+            var go = new GameObject("VCol", typeof(RectTransform), typeof(VerticalLayoutGroup), typeof(LayoutElement));
+            go.transform.SetParent(parent, false);
+            var vlg = go.GetComponent<VerticalLayoutGroup>();
+            vlg.childControlWidth = true; vlg.childForceExpandWidth = true;
+            vlg.childControlHeight = true; vlg.childForceExpandHeight = false;
+            vlg.spacing = 0f; vlg.childAlignment = TextAnchor.MiddleCenter;
+            var le = go.GetComponent<LayoutElement>();
+            if (fixedWidth > 0f) { le.preferredWidth = fixedWidth; le.flexibleWidth = 0f; }
             return (RectTransform)go.transform;
         }
 
@@ -487,26 +531,8 @@ namespace WordPuzzle.UI
             vlg.childControlHeight = true; vlg.childForceExpandHeight = false;
             vlg.spacing = 2f; vlg.childAlignment = TextAnchor.MiddleCenter;
             go.GetComponent<LayoutElement>().flexibleWidth = 1f;
-            MakeText(go.transform, caption, 19f, MenuPalette.SecondaryBorder, FontStyles.Bold, TextAlignmentOptions.Center);
-            return MakeText(go.transform, "0", 34f, MenuPalette.SecondaryLabel, FontStyles.Bold, TextAlignmentOptions.Center);
-        }
-
-        // A "Caption ........ Value" row (muted caption left, prominent value right); returns the VALUE label.
-        // Task 40 — values use the gold in-game accent so the numbers read as the focal point of each card.
-        private TMP_Text MakeKeyVal(Transform card, string caption)
-        {
-            var row = new GameObject("KV", typeof(RectTransform), typeof(HorizontalLayoutGroup), typeof(LayoutElement));
-            row.transform.SetParent(card, false);
-            var hlg = row.GetComponent<HorizontalLayoutGroup>();
-            hlg.childControlWidth = true; hlg.childForceExpandWidth = false;
-            hlg.childControlHeight = true; hlg.childForceExpandHeight = false;
-            hlg.childAlignment = TextAnchor.MiddleLeft; hlg.spacing = 6f;
-            row.GetComponent<LayoutElement>().minHeight = 44f;
-            var cap = MakeText(row.transform, caption, 24f, MenuPalette.SecondaryBorder, FontStyles.Normal, TextAlignmentOptions.Left);
-            cap.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
-            var val = MakeText(row.transform, "0", 30f, GameAccents.Gold, FontStyles.Bold, TextAlignmentOptions.Right);
-            var vle = val.gameObject.AddComponent<LayoutElement>(); vle.preferredWidth = 100f; vle.flexibleWidth = 0f;
-            return val;
+            MakeText(go.transform, caption, CAPTION_FONT, Palette.TextMuted, FontStyles.Bold, TextAlignmentOptions.Center);
+            return MakeText(go.transform, "0", SUPPORT_VALUE_FONT, Palette.TextPrimary, FontStyles.Bold, TextAlignmentOptions.Center);
         }
 
         private TMP_Text MakeText(Transform parent, string text, float size, Color color, FontStyles style, TextAlignmentOptions align)
