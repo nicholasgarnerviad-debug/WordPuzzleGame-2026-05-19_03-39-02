@@ -53,6 +53,13 @@ namespace WordPuzzle.UI
         private static readonly Color C_PUZZLE_ID       = Palette.TextMuted;
         private static readonly Color C_GOLD            = Palette.ModeDaily;       // current/next tier accent
 
+        // ── Tier-select layout sizing (centralized — no scattered magic numbers) ──
+        private const float TIER_ROW_H   = 150f; // taller, modern tier row (was 104)
+        private const float LIST_SPACING = 22f;  // even gap between tier rows (was 12)
+        private const int   LIST_PAD_X   = 16;
+        private const int   LIST_PAD_TOP = 16;
+        private const int   LIST_PAD_BOT = 32;
+
         // --- View state ---
         private enum ViewMode { TierSelect, PuzzleGrid }
         private ViewMode viewMode = ViewMode.TierSelect;
@@ -111,6 +118,7 @@ namespace WordPuzzle.UI
         private void OnEnable()
         {
             UIThemeManager.ApplyScreenBackground(gameObject, UIThemeManager.ReadabilityScrimAlpha); // Task 25 backdrop + readability scrim
+            EnsureTransparentScrollPanel(); // drop the scene's hard dark scroll brick — rows breathe on the backdrop
             if (backButton != null)
             {
                 backButton.onClick.AddListener(HandleTopBack);
@@ -137,6 +145,26 @@ namespace WordPuzzle.UI
 
         // Top HOME pill always returns to the main menu (both levels).
         private void HandleTopBack() => OnBackToMenu?.Invoke();
+
+        // The scene ScrollView carries a hard dark Image (an old slate brick) that shows as a dead panel
+        // below the short tier list. Make it (and the viewport) transparent so the rounded glowing rows
+        // breathe on the shared backdrop like every other screen — no dead brick. raycastTarget stays true
+        // so the ScrollRect still receives drags (the 100-card grid view still scrolls). Reached from the
+        // serialized contentRoot (Content → Viewport → ScrollView) — no new scene ref.
+        private void EnsureTransparentScrollPanel()
+        {
+            if (contentRoot == null) return;
+            var viewport = contentRoot.parent;                              // Content → Viewport
+            var scrollView = viewport != null ? viewport.parent : null;     // Viewport → ScrollView
+            FadeImage(scrollView);
+            FadeImage(viewport);
+        }
+
+        private static void FadeImage(Transform t)
+        {
+            var img = t != null ? t.GetComponent<Image>() : null;
+            if (img != null) { var c = img.color; c.a = 0f; img.color = c; }
+        }
 
         public void Show()
         {
@@ -190,7 +218,7 @@ namespace WordPuzzle.UI
             var go = new GameObject($"TierCard_{tier.tierId}", typeof(RectTransform));
             go.transform.SetParent(contentRoot, false);
             var le = go.AddComponent<LayoutElement>();
-            le.minHeight = 104f; le.preferredHeight = 104f; le.flexibleWidth = 1f;
+            le.minHeight = TIER_ROW_H; le.preferredHeight = TIER_ROW_H; le.flexibleWidth = 1f;
 
             bool tierComplete = unlocked && total > 0 && completed >= total;
 
@@ -200,6 +228,11 @@ namespace WordPuzzle.UI
                          : !unlocked    ? C_LOCKED_BORDER
                          : isCurrent    ? C_GOLD
                                         : C_UNPLAYED_BORDER;
+
+            // Soft glow language: the active tier gets the hero glow, other unlocked tiers a standard glow,
+            // locked tiers none (dim border only) — so unlocked vs locked reads clearly.
+            if (isCurrent)     UIThemeManager.ApplyNeonGlow(border, border.color, hero: true);
+            else if (unlocked) UIThemeManager.ApplyNeonGlow(border, border.color, hero: false);
 
             if (unlocked)
             {
@@ -486,8 +519,8 @@ namespace WordPuzzle.UI
             if (rt == null) return;
             var vlg = rt.GetComponent<VerticalLayoutGroup>();
             if (vlg == null) vlg = rt.gameObject.AddComponent<VerticalLayoutGroup>();
-            vlg.spacing = 12f;
-            vlg.padding = new RectOffset(16, 16, 8, 32);
+            vlg.spacing = LIST_SPACING;
+            vlg.padding = new RectOffset(LIST_PAD_X, LIST_PAD_X, LIST_PAD_TOP, LIST_PAD_BOT);
             vlg.childAlignment = TextAnchor.UpperCenter;
             vlg.childControlWidth = true;
             vlg.childControlHeight = false;
