@@ -115,7 +115,7 @@ namespace WordPuzzle.UI
             {
                 backButton.onClick.AddListener(HandleTopBack);
                 UIThemeManager.ApplyOutlineButton(backButton.GetComponent<Image>(),
-                    new Color32(0x8A, 0x93, 0xA1, 0xFF)); // Task 25 — ghost HOME pill
+                    Palette.AccentPeriwinkle); // ghost HOME pill
                 // Preserve the existing HOME pill look (label styled in-code as before).
                 var label = backButton.GetComponentInChildren<TMP_Text>(true);
                 if (label != null)
@@ -123,7 +123,7 @@ namespace WordPuzzle.UI
                     label.text = "HOME";
                     label.fontStyle = FontStyles.Bold;
                     label.fontSize = 28f;
-                    label.color = new Color32(0xE7, 0xE1, 0xC4, 0xFF);
+                    label.color = Palette.TextPrimary;
                     label.alignment = TextAlignmentOptions.Center;
                 }
             }
@@ -309,7 +309,7 @@ namespace WordPuzzle.UI
             brt.anchoredPosition = new Vector2(16f, 0f);
             brt.sizeDelta = new Vector2(96f, 52f);
             var backImg = backGo.AddComponent<Image>();
-            UIThemeManager.ApplyOutlineButton(backImg, new Color32(0x8A, 0x93, 0xA1, 0xFF)); // Task 25 — ghost back chip
+            UIThemeManager.ApplyOutlineButton(backImg, Palette.AccentPeriwinkle); // ghost back chip
             var backBtn = backGo.AddComponent<Button>(); backBtn.transition = Selectable.Transition.None;
             backBtn.onClick.AddListener(() =>
             {
@@ -870,7 +870,7 @@ namespace WordPuzzle.UI
             var le = go.AddComponent<LayoutElement>();
             le.minHeight = 56f; le.preferredHeight = 56f; le.flexibleWidth = 1f;
             var img = go.AddComponent<Image>();
-            UIThemeManager.ApplyOutlineButton(img, new Color32(0x8A, 0x93, 0xA1, 0xFF));
+            UIThemeManager.ApplyOutlineButton(img, Palette.AccentPeriwinkle);
             var btn = go.AddComponent<Button>(); btn.transition = Selectable.Transition.None;
             int captured = puzzleId;
             btn.onClick.AddListener(() => { ClosePathDetail(); OnPuzzleSelected?.Invoke(captured); });

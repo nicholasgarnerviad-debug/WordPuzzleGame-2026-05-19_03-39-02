@@ -34,10 +34,13 @@ namespace WordPuzzle.UI
 
         // ── Design tokens (README §14). UI layout/colour constants live here, mirroring
         //    GameplayScreen's in-screen literals; gameplay tunables stay in BalanceConfig. ──
-        private static readonly Color C_ACCENT_GOLD  = new Color32(0xC9, 0xB4, 0x58, 0xFF); // Timed
-        private static readonly Color C_ACCENT_GREEN = new Color32(0x6A, 0xAA, 0x64, 0xFF); // Survival
-        private static readonly Color C_TEXT_PRIMARY = new Color32(0xE7, 0xE1, 0xC4, 0xFF); // duration / title
-        private static readonly Color C_TEXT_MUTED   = new Color32(0x8A, 0x93, 0xA1, 0xFF); // subtitle / explainer
+        // Direction B — forward to the canonical Palette (no local colour literals). TIMED/SURVIVAL get two
+        // distinct on-palette accents (was gold/green); the title uses the shared app title token (aqua).
+        private static readonly Color C_ACCENT_TIMED    = Palette.ModeTimeAttack; // TIMED card/label (magenta-violet)
+        private static readonly Color C_ACCENT_SURVIVAL = Palette.AccentLavender; // SURVIVAL card/label (lavender)
+        private static readonly Color C_TITLE           = MenuPalette.TitleColor; // cool title, matches the menu
+        private static readonly Color C_TEXT_PRIMARY    = Palette.TextPrimary;    // duration / card top
+        private static readonly Color C_TEXT_MUTED      = Palette.TextMuted;      // subtitle / explainer
 
         // Vertical rhythm in the screen-root's local space (centre pivot; visible ≈ ±1059y).
         private const float TITLE_Y     =  680f;
@@ -81,12 +84,12 @@ namespace WordPuzzle.UI
 
             UIThemeManager.ApplyScreenBackground(gameObject); // Task 25 — true-black background
 
-            // 13C — header: gold title + muted subtitle, repositioned on-screen.
+            // 13C — header: cool title + muted subtitle, repositioned on-screen.
             PlaceCentered(titleText != null ? titleText.rectTransform : null, TITLE_Y, 860f, 110f);
             if (titleText != null)
             {
                 titleText.text = "TIME ATTACK";
-                titleText.color = C_ACCENT_GOLD;
+                titleText.color = C_TITLE;
                 titleText.fontStyle = FontStyles.Bold;
                 titleText.fontSize = 76f;
                 titleText.alignment = TextAlignmentOptions.Center;
@@ -116,11 +119,11 @@ namespace WordPuzzle.UI
                 }
             }
 
-            // 13B — card styling + the gold/green meaning scheme.
-            StyleCard(btn60Timed,     C_ACCENT_GOLD);
-            StyleCard(btn120Timed,    C_ACCENT_GOLD);
-            StyleCard(btn60Survival,  C_ACCENT_GREEN);
-            StyleCard(btn120Survival, C_ACCENT_GREEN);
+            // 13B — card styling + the TIMED/SURVIVAL meaning scheme (two distinct on-palette accents).
+            StyleCard(btn60Timed,     C_ACCENT_TIMED);
+            StyleCard(btn120Timed,    C_ACCENT_TIMED);
+            StyleCard(btn60Survival,  C_ACCENT_SURVIVAL);
+            StyleCard(btn120Survival, C_ACCENT_SURVIVAL);
 
             // 13C — explainer with the real Timed/Survival rules (reward sourced from config).
             EnsureExplainer();
@@ -193,12 +196,12 @@ namespace WordPuzzle.UI
             }
 
             int reward = Mathf.RoundToInt(TimeAttackConfig.DefaultSurvival().survivalRewardSeconds);
-            string gold  = "#" + ColorUtility.ToHtmlStringRGB(Palette.Coins);
-            string green = "#" + ColorUtility.ToHtmlStringRGB(Palette.AccentAqua); // retired green → aqua
+            string timed    = "#" + ColorUtility.ToHtmlStringRGB(C_ACCENT_TIMED);
+            string survival = "#" + ColorUtility.ToHtmlStringRGB(C_ACCENT_SURVIVAL);
             explainerText.richText = true;
             explainerText.text =
-                $"<color={gold}><b>TIMED</b></color>  ·  fixed countdown — beat the clock\n" +
-                $"<color={green}><b>SURVIVAL</b></color>  ·  each solved word adds +{reward}s";
+                $"<color={timed}><b>TIMED</b></color>  ·  fixed countdown — beat the clock\n" +
+                $"<color={survival}><b>SURVIVAL</b></color>  ·  each solved word adds +{reward}s";
             explainerText.color = C_TEXT_MUTED;
             explainerText.fontSize = 32f;
             explainerText.lineSpacing = 18f;

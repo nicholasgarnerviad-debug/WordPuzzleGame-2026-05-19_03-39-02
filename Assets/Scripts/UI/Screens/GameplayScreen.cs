@@ -260,7 +260,7 @@ namespace WordPuzzle.UI
             if (tierIndicatorText != null)
             {
                 tierIndicatorText.fontStyle = FontStyles.Normal;
-                tierIndicatorText.color = new Color32(0x8A, 0x93, 0xA1, 0xFF);
+                tierIndicatorText.color = Palette.TextMuted;
                 tierIndicatorText.fontSize = 20;
                 tierIndicatorText.alignment = TextAlignmentOptions.Center;
                 tierIndicatorText.gameObject.SetActive(true);
@@ -296,7 +296,7 @@ namespace WordPuzzle.UI
         // HOME button: a house icon (Lucide) in a subtle surface pill — clearly visible and a
         // comfortable tap target. Falls back to a "HOME" text label if the icon asset is missing,
         // so the button never breaks.
-        private static readonly Color C_HOME_TINT = new Color32(0xE7, 0xE1, 0xC4, 0xFF); // text-primary
+        private static readonly Color C_HOME_TINT = Palette.TextPrimary;
 
         private static Sprite _homeIconSprite;
         private static Sprite GetHomeIconSprite()
@@ -417,7 +417,7 @@ namespace WordPuzzle.UI
             badge.alignment = TextAlignmentOptions.Center;
             badge.fontSize = 17f;
             badge.fontStyle = FontStyles.Bold;
-            badge.color = new Color32(0xFF, 0xFF, 0xFF, 0xFF);
+            badge.color = Color.white;
             badge.raycastTarget = false;
 
             // Add a dark circular bg pill behind the count digit
@@ -1188,23 +1188,23 @@ namespace WordPuzzle.UI
             crt.sizeDelta = new Vector2(560f, 360f);
             var cardImg = card.AddComponent<Image>();
             UIThemeManager.ApplyRoundedButton(cardImg); // Task 22B — match the shared bubbly corner language
-            cardImg.color = new Color32(0x24, 0x29, 0x36, 0xFF); // surface-2
+            cardImg.color = Palette.Panel; // surface
 
             MakeWinText(card.transform, "Title", "SOLVED", 54, new Vector2(0f, 1f), new Vector2(1f, 1f),
-                new Vector2(0f, -54f), new Color32(0x6A, 0xAA, 0x64, 0xFF), FontStyles.Bold); // green
+                new Vector2(0f, -54f), Palette.AccentAqua, FontStyles.Bold); // success (aqua, retired green)
             winStepsText = MakeWinText(card.transform, "Steps", "", 30, new Vector2(0f, 1f), new Vector2(1f, 1f),
-                new Vector2(0f, -120f), new Color32(0x8A, 0x93, 0xA1, 0xFF), FontStyles.Normal); // muted
+                new Vector2(0f, -120f), Palette.TextMuted, FontStyles.Normal); // muted
 
             // Task 25 — ghost buttons: colour is now the BORDER, labels are LIGHT (the old NEXT label
             // was near-black surface and would vanish on the transparent-over-black button).
             MakeWinButton(card.transform, "NextButton", "NEXT PUZZLE",
                 new Vector2(0.5f, 0f), new Vector2(0f, 116f), new Vector2(420f, 76f),
-                new Color32(0xC9, 0xB4, 0x58, 0xFF), new Color32(0xF5, 0xF7, 0xFA, 0xFF),
-                () => OnNextPuzzle?.Invoke());   // gold border, light label (hero)
+                Palette.Coins, Palette.TextPrimary,
+                () => OnNextPuzzle?.Invoke());   // warm gold border, light label (hero)
             MakeWinButton(card.transform, "HomeButton", "Home",
                 new Vector2(0.5f, 0f), new Vector2(0f, 36f), new Vector2(420f, 56f),
-                new Color32(0x8A, 0x93, 0xA1, 0xFF), new Color32(0xE7, 0xE1, 0xC4, 0xFF),
-                () => OnWinHome?.Invoke());       // muted border, cream label
+                Palette.AccentPeriwinkle, Palette.TextPrimary,
+                () => OnWinHome?.Invoke());       // periwinkle border, light label
         }
 
         private static TextMeshProUGUI MakeWinText(Transform parent, string name, string text, float size,

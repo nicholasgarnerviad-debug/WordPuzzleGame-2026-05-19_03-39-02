@@ -46,8 +46,8 @@ namespace WordPuzzle.UI
         // Task 8A: gold is kept for the primary streak number (focal element in streakText richtext)
         // and for the toast confirmation. longestStreakText (Best: N) is secondary — demoted to muted.
         // Task 38 — gold now comes from the shared GameAccents.Gold token (no inline hex re-declared here).
-        private static readonly Color C_TEXT_PRIMARY  = new Color32(0xE7, 0xE1, 0xC4, 0xFF);
-        private static readonly Color C_TEXT_MUTED   = new Color32(0x8A, 0x93, 0xA1, 0xFF);
+        private static readonly Color C_TEXT_PRIMARY  = Palette.TextPrimary;
+        private static readonly Color C_TEXT_MUTED   = Palette.TextMuted;
 
         private UnityAction playAgainAction;
         private UnityAction mainMenuAction;
@@ -78,9 +78,9 @@ namespace WordPuzzle.UI
             UIThemeManager.ApplyScreenBackground(gameObject); // Task 25 — true-black background
 
             // Task 25 — outline ("ghost") buttons: Play Again = green CTA, Home/Share = muted; light labels.
-            UIThemeManager.ApplyOutlineButton(playAgainButton, new Color32(0x6A, 0xAA, 0x64, 0xFF), new Color32(0xF5, 0xF7, 0xFA, 0xFF));
-            UIThemeManager.ApplyOutlineButton(mainMenuButton,  new Color32(0x8A, 0x93, 0xA1, 0xFF), new Color32(0xE7, 0xE1, 0xC4, 0xFF));
-            UIThemeManager.ApplyOutlineButton(shareButton,     new Color32(0x8A, 0x93, 0xA1, 0xFF), new Color32(0xE7, 0xE1, 0xC4, 0xFF));
+            UIThemeManager.ApplyOutlineButton(playAgainButton, Palette.AccentAqua, Palette.TextPrimary);
+            UIThemeManager.ApplyOutlineButton(mainMenuButton,  Palette.AccentPeriwinkle, Palette.TextPrimary);
+            UIThemeManager.ApplyOutlineButton(shareButton,     Palette.AccentPeriwinkle, Palette.TextPrimary);
         }
 
         // §2.1/§2.3 Home-button visual swap.
@@ -95,7 +95,7 @@ namespace WordPuzzle.UI
             label.fontSize = glyphSupported ? 26f : 28f;
             label.fontStyle = FontStyles.Bold;
             label.alignment = TextAlignmentOptions.Center;
-            label.color = new Color32(0xE7, 0xE1, 0xC4, 0xFF);
+            label.color = Palette.TextPrimary;
         }
 
         private void OnDisable()
@@ -299,7 +299,7 @@ namespace WordPuzzle.UI
             go.transform.SetSiblingIndex(playAgainButton.transform.GetSiblingIndex());
 
             // Task 25 — gold outline emphasis on the tier-up action; light label.
-            UIThemeManager.ApplyOutlineButton(nextTierButton, GameAccents.Gold, new Color32(0xF5, 0xF7, 0xFA, 0xFF));
+            UIThemeManager.ApplyOutlineButton(nextTierButton, GameAccents.Gold, Palette.TextPrimary);
         }
 
         /// <summary>
@@ -340,7 +340,7 @@ namespace WordPuzzle.UI
             go.transform.SetSiblingIndex(playAgainButton.transform.GetSiblingIndex());
 
             // Gold outline emphasis (a bonus action); light label.
-            UIThemeManager.ApplyOutlineButton(doublerButton, GameAccents.Gold, new Color32(0xF5, 0xF7, 0xFA, 0xFF));
+            UIThemeManager.ApplyOutlineButton(doublerButton, GameAccents.Gold, Palette.TextPrimary);
         }
 
         // Task 38 — the ResultsScreen is a single shared instance, so daily-only widgets persist their
