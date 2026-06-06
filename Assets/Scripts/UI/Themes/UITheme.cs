@@ -365,6 +365,44 @@ public static class UIThemeManager
     }
 
     /// <summary>
+    /// Full-screen OVERLAY background (Shop, full-screen popups). Unlike <see cref="ApplyScreenBackground"/>
+    /// (which is transparent and relies on the one shared backdrop layer behind every screen), an overlay is
+    /// drawn ON TOP of another screen, so it must be OPAQUE or the screen behind would show through. This
+    /// paints the root with the opaque app base, then mounts the SAME app backdrop — the looping video
+    /// (&gt; still sprite &gt; flat base) — as a BACKMOST child (behind the overlay's content), so the overlay
+    /// matches every other screen instead of a stale still image. Routed through here so it can't drift again.
+    /// </summary>
+    public static void ApplyOverlayBackground(UnityEngine.GameObject root)
+    {
+        if (root == null) return;
+        var img = root.GetComponent<UnityEngine.UI.Image>();
+        if (img == null) img = root.AddComponent<UnityEngine.UI.Image>();
+        img.sprite = null;
+        img.type = UnityEngine.UI.Image.Type.Simple;
+        img.color = AppBackground;   // opaque purple-black base — occludes the screen behind this overlay
+        img.raycastTarget = true;    // swallow taps so they don't fall through
+
+        var clip = UnityEngine.Resources.Load<UnityEngine.Video.VideoClip>("UI/CloudBackground")
+                ?? UnityEngine.Resources.Load<UnityEngine.Video.VideoClip>("UI/SpaceBackground");
+        if (clip != null)
+        {
+            EnsureVideoBackground(root.transform, clip, sendToBack: true);
+        }
+        else
+        {
+            RemoveVideoBackground(root.transform);
+            var sprite = UnityEngine.Resources.Load<UnityEngine.Sprite>("UI/CloudBackground")
+                      ?? UnityEngine.Resources.Load<UnityEngine.Sprite>("UI/SpaceBackground");
+            if (sprite != null)
+            {
+                img.sprite = sprite;
+                img.preserveAspect = false;        // stretch to fill — no gaps on any aspect ratio
+                img.color = UnityEngine.Color.white;
+            }
+        }
+    }
+
+    /// <summary>
     /// Task 26 — ensure ONE reusable full-screen "BackgroundLayer" Image exists as the first child of the
     /// root Canvas (so it renders behind every screen). It is filled with the flat app black now, and will
     /// auto-display a space backdrop the moment a sprite is dropped at Resources/UI/SpaceBackground.png
@@ -437,7 +475,7 @@ public static class UIThemeManager
     /// renders the clip into a RenderTexture, so a video backdrop sits behind every screen and loops
     /// forever. Idempotent: reuses the existing surface; only (re)configures when the clip changes.
     /// </summary>
-    private static void EnsureVideoBackground(UnityEngine.Transform layer, UnityEngine.Video.VideoClip clip)
+    private static void EnsureVideoBackground(UnityEngine.Transform layer, UnityEngine.Video.VideoClip clip, bool sendToBack = false)
     {
         if (layer == null || clip == null) return;
 
@@ -495,7 +533,8 @@ public static class UIThemeManager
             vp.Play();
         }
 
-        raw.transform.SetAsLastSibling(); // cover the layer's black base
+        if (sendToBack) raw.transform.SetAsFirstSibling(); // behind an overlay's own content
+        else            raw.transform.SetAsLastSibling();  // cover the shared layer's black base
     }
 
     private static void RemoveVideoBackground(UnityEngine.Transform layer)

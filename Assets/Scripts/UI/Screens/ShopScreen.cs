@@ -34,7 +34,6 @@ namespace WordPuzzle.UI
                       revealPrices = { 120, 320, 800 }, timePrices = { 60, 160, 400 };
 
         // Direction B — forward to the canonical Palette (no raw hex).
-        private static readonly Color C_BLACK   = Palette.SurfaceVoid;
         private static readonly Color C_GOLD     = Palette.Coins;
         private static readonly Color C_CREAM    = Palette.TextPrimary;
         private static readonly Color C_MUTED    = Palette.TextMuted;
@@ -85,23 +84,10 @@ namespace WordPuzzle.UI
             if (rt == null) rt = gameObject.AddComponent<RectTransform>();
             Stretch(rt);
 
-            var bg = gameObject.GetComponent<Image>();
-            if (bg == null) bg = gameObject.AddComponent<Image>();
-            bg.raycastTarget = true;            // swallow taps so they don't fall through to the menu
-            // Task 34A — paint the shared pixel-space backdrop (opaque) so the Shop matches every other
-            // screen while fully covering the menu/gear behind this overlay. Falls back to flat black.
-            var spaceSprite = Resources.Load<Sprite>("UI/SpaceBackground");
-            if (spaceSprite != null)
-            {
-                bg.sprite = spaceSprite;
-                bg.type = Image.Type.Simple;
-                bg.preserveAspect = false;      // stretch to fill — no gaps on any aspect ratio
-                bg.color = Color.white;         // untinted so the image shows its true colours
-            }
-            else
-            {
-                bg.color = C_BLACK;
-            }
+            // Direction B — give the Shop overlay the SAME animated app backdrop as every other screen
+            // (opaque, since it covers the menu behind it). Routed through the shared helper so it can't
+            // drift back onto a stale still image.
+            UIThemeManager.ApplyOverlayBackground(gameObject);
 
             // Title — cyan, matches the menu header.
             var title = MakeText(transform, "SHOP", 56f, MenuPalette.TitleColor, FontStyles.Bold, TextAlignmentOptions.Center);
