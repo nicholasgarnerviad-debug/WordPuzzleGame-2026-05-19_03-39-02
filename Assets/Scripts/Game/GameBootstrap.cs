@@ -105,6 +105,7 @@ namespace WordPuzzle
             InitializeGameSystems();
             WireEventHandlers();
             ShowMainMenu();
+            MaybeOfferTutorial(); // first launch: OFFER the tutorial over the menu (no longer forced)
         }
 
         private void InitializeGameSystems()
@@ -681,6 +682,9 @@ namespace WordPuzzle
                     cachedPuzzleProgress.completedPuzzleIds,
                     cachedPuzzleProgress.inProgressPuzzleIds,
                     cachedPuzzleProgress.currentTier);
+                // Library Path View — inject the per-puzzle best-solve + revealed-optimal records so a
+                // beaten puzzle's detail panel can render (A) best solve and (B) partial optimal path.
+                lib.SetPathRecords(cachedPuzzleProgress.puzzlePaths);
             }
             uiManager.ShowLibrary();
         }
@@ -756,11 +760,7 @@ namespace WordPuzzle
 
         private void StartClassicMode()
         {
-            if (OnboardingRules.ShouldRouteToTutorial(cachedOnboarding))
-            {
-                StartTutorialRun();
-                return;
-            }
+            // Onboarding is OFFERED at boot (MaybeOfferTutorial) — no longer forced here, so Classic just plays.
             StartNormalClassic();
         }
 
@@ -793,7 +793,7 @@ namespace WordPuzzle
             modeController.SetMode(activeMode);
             StartNewGame();
             EnsureTutorialOverlaySubscribed();
-            tutorialOverlay.Begin();
+            tutorialOverlay.Begin(pendingTutorialPuzzle != null ? pendingTutorialPuzzle.optimalSteps : 2);
         }
 
         // Task 1A — Daily puzzle entry point.
@@ -1026,6 +1026,16 @@ namespace WordPuzzle
             if (cachedOnboarding == null) cachedOnboarding = new OnboardingData();
         }
 
+        // Tutorial redo — OFFER the tutorial on first launch (over the menu) instead of forcing it.
+        // Welcome: PLAY -> the lesson (StartTutorialRun); SKIP -> marked done, stay on the menu (never re-nags).
+        private void MaybeOfferTutorial()
+        {
+            if (!OnboardingRules.ShouldRouteToTutorial(cachedOnboarding)) return;
+            if (tutorialOverlay == null) return; // no overlay wired => no offer; the menu is fully usable
+            EnsureTutorialOverlaySubscribed();
+            tutorialOverlay.ShowWelcome(onPlay: StartTutorialRun, onSkip: HandleTutorialSkip);
+        }
+
         // Task 3A — complete the tutorial (called by overlay events or fallback).
         private async void CompleteTutorial(bool skipped)
         {
@@ -1038,7 +1048,9 @@ namespace WordPuzzle
                 catch (System.Exception ex) { Debug.LogError($"[Tutorial] persist failed: {ex.Message}"); }
             }
             if (tutorialOverlay != null) tutorialOverlay.Hide();
-            StartNormalClassic();
+            // Skip (welcome or any beat) returns to the menu; completing the lesson drops into the first real puzzle.
+            if (skipped) ShowMainMenu();
+            else StartNormalClassic();
         }
 
         // Task 3A — settings screen "Replay Tutorial" handler.
@@ -1050,7 +1062,8 @@ namespace WordPuzzle
                 try { await dataManagerRef.SaveOnboardingAsync(cachedOnboarding); }
                 catch (System.Exception ex) { Debug.LogError($"[Tutorial] reset persist failed: {ex.Message}"); }
             }
-            // Next time Classic is tapped, the gate in StartClassicMode reroutes to tutorial.
+            // Replay goes STRAIGHT into the lesson (no welcome prompt) and can be repeated cleanly.
+            StartTutorialRun();
         }
 
         // Task 3A — subscribe overlay events exactly once.

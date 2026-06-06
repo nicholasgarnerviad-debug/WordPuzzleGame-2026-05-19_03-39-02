@@ -502,6 +502,7 @@ public static class UIThemeManager
         img.pixelsPerUnitMultiplier = 1f;
         img.color = borderColor;
         RemoveRingChild(img.transform);
+        ApplyNeonGlow(img, borderColor, hero: false); // Polish — subtle neon halo matching the border colour.
     }
 
     /// <summary>Convenience: render a Button as a coloured outline and set its label colour in one call.</summary>
@@ -528,11 +529,116 @@ public static class UIThemeManager
         img.pixelsPerUnitMultiplier = 1f;
         img.color = borderColor;
         RemoveRingChild(img.transform); // drop the old faint-fill ring child if it exists
+        ApplyNeonGlow(img, borderColor, hero: true); // Polish — stronger neon halo for the hero action (Daily).
     }
 
     private static void RemoveRingChild(UnityEngine.Transform parent)
     {
         var existing = parent.Find(RingChildName);
         if (existing != null) UnityEngine.Object.Destroy(existing.gameObject);
+    }
+
+    // ============================================================
+    //  Polish — TIGHT NEON-TUBE glow on outline buttons.
+    //  The outline must read as a luminous LINE, not a fuzzy cloud: a
+    //  small glow radius that HUGS the stroke with minimal outer bleed.
+    //  A dedicated child Image sits BEHIND the button using the same
+    //  rounded-ring sprite at the SAME size (no upscale, so the glow does
+    //  not balloon past the outline), and several faint Shadow copies are
+    //  spread over a TIGHT radius (~2px) for an even, crisp tube glow.
+    //  Daily (hero) is slightly BRIGHTER (higher alpha) but stays just as
+    //  tight — a brighter line, never a bigger halo. Static (no pulsing).
+    // ============================================================
+
+    private const string GlowChildName = "__NeonGlow";
+
+    // Outward radius of the glow, in UI px. Kept SMALL so the light hugs the
+    // stroke as a crisp tube — larger values bloom into a bulky halo.
+    private const float GlowRadiusNormal = 2f;
+    private const float GlowRadiusHero   = 2f; // hero stays tight — brighter, not wider.
+    // Glow ring size vs the button (1.0 = exactly on the stroke). NO upscale:
+    // an upscaled ring pushes light out past the outline into the background.
+    private const float GlowScaleNormal = 1f;
+    private const float GlowScaleHero   = 1f;
+    // Per-copy alpha. MANY faint copies (GlowSamples) build the perceived
+    // glow. At the tight radius the copies sit right on the stroke, so the
+    // line reads luminous. Hero is a touch brighter for primary emphasis.
+    private const float GlowAlphaNormal = 0.14f;
+    private const float GlowAlphaHero   = 0.22f;
+
+    // Eight directions (cardinals + diagonals) at the tight radius give an
+    // even, ring-shaped tube glow rather than a one-sided shadow.
+    private const int GlowSamples = 8;
+
+    /// <summary>
+    /// Polish — give an outline button/card a soft, static NEON GLOW halo tinted to its border colour.
+    /// Builds a dedicated child Image BEHIND the button (the same rounded-ring sprite, slightly upscaled)
+    /// and spreads several very-faint <see cref="UnityEngine.UI.Shadow"/> copies of it over a wide radius,
+    /// so the result reads as a soft light halo — NOT a thicker border. Idempotent: re-applying reuses the
+    /// existing glow child and re-tints it to the CURRENT border colour. The glow child never eats taps and
+    /// leaves the crisp outline, labels, icons, and raycast untouched. No external art assets required.
+    /// </summary>
+    public static void ApplyNeonGlow(UnityEngine.UI.Image img, UnityEngine.Color borderColor, bool hero)
+    {
+        if (img == null) return;
+
+        float radius = hero ? GlowRadiusHero : GlowRadiusNormal;
+        float scale  = hero ? GlowScaleHero  : GlowScaleNormal;
+        float alpha  = hero ? GlowAlphaHero   : GlowAlphaNormal;
+
+        // ── Find or create the dedicated glow child (rendered first => behind siblings). ──
+        var existing = img.transform.Find(GlowChildName);
+        UnityEngine.UI.Image glow;
+        if (existing != null)
+        {
+            glow = existing.GetComponent<UnityEngine.UI.Image>();
+            if (glow == null) glow = existing.gameObject.AddComponent<UnityEngine.UI.Image>();
+        }
+        else
+        {
+            var go = new UnityEngine.GameObject(GlowChildName,
+                typeof(UnityEngine.RectTransform), typeof(UnityEngine.CanvasRenderer), typeof(UnityEngine.UI.Image));
+            go.transform.SetParent(img.transform, false);
+            glow = go.GetComponent<UnityEngine.UI.Image>();
+        }
+
+        // Match the button's rounded-ring sprite so the halo follows the same shape.
+        glow.sprite = img.sprite;
+        glow.type = UnityEngine.UI.Image.Type.Sliced;
+        glow.pixelsPerUnitMultiplier = img.pixelsPerUnitMultiplier;
+        glow.raycastTarget = false;                 // never eats taps
+        var glowColor = borderColor; glowColor.a = alpha;
+        glow.color = glowColor;
+
+        // Stretch to the button's rect, then upscale slightly so the halo sits just outside the border.
+        var grt = glow.rectTransform;
+        grt.anchorMin = UnityEngine.Vector2.zero;
+        grt.anchorMax = UnityEngine.Vector2.one;
+        grt.offsetMin = UnityEngine.Vector2.zero;
+        grt.offsetMax = UnityEngine.Vector2.zero;
+        grt.localScale = new UnityEngine.Vector3(scale, scale, 1f);
+        grt.SetAsFirstSibling(); // render behind the crisp outline + label
+
+        // Spread faint Shadow copies in 8 directions at the radius for a soft, even falloff.
+        var glowShadows = new System.Collections.Generic.List<UnityEngine.UI.Shadow>(GlowSamples);
+        foreach (var s in glow.GetComponents<UnityEngine.UI.Shadow>())
+        {
+            if (s.GetType() == typeof(UnityEngine.UI.Shadow)) glowShadows.Add(s);
+        }
+        for (int i = 0; i < GlowSamples; i++)
+        {
+            float ang = (UnityEngine.Mathf.PI * 2f) * i / GlowSamples;
+            var offset = new UnityEngine.Vector2(
+                UnityEngine.Mathf.Cos(ang) * radius,
+                UnityEngine.Mathf.Sin(ang) * radius);
+
+            UnityEngine.UI.Shadow s = i < glowShadows.Count
+                ? glowShadows[i]
+                : glow.gameObject.AddComponent<UnityEngine.UI.Shadow>();
+            s.enabled         = true;
+            s.effectColor     = glowColor;
+            s.effectDistance  = offset;
+            s.useGraphicAlpha = true; // follow the ring's own shape for a clean halo edge
+        }
     }
 }

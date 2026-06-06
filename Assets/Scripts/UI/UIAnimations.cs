@@ -250,6 +250,27 @@ namespace WordPuzzle.UI
         /// </summary>
         /// <param name="t">Normalized time 0-1</param>
         /// <returns>Eased value</returns>
+        /// <summary>
+        /// Modern feel — gentle screen ENTRANCE on open. Ensures a CanvasGroup on the screen root and fades
+        /// it in over <see cref="STANDARD"/> (0.22s, ease-out) for a calm, premium reveal. Uses the existing
+        /// fade primitive only (no new motion language). ReduceMotion / inactive ⇒ snaps to full alpha
+        /// instantly. Single coroutine, Mathf-only (no per-frame GC). Pure alpha — never fights layout, never
+        /// moves the static background. Call right after the screen is activated.
+        /// </summary>
+        /// <param name="host">The screen MonoBehaviour (runs the coroutine and hosts the CanvasGroup).</param>
+        public static void PlayScreenEntrance(MonoBehaviour host)
+        {
+            if (host == null) return;
+            var cg = host.GetComponent<CanvasGroup>();
+            if (cg == null) cg = host.gameObject.AddComponent<CanvasGroup>();
+            if (ReduceMotion || !host.isActiveAndEnabled)
+            {
+                cg.alpha = 1f;
+                return;
+            }
+            host.StartCoroutine(FadeTransition(cg, true, STANDARD));
+        }
+
         private static float EaseOut(float t)
         {
             return 1f - (1f - t) * (1f - t);

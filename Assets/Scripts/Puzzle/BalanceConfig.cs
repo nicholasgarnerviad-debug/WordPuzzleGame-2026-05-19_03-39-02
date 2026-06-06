@@ -106,13 +106,13 @@ public static class BalanceConfig
         return min < AbsoluteMinMoves ? AbsoluteMinMoves : min;
     }
 
-    // ─── Tier pacing (Task 5A; Task 15: 7 tiers × 50) ─────────────────────────
+    // ─── Tier pacing (Task 5A; Task 15: 7 tiers × 50; expanded to 7 × 100) ────
 
     /// <summary>Total number of tiers in the game (Puzzle Show mode).</summary>
     public const int MaxTier = 7;
 
-    /// <summary>Curated puzzles authored per tier (Task 15).</summary>
-    public const int PuzzlesPerTier = 50;
+    /// <summary>Curated puzzles authored per tier (expanded from 50 → 100; 7 × 100 = 700 total).</summary>
+    public const int PuzzlesPerTier = 100;
 
     /// <summary>
     /// Base gate (Tier 1) — puzzles a player must complete to advance to the next tier.

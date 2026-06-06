@@ -19,8 +19,8 @@ DATA = os.path.normpath(os.path.join(HERE, "..", "Assets", "Resources", "Data"))
 
 # Mirrors of game constants we must not silently drift from.
 EXPECT_TIERS = 7
-EXPECT_PER_TIER = 50
-EXPECT_TIER_TOTAL = 350
+EXPECT_PER_TIER = 100
+EXPECT_TIER_TOTAL = 700
 MIN_DAILY_POOL = 450            # never SHRINK below the original curated pool
 
 # Must mirror dictionary_build.OFFENSIVE_BLOCKLIST (kept in sync deliberately; a few sentinels
@@ -97,7 +97,7 @@ def verify(td, dp, library, common):
     for w in library: by_len[len(w)].append(w)
     adjL = {L: build_graph(by_len[L]) for L in by_len}
 
-    def check_puzzle(kind, p, enforce_floor):
+    def check_puzzle(kind, p, enforce_floor, enforce_multiroute=False):
         s = p["startWord"].lower(); e = p["endWord"].lower()
         sol = [w.lower() for w in p["solution"]]
         pid = p.get("puzzleId")
@@ -123,13 +123,20 @@ def verify(td, dp, library, common):
         if dd < 0: fails.append(f"{pre}: UNSOLVABLE in dictionary graph")
         if enforce_floor and 0 <= dd < min_moves_for_length(L0):
             fails.append(f"{pre}: below min-move floor (true dist {dd})")
+        if enforce_multiroute:
+            # stored solution length must equal the TRUE full-dictionary shortest distance
+            if dd >= 0 and dd != len(sol) - 1:
+                fails.append(f"{pre}: optimalSteps {len(sol)-1} != true shortest {dd}")
+            # GUARANTEE: every tier puzzle must have >= 2 distinct optimal routes
+            if n < 2:
+                fails.append(f"{pre}: only {n} optimal route(s) (need >=2)")
         return n
 
     multi = single = 0
     for t in tiers:
         pairseen = set()
         for p in t["puzzles"]:
-            n = check_puzzle(f"tier{t['tierId']}", p, enforce_floor=True)
+            n = check_puzzle(f"tier{t['tierId']}", p, enforce_floor=True, enforce_multiroute=True)
             if n is not None:
                 multi += n > 1; single += n <= 1
             key = tuple(sorted((p["startWord"].lower(), p["endWord"].lower())))

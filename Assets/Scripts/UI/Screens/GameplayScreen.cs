@@ -43,6 +43,13 @@ namespace WordPuzzle.UI
         [SerializeField] private OnScreenKeyboard keyboard;
         [SerializeField] private TextMeshProUGUI currentInputText;
 
+        // How far (px, canvas space) to lift the keyboard — and with it the power-up bar, which
+        // reseats relative to the keys — up from its authored position. Tweak to taste.
+        [SerializeField] private float keyboardLift = 90f;
+        // Authored keyboard.anchoredPosition.y, captured once so repeated OnEnable lifts stay idempotent.
+        private float _keyboardBaseY;
+        private bool _keyboardBaseCaptured;
+
         // ---------- Ladder layout rows (Spec §3) ----------
         [SerializeField] private RectTransform startWordRow;
         [SerializeField] private RectTransform endWordRow;
@@ -494,6 +501,17 @@ namespace WordPuzzle.UI
             var keebRt = keyboard.GetComponent<RectTransform>();
             var selfRt = transform as RectTransform;
             if (keebRt == null || selfRt == null) return;
+
+            // Lift the keyboard up by keyboardLift from its authored Y. Idempotent: we capture the
+            // authored Y once and always re-derive from it, so repeated OnEnable calls don't compound.
+            if (!_keyboardBaseCaptured)
+            {
+                _keyboardBaseY = keebRt.anchoredPosition.y;
+                _keyboardBaseCaptured = true;
+            }
+            var keebAp = keebRt.anchoredPosition;
+            keebAp.y = _keyboardBaseY + keyboardLift;
+            keebRt.anchoredPosition = keebAp;
 
             Canvas.ForceUpdateCanvases();
             var corners = new Vector3[4];

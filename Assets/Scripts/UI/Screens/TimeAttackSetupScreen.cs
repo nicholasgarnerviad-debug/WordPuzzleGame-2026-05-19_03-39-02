@@ -306,7 +306,7 @@ namespace WordPuzzle.UI
             OnConfigConfirmed?.Invoke(cfg);
         }
 
-        public void Show() => gameObject.SetActive(true);
+        public void Show() { gameObject.SetActive(true); UIAnimations.PlayScreenEntrance(this); }
         public void Hide() => gameObject.SetActive(false);
     }
 }

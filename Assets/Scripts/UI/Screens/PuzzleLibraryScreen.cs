@@ -1,16 +1,18 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using WordPuzzle.Modes;
+using WordPuzzle.Persistence;
 
 namespace WordPuzzle.UI
 {
     /// <summary>
-    /// Puzzle Library (Task 15) — two-level Puzzle Show navigation.
-    ///   Level 1 (Tier Select): 7 tier cards with theme, progress (X/50) and lock state.
-    ///   Level 2 (Puzzle Grid):  the selected tier's 50 puzzle cards + a Back to tier-select.
+    /// Puzzle Library (Task 15; tiers expanded to 100/tier) — two-level Puzzle Show navigation.
+    ///   Level 1 (Tier Select): 7 tier cards with theme, progress (X/100) and lock state.
+    ///   Level 2 (Puzzle Grid):  the selected tier's 100 puzzle cards + a Back to tier-select.
     /// Card colour reflects real saved progress (completed = green + check, in-progress = gold,
     /// unlocked = surface grey, locked = padlock), resolved via PuzzleShowMode.ResolveState so
     /// it matches gameplay state exactly. Only the active tier's cards are rendered (perf).
@@ -61,7 +63,24 @@ namespace WordPuzzle.UI
         private readonly HashSet<int> inProgressIds = new HashSet<int>();
         private int highestUnlockedTier = 1;
 
+        // Library Path View — per-puzzle best-solve + revealed-optimal records, keyed by puzzleId.
+        private readonly Dictionary<int, PuzzlePathRecord> pathRecords = new Dictionary<int, PuzzlePathRecord>();
+
         private TierDefinitionsWrapper tierData;
+
+        // --- Path View detail overlay (built lazily) ---
+        private GameObject detailOverlay;
+
+        // Path View palette (on-brand: black + outline, no gold accents on the path itself).
+        private static readonly Color C_DETAIL_SCRIM   = new Color(0f, 0f, 0f, 0.82f);
+        private static readonly Color C_PANEL_BG       = HexC("#0C0E12");
+        private static readonly Color C_PANEL_BORDER   = HexC("#6B7689");
+        private static readonly Color C_SLOT_BG        = HexC("#10131A");
+        private static readonly Color C_SLOT_BORDER    = HexC("#3A4150"); // blank slot ring
+        private static readonly Color C_SLOT_REVEALED  = HexC("#6AAA64"); // matched optimal word (green, like completed)
+        private static readonly Color C_SLOT_BLANK_TXT = HexC("#5A6270");
+        private static readonly Color C_BEST_WORD      = HexC("#E7E1C4");
+        private static readonly Color C_PERFECT_TXT    = HexC("#6AAA64");
 
         /// <summary>
         /// Task 15C — orchestrator injects the saved Puzzle Show progress before Show().
@@ -74,6 +93,19 @@ namespace WordPuzzle.UI
             if (completed != null) foreach (var id in completed) completedIds.Add(id);
             if (inProgress != null) foreach (var id in inProgress) inProgressIds.Add(id);
             highestUnlockedTier = Mathf.Max(1, highestUnlocked);
+        }
+
+        /// <summary>
+        /// Library Path View — orchestrator injects the per-puzzle path records (best solve +
+        /// revealed-optimal slots) before Show(). Keyed by puzzleId for O(1) lookup when a beaten
+        /// puzzle is tapped. Null/empty (old saves) is fine — those puzzles just show no path data.
+        /// </summary>
+        public void SetPathRecords(IEnumerable<PuzzlePathRecord> records)
+        {
+            pathRecords.Clear();
+            if (records == null) return;
+            foreach (var r in records)
+                if (r != null) pathRecords[r.puzzleId] = r;
         }
 
         private void OnEnable()
@@ -112,9 +144,14 @@ namespace WordPuzzle.UI
             viewMode = ViewMode.TierSelect;   // always enter at the tier-select level
             tierData = LoadTierDefinitions();
             PopulateContent();
+            UIAnimations.PlayScreenEntrance(this); // modern feel — gentle fade-in on open (ReduceMotion-gated)
         }
 
-        public void Hide() => gameObject.SetActive(false);
+        public void Hide()
+        {
+            ClosePathDetail();
+            gameObject.SetActive(false);
+        }
 
         // ================================================================
         //  Population — branches on the active view
@@ -136,6 +173,7 @@ namespace WordPuzzle.UI
         {
             CreateScreenTitle("PUZZLE SHOW", "Pick a tier");
 
+            int index = 0;
             foreach (var tier in tierData.tiers)
             {
                 if (tier == null) continue;
@@ -143,11 +181,11 @@ namespace WordPuzzle.UI
                 bool isCurrent = tier.tierId == highestUnlockedTier;
                 int total = tier.puzzles != null ? tier.puzzles.Length : 0;
                 int completed = CountCompleted(tier);
-                CreateTierSelectCard(tier, unlocked, isCurrent, completed, total);
+                CreateTierSelectCard(tier, unlocked, isCurrent, completed, total, index++);
             }
         }
 
-        private void CreateTierSelectCard(TierData tier, bool unlocked, bool isCurrent, int completed, int total)
+        private void CreateTierSelectCard(TierData tier, bool unlocked, bool isCurrent, int completed, int total, int animIndex = 0)
         {
             var go = new GameObject($"TierCard_{tier.tierId}", typeof(RectTransform));
             go.transform.SetParent(contentRoot, false);
@@ -168,7 +206,13 @@ namespace WordPuzzle.UI
                 var btn = go.AddComponent<Button>();
                 btn.transition = Selectable.Transition.None;
                 int captured = tier.tierId;
-                btn.onClick.AddListener(() => OpenTier(captured));
+                var capturedRt = (RectTransform)go.transform;
+                btn.onClick.AddListener(() =>
+                {
+                    if (!UIAnimations.ReduceMotion && isActiveAndEnabled)
+                        StartCoroutine(UIAnimations.ScaleButtonTap(capturedRt));
+                    OpenTier(captured);
+                });
             }
 
             var fill = MakeFill(go.transform, 6f); // Task 25 — wider ring for the ghost look
@@ -204,12 +248,16 @@ namespace WordPuzzle.UI
                     TextAlignmentOptions.Right, C_LOCKED_TEXT, FontStyles.Bold,
                     new Vector2(1f, 1f), new Vector2(1f, 1f),
                     new Vector2(-24f, -16f), new Vector2(40f, 32f));
+                // Polish — was C_SUBTITLE @18 (flagged low-contrast/tiny); brighter + larger for legibility.
                 CreateAnchored(fill.transform, "UnlockHint",
-                    $"Clear {need} in Tier {tier.tierId - 1} to unlock", 18,
-                    TextAlignmentOptions.BottomRight, C_SUBTITLE, FontStyles.Normal,
+                    $"Clear {need} in Tier {tier.tierId - 1} to unlock", 19,
+                    TextAlignmentOptions.BottomRight, C_HEADER_COUNT, FontStyles.Normal,
                     new Vector2(1f, 0f), new Vector2(1f, 0f),
                     new Vector2(-24f, 18f), new Vector2(360f, 28f));
             }
+
+            // Modern feel — staggered cascade reveal (slide-up + fade), ReduceMotion-gated.
+            PlayCardCascade(go.transform, animIndex);
         }
 
         private void OpenTier(int tierId)
@@ -235,11 +283,12 @@ namespace WordPuzzle.UI
 
             var grid = CreateTierGridContainer(tier.tierId);
             if (tier.puzzles == null) return;
+            int cardIndex = 0;
             foreach (var puzzle in tier.puzzles)
             {
                 if (puzzle == null) continue;
                 var state = PuzzleShowMode.ResolveState(puzzle.puzzleId, unlocked, completedIds, inProgressIds);
-                CreateLevelCard(grid.transform, puzzle, state);
+                CreateLevelCard(grid.transform, puzzle, state, cardIndex++);
             }
         }
 
@@ -262,7 +311,12 @@ namespace WordPuzzle.UI
             var backImg = backGo.AddComponent<Image>();
             UIThemeManager.ApplyOutlineButton(backImg, new Color32(0x8A, 0x93, 0xA1, 0xFF)); // Task 25 — ghost back chip
             var backBtn = backGo.AddComponent<Button>(); backBtn.transition = Selectable.Transition.None;
-            backBtn.onClick.AddListener(BackToTierSelect);
+            backBtn.onClick.AddListener(() =>
+            {
+                if (!UIAnimations.ReduceMotion && isActiveAndEnabled)
+                    StartCoroutine(UIAnimations.ScaleButtonTap(brt));
+                BackToTierSelect();
+            });
             CreateText(backGo.transform, "BackLabel", "‹ Back", 20,
                 TextAlignmentOptions.Center, C_UNPLAYED_TEXT, FontStyles.Bold);
 
@@ -302,7 +356,7 @@ namespace WordPuzzle.UI
         }
 
         // ---------------- Puzzle card ----------------
-        private void CreateLevelCard(Transform parent, PuzzleDefinition puzzle, PuzzleState state)
+        private void CreateLevelCard(Transform parent, PuzzleDefinition puzzle, PuzzleState state, int animIndex = 0)
         {
             var go = new GameObject($"Card_{puzzle.puzzleId}", typeof(RectTransform));
             go.transform.SetParent(parent, false);
@@ -316,8 +370,26 @@ namespace WordPuzzle.UI
             var btn = go.AddComponent<Button>();
             btn.transition = Selectable.Transition.None;
             int capturedId = puzzle.puzzleId;
+            var capturedPuzzle = puzzle;
             btn.interactable = (state != PuzzleState.Locked);
-            btn.onClick.AddListener(() => OnPuzzleSelected?.Invoke(capturedId));
+            var cardRt = (RectTransform)go.transform;
+            // Library Path View — a BEATEN puzzle opens the detail panel (best solve + partial optimal),
+            // gated by completion (no spoilers before beating). Unbeaten-unlocked launches as before.
+            // Polish — a subtle press-squish on tap (ReduceMotion-gated) precedes the action for tactile feel.
+            if (state == PuzzleState.Completed)
+                btn.onClick.AddListener(() =>
+                {
+                    if (!UIAnimations.ReduceMotion && isActiveAndEnabled)
+                        StartCoroutine(UIAnimations.ScaleButtonTap(cardRt));
+                    ShowPathDetail(capturedPuzzle);
+                });
+            else
+                btn.onClick.AddListener(() =>
+                {
+                    if (!UIAnimations.ReduceMotion && isActiveAndEnabled)
+                        StartCoroutine(UIAnimations.ScaleButtonTap(cardRt));
+                    OnPuzzleSelected?.Invoke(capturedId);
+                });
 
             var fillGo = MakeFill(go.transform, state == PuzzleState.Locked ? 4f : 6f); // Task 25 — wider ghost ring
             var fillImg = fillGo.GetComponent<Image>();
@@ -358,6 +430,10 @@ namespace WordPuzzle.UI
                 TextAlignmentOptions.Center, C_SUBTITLE, FontStyles.Normal,
                 new Vector2(0f, 0f), new Vector2(1f, 0f), new Vector2(0f, 14f), Vector2.zero,
                 fillSize: true, fillHeight: 22f);
+
+            // Modern feel — staggered cascade reveal (slide-up + fade), ReduceMotion-gated.
+            // Wrapped by column so the 3-wide grid ripples diagonally rather than row-by-row.
+            PlayCardCascade(go.transform, animIndex % 12);
         }
 
         // ================================================================
@@ -527,10 +603,302 @@ namespace WordPuzzle.UI
             => ColorUtility.TryParseHtmlString(hex, out var c) ? c : Color.magenta;
 
         // ================================================================
+        //  Library Path View — detail overlay (best solve + partial optimal)
+        // ================================================================
+
+        // Build (or rebuild) and show the full-screen detail overlay for a BEATEN puzzle:
+        //   (A) the player's BEST solve path, and
+        //   (B) the canonical optimal path as word-slots — matched words revealed, the rest blank.
+        // On-brand (black + outline, no gold on the path), Safe-Area inset, Large-Text safe (wraps),
+        // ReduceMotion-gated reveal (blanks animate a subtle fade/scale-in, or snap when ReduceMotion).
+        private void ShowPathDetail(PuzzleDefinition puzzle)
+        {
+            if (puzzle == null) return;
+            pathRecords.TryGetValue(puzzle.puzzleId, out var record);
+
+            if (detailOverlay != null) Destroy(detailOverlay);
+
+            // Full-screen scrim (also a tap-to-close target).
+            detailOverlay = new GameObject($"PathDetail_{puzzle.puzzleId}", typeof(RectTransform));
+            detailOverlay.transform.SetParent(transform, false);
+            var ort = (RectTransform)detailOverlay.transform;
+            ort.anchorMin = Vector2.zero; ort.anchorMax = Vector2.one;
+            ort.offsetMin = Vector2.zero; ort.offsetMax = Vector2.zero;
+            var scrim = detailOverlay.AddComponent<Image>();
+            scrim.color = C_DETAIL_SCRIM;
+            var scrimBtn = detailOverlay.AddComponent<Button>();
+            scrimBtn.transition = Selectable.Transition.None;
+            scrimBtn.onClick.AddListener(ClosePathDetail);
+
+            // Compact, content-sized panel: stretches horizontally (Safe-Area inset) but its HEIGHT
+            // is driven by ContentSizeFitter so it hugs the content and sits centred — no dead space.
+            var safe = GetSafeAreaInsets();
+            var panelGo = new GameObject("Panel", typeof(RectTransform));
+            panelGo.transform.SetParent(detailOverlay.transform, false);
+            var prt = (RectTransform)panelGo.transform;
+            prt.anchorMin = new Vector2(0f, 0.5f); prt.anchorMax = new Vector2(1f, 0.5f);
+            prt.pivot = new Vector2(0.5f, 0.5f);
+            prt.anchoredPosition = Vector2.zero;
+            prt.offsetMin = new Vector2(24f + safe.x, 0f);
+            prt.offsetMax = new Vector2(-24f - safe.z, 0f);
+            var panelImg = panelGo.AddComponent<Image>();
+            UIThemeManager.ApplyRoundedButton(panelImg);
+            panelImg.color = C_PANEL_BORDER;
+            // Eat taps so clicking the panel doesn't close it (only the scrim does).
+            panelGo.AddComponent<Button>().transition = Selectable.Transition.None;
+            // Outer layout = the 5px ring; ContentSizeFitter sizes the panel to its single child.
+            var panelVlg = panelGo.AddComponent<VerticalLayoutGroup>();
+            panelVlg.padding = new RectOffset(5, 5, 5, 5);
+            panelVlg.childControlWidth = true; panelVlg.childControlHeight = true;
+            panelVlg.childForceExpandWidth = true; panelVlg.childForceExpandHeight = false;
+            var panelCsf = panelGo.AddComponent<ContentSizeFitter>();
+            panelCsf.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            panelCsf.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
+
+            // Inner fill card holds the actual content stack (also content-sized).
+            var content = new GameObject("DetailContent", typeof(RectTransform));
+            content.transform.SetParent(panelGo.transform, false);
+            var panelFillImg = content.AddComponent<Image>();
+            UIThemeManager.ApplyRoundedButton(panelFillImg);
+            panelFillImg.color = C_PANEL_BG;
+            panelFillImg.raycastTarget = false;
+            var vlg = content.AddComponent<VerticalLayoutGroup>();
+            vlg.padding = new RectOffset(20, 20, 18, 18);
+            vlg.spacing = 9f;
+            vlg.childAlignment = TextAnchor.UpperCenter;
+            vlg.childControlWidth = true; vlg.childControlHeight = true;
+            vlg.childForceExpandWidth = true; vlg.childForceExpandHeight = false;
+            var contentCsf = content.AddComponent<ContentSizeFitter>();
+            contentCsf.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            contentCsf.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
+
+            // Title: the word pair.
+            string pair = $"{(puzzle.startWord ?? "").ToUpper()}  →  {(puzzle.endWord ?? "").ToUpper()}";
+            AddDetailLabel(content.transform, pair, 28, C_HEADER_TIER, FontStyles.Bold, 38f);
+            AddDetailLabel(content.transform, $"#{puzzle.puzzleId:000} · {puzzle.optimalSteps} steps optimal",
+                15, C_SUBTITLE, FontStyles.Normal, 20f);
+
+            // (A) Best solve.
+            AddDetailLabel(content.transform, "YOUR BEST SOLVE", 15, C_GOLD, FontStyles.Bold, 20f);
+            string[] best = record != null ? record.bestSolvePath : null;
+            bool isPerfect = best != null && best.Length > 0 && (best.Length - 1) == puzzle.optimalSteps;
+            if (best != null && best.Length > 0)
+            {
+                AddWordRow(content.transform, best, _ => C_BEST_WORD, null, animate: false);
+                int steps = best.Length - 1;
+                string sub = isPerfect ? "Perfect — optimal length!" : $"{steps} steps";
+                AddDetailLabel(content.transform, sub, 15,
+                    isPerfect ? C_PERFECT_TXT : C_SUBTITLE, FontStyles.Italic, 20f);
+            }
+            else
+            {
+                // Graceful degrade: beaten on an OLD save (pre-Path-View) with no stored best.
+                AddDetailLabel(content.transform, "Replay to record your best route.",
+                    15, C_SUBTITLE, FontStyles.Italic, 20f);
+            }
+
+            // (B) Optimal path — revealed slots vs blanks.
+            AddDetailLabel(content.transform, "OPTIMAL PATH", 15, C_GOLD, FontStyles.Bold, 20f);
+            string[] solution = puzzle.solution ?? Array.Empty<string>();
+            var revealed = new HashSet<int>();
+            if (record != null && record.revealedOptimalIndices != null)
+                foreach (var i in record.revealedOptimalIndices) revealed.Add(i);
+            AddWordRow(content.transform, solution,
+                i => revealed.Contains(i) ? C_SLOT_REVEALED : C_SLOT_BLANK_TXT,
+                i => revealed.Contains(i),
+                animate: true);
+            int revealedCount = 0;
+            for (int i = 0; i < solution.Length; i++) if (revealed.Contains(i)) revealedCount++;
+            AddDetailLabel(content.transform, $"{revealedCount}/{solution.Length} revealed",
+                15, C_SUBTITLE, FontStyles.Normal, 20f);
+
+            // Replay button (reuses the existing launch path — no spoiler concern; already beaten).
+            AddReplayButton(content.transform, puzzle.puzzleId);
+
+            // Entrance: gentle fade-in (ReduceMotion → instant inside PlayScreenEntrance).
+            UIAnimations.PlayScreenEntrance(this);
+        }
+
+        private void ClosePathDetail()
+        {
+            if (detailOverlay != null) { Destroy(detailOverlay); detailOverlay = null; }
+        }
+
+        // A single row of word "slots". Each slot is a bordered box; revealed/known words show text,
+        // blanks show "_ _ _" sized to the word length. ReduceMotion-gated subtle reveal animation.
+        private void AddWordRow(Transform parent, string[] words, Func<int, Color> textColor,
+            Func<int, bool> isRevealed, bool animate)
+        {
+            var rowGo = new GameObject("WordRow", typeof(RectTransform));
+            rowGo.transform.SetParent(parent, false);
+            var le = rowGo.AddComponent<LayoutElement>();
+            le.minHeight = 52f; le.flexibleWidth = 1f;
+            var hlg = rowGo.AddComponent<HorizontalLayoutGroup>();
+            hlg.spacing = 8f;
+            hlg.childAlignment = TextAnchor.MiddleCenter;
+            hlg.childControlWidth = true; hlg.childControlHeight = true;
+            hlg.childForceExpandWidth = false; hlg.childForceExpandHeight = false;
+            var fitter = rowGo.AddComponent<ContentSizeFitter>();
+            fitter.horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
+            fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+            if (words == null) return;
+            for (int i = 0; i < words.Length; i++)
+            {
+                bool revealed = isRevealed == null || isRevealed(i);
+                string w = words[i] ?? "";
+                string shown = revealed
+                    ? w.ToUpper()
+                    : MakeBlank(w.Length);
+
+                var slot = new GameObject($"Slot_{i}", typeof(RectTransform));
+                slot.transform.SetParent(rowGo.transform, false);
+                var sle = slot.AddComponent<LayoutElement>();
+                sle.minHeight = 46f; sle.preferredHeight = 46f;
+                sle.minWidth = 44f;
+                var sImg = slot.AddComponent<Image>();
+                UIThemeManager.ApplyRoundedButton(sImg);
+                sImg.color = revealed ? C_SLOT_REVEALED : C_SLOT_BORDER;
+                sImg.raycastTarget = false;
+
+                var sFill = MakeFill(slot.transform, 3f);
+                var sFillImg = sFill.GetComponent<Image>();
+                UIThemeManager.ApplyRoundedButton(sFillImg);
+                sFillImg.color = C_SLOT_BG;
+
+                var txt = CreateText(sFill.transform, "Word", shown, 22,
+                    TextAlignmentOptions.Center, textColor != null ? textColor(i) : C_BEST_WORD,
+                    FontStyles.Bold);
+                txt.enableWordWrapping = false;
+                var padded = (RectTransform)txt.transform;
+                padded.offsetMin = new Vector2(8f, 2f); padded.offsetMax = new Vector2(-8f, -2f);
+
+                // ReduceMotion-gated reveal: revealed slots pop subtly in; blanks/static snap.
+                if (animate && revealed && !UIAnimations.ReduceMotion)
+                    StartCoroutine(AnimateSlotIn(slot.transform, i * 0.05f));
+            }
+        }
+
+        private IEnumerator AnimateSlotIn(Transform slot, float delay)
+        {
+            if (slot == null) yield break;
+            var rt = slot as RectTransform;
+            if (rt == null) yield break;
+            rt.localScale = new Vector3(0.6f, 0.6f, 1f);
+            float t = -delay;
+            const float dur = 0.18f;
+            while (t < dur)
+            {
+                t += Time.unscaledDeltaTime;
+                if (slot == null) yield break;
+                float p = Mathf.Clamp01(t / dur);
+                float e = 1f - (1f - p) * (1f - p); // ease-out-quad
+                rt.localScale = new Vector3(Mathf.Lerp(0.6f, 1f, e), Mathf.Lerp(0.6f, 1f, e), 1f);
+                yield return null;
+            }
+            rt.localScale = Vector3.one;
+        }
+
+        // ================================================================
+        //  Modern feel — staggered cascade entrance for cards/rows.
+        //  Each card fades + slides up a few px into place, delayed by its
+        //  index so the list/grid ripples in. ReduceMotion ⇒ instant (no
+        //  CanvasGroup left over). Coroutine/Mathf-only — no per-frame GC.
+        // ================================================================
+        private void PlayCardCascade(Transform card, int index)
+        {
+            if (card == null) return;
+            if (UIAnimations.ReduceMotion || !isActiveAndEnabled) return;
+            var cg = card.GetComponent<CanvasGroup>();
+            if (cg == null) cg = card.gameObject.AddComponent<CanvasGroup>();
+            StartCoroutine(CascadeIn(card as RectTransform, cg, index * 0.045f));
+        }
+
+        // Layout-safe entrance: animate ALPHA + a gentle scale rise only. Cards live inside
+        // Vertical/Grid LayoutGroups which own anchoredPosition, so we never touch position
+        // (that would fight the layout); localScale is untouched by layout, so it's safe.
+        private IEnumerator CascadeIn(RectTransform rt, CanvasGroup cg, float delay)
+        {
+            if (rt == null || cg == null) yield break;
+            cg.alpha = 0f;
+            rt.localScale = new Vector3(0.96f, 0.96f, 1f);
+
+            float t = -delay;
+            const float dur = 0.26f;
+            while (t < dur)
+            {
+                t += Time.unscaledDeltaTime;
+                if (rt == null || cg == null) yield break;
+                if (t < 0f) { yield return null; continue; }
+                float p = UIAnimations.EaseOutCubic(Mathf.Clamp01(t / dur));
+                cg.alpha = p;
+                float s = Mathf.Lerp(0.96f, 1f, p);
+                rt.localScale = new Vector3(s, s, 1f);
+                yield return null;
+            }
+            rt.localScale = Vector3.one;
+            cg.alpha = 1f;
+        }
+
+        private static string MakeBlank(int len)
+        {
+            if (len <= 0) len = 3;
+            var sb = new System.Text.StringBuilder();
+            for (int i = 0; i < len; i++) { if (i > 0) sb.Append(' '); sb.Append('_'); }
+            return sb.ToString();
+        }
+
+        private void AddDetailLabel(Transform parent, string text, float size, Color color,
+            FontStyles style, float height)
+        {
+            var go = new GameObject("Label", typeof(RectTransform));
+            go.transform.SetParent(parent, false);
+            var le = go.AddComponent<LayoutElement>();
+            le.minHeight = height; le.flexibleWidth = 1f;
+            var tmp = go.AddComponent<TextMeshProUGUI>();
+            tmp.text = text; tmp.fontSize = size; tmp.color = color;
+            tmp.alignment = TextAlignmentOptions.Center; tmp.fontStyle = style;
+            tmp.raycastTarget = false;
+            tmp.enableWordWrapping = true;       // Large-Text safe — wraps rather than clipping.
+            tmp.overflowMode = TextOverflowModes.Overflow;
+        }
+
+        private void AddReplayButton(Transform parent, int puzzleId)
+        {
+            var go = new GameObject("ReplayBtn", typeof(RectTransform));
+            go.transform.SetParent(parent, false);
+            var le = go.AddComponent<LayoutElement>();
+            le.minHeight = 56f; le.preferredHeight = 56f; le.flexibleWidth = 1f;
+            var img = go.AddComponent<Image>();
+            UIThemeManager.ApplyOutlineButton(img, new Color32(0x8A, 0x93, 0xA1, 0xFF));
+            var btn = go.AddComponent<Button>(); btn.transition = Selectable.Transition.None;
+            int captured = puzzleId;
+            btn.onClick.AddListener(() => { ClosePathDetail(); OnPuzzleSelected?.Invoke(captured); });
+            CreateText(go.transform, "ReplayLabel", "REPLAY", 22,
+                TextAlignmentOptions.Center, C_UNPLAYED_TEXT, FontStyles.Bold);
+        }
+
+        // Safe-area insets (left,bottom,right,top) in UI-space px relative to this Canvas. Returns
+        // zero when there's no inset or no canvas (Editor/Simulator without a notch).
+        private Vector4 GetSafeAreaInsets()
+        {
+            var canvas = GetComponentInParent<Canvas>();
+            if (canvas == null) return Vector4.zero;
+            var sa = Screen.safeArea;
+            float scale = canvas.scaleFactor <= 0f ? 1f : canvas.scaleFactor;
+            float left = sa.xMin / scale;
+            float bottom = sa.yMin / scale;
+            float right = (Screen.width - sa.xMax) / scale;
+            float top = (Screen.height - sa.yMax) / scale;
+            return new Vector4(Mathf.Max(0f, left), Mathf.Max(0f, bottom),
+                               Mathf.Max(0f, right), Mathf.Max(0f, top));
+        }
+
+        // ================================================================
         //  JSON wrapper types (mirror GameBootstrap's tier types)
         // ================================================================
         [Serializable] private class TierDefinitionsWrapper { public TierData[] tiers; }
         [Serializable] private class TierData { public int tierId; public bool isUnlocked; public PuzzleDefinition[] puzzles; }
-        [Serializable] private class PuzzleDefinition { public int puzzleId; public string startWord; public string endWord; public int optimalSteps; }
+        [Serializable] private class PuzzleDefinition { public int puzzleId; public string startWord; public string endWord; public int optimalSteps; public string[] solution; }
     }
 }

@@ -74,6 +74,11 @@ namespace WordPuzzle.Modes
         private readonly HashSet<int> completedPuzzleIds = new HashSet<int>();
         private readonly HashSet<int> inProgressPuzzleIds = new HashSet<int>();
 
+        // Library Path View — per-puzzle best-solve + revealed-optimal records, keyed by puzzleId.
+        // Loaded from / exported to PuzzleProgressData.puzzlePaths; updated on every solve via
+        // the pure PuzzlePathProgress folder. Display-only state; never affects the tier gate.
+        private readonly Dictionary<int, PuzzlePathRecord> pathRecords = new Dictionary<int, PuzzlePathRecord>();
+
         // Lookup of tier -> set of puzzleIds belonging to that tier. Populated by
         // SetTierPuzzleLookup (called by orchestrator after tier_definitions load).
         // Used to recompute PuzzlesCompletedInCurrentTier on tier advance / load.
@@ -140,6 +145,7 @@ namespace WordPuzzle.Modes
         {
             completedPuzzleIds.Clear();
             inProgressPuzzleIds.Clear();
+            pathRecords.Clear();
 
             if (data == null)
             {
@@ -156,6 +162,12 @@ namespace WordPuzzle.Modes
             if (data.inProgressPuzzleIds != null)
                 foreach (var id in data.inProgressPuzzleIds) inProgressPuzzleIds.Add(id);
 
+            // Library Path View — restore per-puzzle best-solve + revealed-optimal records.
+            // Old saves have a null/empty list (graceful default — nothing to restore).
+            if (data.puzzlePaths != null)
+                foreach (var rec in data.puzzlePaths)
+                    if (rec != null) pathRecords[rec.puzzleId] = rec;
+
             RecomputeCompletedInCurrentTier();
         }
 
@@ -166,9 +178,18 @@ namespace WordPuzzle.Modes
                 currentTier = currentTier,
                 completedPuzzleIds = new List<int>(completedPuzzleIds),
                 inProgressPuzzleIds = new List<int>(inProgressPuzzleIds),
+                puzzlePaths = new List<PuzzlePathRecord>(pathRecords.Values),
                 lastUpdated = DateTime.UtcNow.Ticks
             };
         }
+
+        /// <summary>
+        /// Library Path View — read-only access to a puzzle's stored path record (best solve +
+        /// revealed-optimal slots), or null if the player has no record yet. Used by the library
+        /// detail panel; display-only.
+        /// </summary>
+        public PuzzlePathRecord GetPathRecord(int puzzleId)
+            => pathRecords.TryGetValue(puzzleId, out var rec) ? rec : null;
 
         // -------- IGameMode --------
 
@@ -212,6 +233,12 @@ namespace WordPuzzle.Modes
         /// <summary>Spec §3.3 completion handling.</summary>
         private void OnPuzzleSolutionReached(int puzzleId)
         {
+            // Library Path View — fold THIS solve (the chain the player just built) into the
+            // per-puzzle record BEFORE firing OnPuzzleCompleted, so the orchestrator's
+            // ExportProgress() persists the updated best-solve + revealed-optimal slots.
+            // Runs on every solve AND replay (best only improves; reveals only grow).
+            UpdatePathRecordFromCurrentSolve(puzzleId);
+
             // §3.3.2 — dedup; §3.5 — replays don't increment.
             bool isNewCompletion = !completedPuzzleIds.Contains(puzzleId);
             if (isNewCompletion)
@@ -252,6 +279,26 @@ namespace WordPuzzle.Modes
                 }
                 // currentTier > MaxTier: silently no-op (already complete).
             }
+        }
+
+        // Library Path View — fold the player's current chain into the per-puzzle record using
+        // the pure PuzzlePathProgress logic. Reads the live chain + canonical solution from the
+        // GameStateManager / currentPuzzle (no scoring recompute). Display-only; safe if state is
+        // missing. par == optimalSteps (the stored solution is a genuine optimal path).
+        private void UpdatePathRecordFromCurrentSolve(int puzzleId)
+        {
+            if (stateManager == null || currentPuzzle == null) return;
+            var state = stateManager.GetCurrentState();
+            if (state == null || state.wordChain == null) return;
+
+            pathRecords.TryGetValue(puzzleId, out var existing);
+            var updated = PuzzlePathProgress.ApplySolve(
+                existing,
+                puzzleId,
+                state.wordChain,
+                currentPuzzle.solution,
+                currentPuzzle.optimalSteps);
+            pathRecords[puzzleId] = updated;
         }
 
         private bool PuzzleBelongsToTier(int puzzleId, int tier)

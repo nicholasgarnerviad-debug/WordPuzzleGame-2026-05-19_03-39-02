@@ -1,4 +1,6 @@
 using System;
+using System.Collections;
+using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -7,13 +9,19 @@ using WordPuzzle.Persistence;
 namespace WordPuzzle.UI
 {
     // -------------------------------------------------------------------------
-    //  StatsScreen  (Task 9F; rebuilt Task 38)
+    //  StatsScreen  (Task 9F; rebuilt Task 38; polished Task 40)
     //  Displays persisted player statistics in clean, grouped sections. A pure
     //  view-model struct (StatsViewModel) holds all data so QA can unit-test the
     //  number derivation without a MonoBehaviour. The VISUAL layout is built at
     //  RUNTIME from layout-group cards (the same code-driven approach as
     //  MainMenuScreen/ShopScreen) — auto-spaced, so there are no hand-placed
     //  positions to collide. The flat scene-authored labels are hidden.
+    //
+    //  Task 40 polish — on every open the cards REVEAL with a staggered fade +
+    //  scale-in, the numeric values COUNT UP from zero, and the hero day-streak
+    //  gives a brief gold pop. All motion is gated on UIAnimations.ReduceMotion
+    //  (instant final state when reduced) and is re-entrant: re-opening the
+    //  screen cleanly restarts the reveal without leftover coroutines.
     // -------------------------------------------------------------------------
 
     /// <summary>Pure, testable view-model for the stats screen. Build with <see cref="StatsScreen.BuildStatsViewModel"/>.</summary>
@@ -65,6 +73,25 @@ namespace WordPuzzle.UI
                          _classicPlayedVal, _classicWonVal, _taPlayedVal, _taBestVal, _overallText;
         private bool _built;
 
+        // ── Task 40 polish — reveal/count-up state ──────────────────────────────
+        // Cards (+ coin pill) animated in, in this order, by the staggered reveal.
+        private readonly List<RevealTarget> _revealTargets = new List<RevealTarget>();
+        private readonly List<Coroutine> _running = new List<Coroutine>();
+        private StatsViewModel _vm;   // last applied data — drives the count-up targets
+        private bool _hasData;
+
+        private struct RevealTarget
+        {
+            public CanvasGroup group;
+            public RectTransform rect;
+        }
+
+        // Reveal tuning — calm, premium (ease-out, no bounce).
+        private const float RevealStagger = 0.07f;   // delay between successive cards
+        private const float RevealDuration = 0.30f;   // per-card fade + scale-in
+        private const float CountUpDuration = 0.55f;   // numeric roll-up
+        private const float RevealStartScale = 0.94f;   // cards scale up from here
+
         private void OnEnable()
         {
             UIThemeManager.ApplyScreenBackground(gameObject); // shared true-black background
@@ -76,9 +103,16 @@ namespace WordPuzzle.UI
         {
             if (homeButton != null)
                 homeButton.onClick.RemoveListener(OnHomeClicked);
+            StopReveal();
         }
 
-        public void Show() => gameObject.SetActive(true);
+        public void Show()
+        {
+            gameObject.SetActive(true);
+            UIAnimations.PlayScreenEntrance(this);
+            PlayReveal(); // Task 40 — staggered card reveal + number count-ups
+        }
+
         public void Hide() => gameObject.SetActive(false);
 
         /// <summary>Build (once) the grouped layout, then display stats from persisted data. Null-safe.</summary>
@@ -86,6 +120,8 @@ namespace WordPuzzle.UI
         {
             var vm = BuildStatsViewModel(daily, player);
             EnsureBuilt();
+            _vm = vm;
+            _hasData = true;
             ApplyViewModel(vm);
         }
 
@@ -157,6 +193,135 @@ namespace WordPuzzle.UI
                     : $"{vm.totalPuzzlesCompleted} puzzles completed";
         }
 
+        // ── Task 40 — staggered reveal + number count-up ─────────────────────────
+
+        /// <summary>
+        /// Play the open animation: each card (and the coin pill) fades + scales in on a short stagger,
+        /// while its numeric values roll up from zero. Re-entrant (stops any prior reveal first) and
+        /// null/inactive-safe. ReduceMotion ⇒ snap to the final values instantly.
+        /// </summary>
+        private void PlayReveal()
+        {
+            if (!_built || !_hasData) return;
+
+            StopReveal();
+
+            // Reduced motion (or inactive host) — present the final state immediately.
+            if (UIAnimations.ReduceMotion || !isActiveAndEnabled)
+            {
+                ApplyViewModel(_vm);
+                foreach (var t in _revealTargets)
+                {
+                    if (t.group != null) t.group.alpha = 1f;
+                    if (t.rect  != null) t.rect.localScale = Vector3.one;
+                }
+                return;
+            }
+
+            // Stagger the cards in, kicking off each card's count-ups as it appears.
+            for (int i = 0; i < _revealTargets.Count; i++)
+            {
+                var t = _revealTargets[i];
+                if (t.group != null) t.group.alpha = 0f;
+                if (t.rect  != null) t.rect.localScale = Vector3.one * RevealStartScale;
+                _running.Add(StartCoroutine(RevealOne(t, i * RevealStagger)));
+            }
+
+            // Numeric roll-ups, phased to land with their owning card's reveal.
+            bool hasDaily = _vm.dailyGamesPlayed > 0;
+            QueueCount(_coinText, _vm.totalCoins, "N0", 0f);
+            QueueCount(_streakHero, _vm.currentStreak, null, RevealStagger);
+            QueueCount(_longestVal, _vm.longestStreak, null, RevealStagger);
+            if (hasDaily) QueueCount(_winRateVal, _vm.dailyWinRatePct, "0'%'", RevealStagger);
+            QueueCount(_classicPlayedVal, _vm.classicGamesPlayed, null, RevealStagger * 2f);
+            QueueCount(_classicWonVal,    _vm.classicGamesWon,    null, RevealStagger * 2f);
+            QueueCount(_taPlayedVal, _vm.timeAttackGamesPlayed, null, RevealStagger * 3f);
+            QueueCount(_taBestVal,   _vm.timeAttackBestRound,   null, RevealStagger * 3f);
+
+            // Hero day-streak gets a brief gold pop once it has finished counting.
+            if (_streakHero != null)
+                _running.Add(StartCoroutine(HeroPop((RectTransform)_streakHero.transform,
+                    RevealStagger + CountUpDuration)));
+        }
+
+        private void QueueCount(TMP_Text label, int target, string format, float delay)
+        {
+            if (label == null) return;
+            _running.Add(StartCoroutine(CountUp(label, target, format, delay)));
+        }
+
+        private void StopReveal()
+        {
+            for (int i = 0; i < _running.Count; i++)
+                if (_running[i] != null) StopCoroutine(_running[i]);
+            _running.Clear();
+        }
+
+        // Fade + scale a single card/pill into place (ease-out, non-bouncy).
+        private IEnumerator RevealOne(RevealTarget t, float delay)
+        {
+            if (delay > 0f) yield return new WaitForSecondsRealtime(delay);
+            float e = 0f;
+            while (e < RevealDuration)
+            {
+                e += Time.unscaledDeltaTime;
+                float p = UIAnimations.EaseOutCubic(Mathf.Clamp01(e / RevealDuration));
+                if (t.group != null) t.group.alpha = p;
+                if (t.rect  != null) t.rect.localScale = Vector3.one * Mathf.Lerp(RevealStartScale, 1f, p);
+                yield return null;
+            }
+            if (t.group != null) t.group.alpha = 1f;
+            if (t.rect  != null) t.rect.localScale = Vector3.one;
+        }
+
+        // Roll an integer label from 0 → target with an ease-out so it decelerates onto the final value.
+        private IEnumerator CountUp(TMP_Text label, int target, string format, float delay)
+        {
+            // Nothing to animate for zero — just show it (already applied) and bail.
+            if (target <= 0)
+            {
+                label.text = Format(0, format);
+                yield break;
+            }
+            label.text = Format(0, format);
+            if (delay > 0f) yield return new WaitForSecondsRealtime(delay);
+
+            float e = 0f;
+            while (e < CountUpDuration)
+            {
+                e += Time.unscaledDeltaTime;
+                float p = UIAnimations.EaseOutCubic(Mathf.Clamp01(e / CountUpDuration));
+                int v = Mathf.Clamp(Mathf.RoundToInt(target * p), 0, target);
+                label.text = Format(v, format);
+                yield return null;
+            }
+            label.text = Format(target, format);
+        }
+
+        private static string Format(int v, string format)
+            => string.IsNullOrEmpty(format) ? v.ToString() : v.ToString(format);
+
+        // Brief gold pop on the hero number (1.0 → 1.12 → 1.0, ease-out) for a satisfying landing.
+        private IEnumerator HeroPop(RectTransform rt, float delay)
+        {
+            if (rt == null) yield break;
+            if (delay > 0f) yield return new WaitForSecondsRealtime(delay);
+            const float dur = 0.20f, peak = 1.12f;
+            float e = 0f;
+            while (e < dur)
+            {
+                e += Time.unscaledDeltaTime;
+                float p = Mathf.Clamp01(e / dur);
+                // up then down — symmetric ease-out either side of the midpoint.
+                float s = p < 0.5f
+                    ? Mathf.Lerp(1f, peak, UIAnimations.EaseOutCubic(p / 0.5f))
+                    : Mathf.Lerp(peak, 1f, UIAnimations.EaseOutCubic((p - 0.5f) / 0.5f));
+                rt.localScale = Vector3.one * s;
+                yield return null;
+            }
+            rt.localScale = Vector3.one;
+        }
+
         // ── Runtime layout (built once) ──────────────────────────────────────────
         private void EnsureBuilt()
         {
@@ -211,6 +376,8 @@ namespace WordPuzzle.UI
             var dle = token.AddComponent<LayoutElement>(); dle.preferredWidth = 26f; dle.preferredHeight = 26f;
 
             _coinText = MakeText(go.transform, "0", 30f, GameAccents.Gold, FontStyles.Bold, TextAlignmentOptions.Center);
+
+            RegisterReveal(go); // coin pill reveals first
         }
 
         // Centered, top-anchored vertical stack of grouped cards (auto-spaced — no manual positions).
@@ -241,6 +408,7 @@ namespace WordPuzzle.UI
             _longestVal = MakeStatCell(tri, "LONGEST");
             _winRateVal = MakeStatCell(tri, "WIN %");
             _wlVal      = MakeStatCell(tri, "W–L");
+            RegisterReveal(daily.gameObject);
 
             // CLASSIC + TIME ATTACK side-by-side.
             var modeRow = MakeHRow(content, 196f, true);
@@ -248,17 +416,31 @@ namespace WordPuzzle.UI
             CardHeader(classic, "CLASSIC");
             _classicPlayedVal = MakeKeyVal(classic, "Played");
             _classicWonVal    = MakeKeyVal(classic, "Won");
+            RegisterReveal(classic.gameObject);
             var timeAttack = MakeCard(modeRow, 196f);
             CardHeader(timeAttack, "TIME ATTACK");
             _taPlayedVal = MakeKeyVal(timeAttack, "Played");
             _taBestVal   = MakeKeyVal(timeAttack, "Best round");
+            RegisterReveal(timeAttack.gameObject);
 
             // OVERALL footer.
             _overallText = MakeText(content, "0 puzzles completed", 24f, MenuPalette.SecondaryBorder, FontStyles.Normal, TextAlignmentOptions.Center);
             _overallText.gameObject.AddComponent<LayoutElement>().minHeight = 40f;
+            RegisterReveal(_overallText.gameObject);
         }
 
         // ── tiny builders (mirror ShopScreen) ────────────────────────────────────
+
+        // Task 40 — register a built element as a staggered-reveal target. Ensures a CanvasGroup
+        // (for the fade) and caches the RectTransform (for the scale-in). Order of calls == reveal order.
+        private void RegisterReveal(GameObject go)
+        {
+            if (go == null) return;
+            var cg = go.GetComponent<CanvasGroup>();
+            if (cg == null) cg = go.AddComponent<CanvasGroup>();
+            _revealTargets.Add(new RevealTarget { group = cg, rect = (RectTransform)go.transform });
+        }
+
         private RectTransform MakeCard(Transform parent, float fixedHeight)
         {
             var go = new GameObject("Card", typeof(RectTransform), typeof(Image), typeof(VerticalLayoutGroup), typeof(LayoutElement));
@@ -310,6 +492,7 @@ namespace WordPuzzle.UI
         }
 
         // A "Caption ........ Value" row (muted caption left, prominent value right); returns the VALUE label.
+        // Task 40 — values use the gold in-game accent so the numbers read as the focal point of each card.
         private TMP_Text MakeKeyVal(Transform card, string caption)
         {
             var row = new GameObject("KV", typeof(RectTransform), typeof(HorizontalLayoutGroup), typeof(LayoutElement));
@@ -321,7 +504,7 @@ namespace WordPuzzle.UI
             row.GetComponent<LayoutElement>().minHeight = 44f;
             var cap = MakeText(row.transform, caption, 24f, MenuPalette.SecondaryBorder, FontStyles.Normal, TextAlignmentOptions.Left);
             cap.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
-            var val = MakeText(row.transform, "0", 30f, MenuPalette.SecondaryLabel, FontStyles.Bold, TextAlignmentOptions.Right);
+            var val = MakeText(row.transform, "0", 30f, GameAccents.Gold, FontStyles.Bold, TextAlignmentOptions.Right);
             var vle = val.gameObject.AddComponent<LayoutElement>(); vle.preferredWidth = 100f; vle.flexibleWidth = 0f;
             return val;
         }

@@ -96,7 +96,7 @@ namespace WordPuzzle.UI
             }
         }
 
-        public void Show() => gameObject.SetActive(true);
+        public void Show() { gameObject.SetActive(true); UIAnimations.PlayScreenEntrance(this); }
         public void Hide() => gameObject.SetActive(false);
 
         /// <summary>

@@ -62,6 +62,7 @@ namespace WordPuzzle.UI
             transform.SetAsLastSibling();      // cover the gear + coin pill + menu behind it
             EnsureBuilt();
             Rebuild();
+            UIAnimations.PlayScreenEntrance(this); // modern feel — gentle fade-in on open (ReduceMotion-gated)
         }
 
         public void Close()

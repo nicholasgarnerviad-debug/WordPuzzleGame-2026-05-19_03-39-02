@@ -182,6 +182,8 @@ namespace WordPuzzle.Persistence
         if (data == null) data = new PuzzleProgressData();
         if (data.completedPuzzleIds == null) data.completedPuzzleIds = new System.Collections.Generic.List<int>();
         if (data.inProgressPuzzleIds == null) data.inProgressPuzzleIds = new System.Collections.Generic.List<int>();
+        // Library Path View — old saves predate puzzlePaths; JsonUtility leaves it null. Default clean.
+        if (data.puzzlePaths == null) data.puzzlePaths = new System.Collections.Generic.List<PuzzlePathRecord>();
         if (data.currentTier < 1) data.currentTier = 1;
 
         puzzleProgress = data;

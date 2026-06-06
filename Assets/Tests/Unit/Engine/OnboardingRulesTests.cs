@@ -53,4 +53,13 @@ public class OnboardingRulesTests
         Assert.IsFalse(reset.skipped);
         Assert.IsTrue(OnboardingRules.ShouldRouteToTutorial(reset));
     }
+
+    [Test]
+    public void AppClosedMidTutorial_NotCompleted_StillOffersOnRelaunch()
+    {
+        // Closing the app mid-tutorial persists nothing new -> still !completed -> the welcome offer
+        // (ShouldRouteToTutorial) returns true again next launch. No half-state; no nag after completion.
+        var d = new OnboardingData(); // started, but neither completed nor skipped
+        Assert.IsTrue(OnboardingRules.ShouldRouteToTutorial(d));
+    }
 }

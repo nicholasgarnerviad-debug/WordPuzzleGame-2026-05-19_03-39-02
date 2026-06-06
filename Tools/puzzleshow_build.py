@@ -1,20 +1,24 @@
 #!/usr/bin/env python3
 """
-puzzleshow_build.py  --  TASK 15A reproducible Puzzle Show tier generator + validator.
+puzzleshow_build.py  --  reproducible Puzzle Show tier generator + validator.
 
 NOT shipped (lives under Tools/, outside Assets/). Re-runnable and deterministic
 (seeded RNG): regenerates Assets/Resources/Data/tier_definitions.json as
-7 tiers x 50 = 350 curated word-ladder puzzles following a length/step difficulty curve.
+7 tiers x 100 = 700 curated word-ladder puzzles following a length/step difficulty curve.
 
 Every puzzle:
   * draws start/end (and intermediates) from common_words.json (fair, well-known)
-  * is the SHORTEST Hamming-1 path (BFS) at the intended length  -> solvable by construction
-  * has optimalSteps == len(solution) - 1, within the tier's step band
+  * stores a SHORTEST Hamming-1 path whose length equals the TRUE full-dictionary
+    shortest distance  -> solution length == optimalSteps == true shortest (no shortcut)
+  * has optimalSteps within the tier's step band, and >= the per-length min-move floor
   * is unique within its tier (no repeated start/end pair)
   * uses only words present in word_library.json (the validator dictionary)
+  * has >= 2 DISTINCT optimal-length routes through the FULL dictionary graph
+    (the "multiple ways to solve" guarantee; single-route pairs are flagged & skipped)
 
-The tool FAILS LOUDLY (exit 1) on any unsolvable / duplicate / out-of-length / out-of-band
-entry, and prints a per-tier report. Schema preserved exactly for the JsonUtility loaders
+The tool FAILS LOUDLY (exit 1) on any unsolvable / duplicate / out-of-length / out-of-band /
+single-route entry, and prints a per-tier report incl. how many single-route candidates were
+rejected/replaced. Schema preserved exactly for the JsonUtility loaders
 (GameBootstrap.LoadTierData + PuzzleLibraryScreen):
   {"tiers":[{"tierId","isUnlocked","unlockedTimestamp",
              "puzzles":[{"puzzleId","startWord","endWord","optimalSteps","solution":[...],"seedValue"}]}]}
@@ -23,16 +27,23 @@ Usage:  python Tools/puzzleshow_build.py            (writes file + report)
         python Tools/puzzleshow_build.py --dry-run  (report only)
 """
 import os, sys, json, random, collections
+from collections import deque
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 DATA = os.path.normpath(os.path.join(HERE, "..", "Assets", "Resources", "Data"))
 
-PUZZLES_PER_TIER = 50
+PUZZLES_PER_TIER = 100
+TIER_TOTAL = 700
 GLOBAL_SEED = 1515
 
+# Bounded enumeration cap for the distinct-optimal-route counter. We only need to prove
+# ">= 2", so any count is clamped here — keeps the DAG path-DP from producing huge integers
+# on highly-connected short words without changing the >=2 decision.
+ROUTE_COUNT_CAP = 256
+
 # (tierId): (lengths, min_steps, max_steps). Mixed-length tiers split evenly.
-# Density verified (Task 15 PLAN): common-word ladders exist in abundance at every (len, step).
-# Task 17 — every tier's MIN now meets max(2, length-curve): 3,4-letter >=2; 5,6-letter >=3; 7-letter >=4.
+# Density verified: common-word ladders exist in abundance at every (len, step).
+# Every tier's MIN meets max(2, length-curve): 3,4-letter >=2; 5,6-letter >=3; 7-letter >=4.
 TIER_CURVE = {
     1: ([3],    2, 3),
     2: ([4],    2, 3),
@@ -42,6 +53,14 @@ TIER_CURVE = {
     6: ([6, 7], 4, 6),
     7: ([7],    4, 8),   # hardest — skewed toward 6/7/8-step ladders
 }
+
+# Per-tier endpoint-reuse cap (how many times a single word may serve as a start OR end across
+# the tier). Tier 1 has only ~890 three-letter words, so without a cap the 100 puzzles cluster on
+# the same common letter-swap families (cat/cot/cog ...). Cap=2 forces distinct start/end families
+# while still leaving ample headroom (100 puzzles -> >=100 distinct endpoint words out of 890).
+# Other tiers have thousands of words per length and stay uncapped.
+ENDPOINT_USE_CAP = {1: 2}
+
 
 # Task 17 — length → minimum TRUE-shortest moves (mirror of BalanceConfig.MinMovesForLength).
 def min_moves_for_length(L):
@@ -76,7 +95,7 @@ def build_graph(words):
 
 
 def bfs_paths(adj, start, max_depth):
-    """BFS from start; return {word: shortest_path_list} up to max_depth."""
+    """BFS from start; return {word: shortest_path_list} up to max_depth (common graph)."""
     paths = {start: [start]}
     frontier = [start]
     d = 0
@@ -96,42 +115,58 @@ def hamming1(a, b):
     return len(a) == len(b) and sum(1 for x, y in zip(a, b) if x != y) == 1
 
 
-def bfs_dist(adj, s, e, cap):
-    """True shortest edit distance over a (full-dictionary) graph; -1 if > cap / unreachable."""
+def count_optimal_routes(adj, s, e, cap=ROUTE_COUNT_CAP):
+    """Over the FULL-dictionary graph, return (num_distinct_shortest_paths, shortest_distance).
+
+    Single bounded BFS + DAG path-count DP: each node records its shortest distance and the
+    number of shortest paths reaching it (clamped to `cap`). Exploration stops past the layer
+    in which `e` is first found, so it never explodes. distance == -1 if e is unreachable.
+    'Distinct' = different word sequences of optimal length (standard shortest-path count)."""
     if s == e:
-        return 0
-    seen = {s}
-    frontier = [s]
-    d = 0
-    while frontier and d < cap:
-        d += 1
-        nxt = []
-        for u in frontier:
-            for v in adj[u]:
+        return 1, 0
+    dist = {s: 0}
+    npaths = {s: 1}
+    q = deque([s])
+    target = None
+    while q:
+        u = q.popleft()
+        du = dist[u]
+        if target is not None and du >= target:
+            continue
+        for v in adj[u]:
+            if v not in dist:
+                dist[v] = du + 1
+                npaths[v] = npaths[u]
                 if v == e:
-                    return d
-                if v not in seen:
-                    seen.add(v)
-                    nxt.append(v)
-        frontier = nxt
-    return -1
+                    target = dist[v]
+                q.append(v)
+            elif dist[v] == du + 1:
+                npaths[v] = min(cap, npaths[v] + npaths[u])
+    return npaths.get(e, 0), dist.get(e, -1)
 
 
 def gen_tier(tier_id, lengths, lo, hi, common_by_len, full_by_len, rng):
-    """Generate PUZZLES_PER_TIER unique shortest-path ladders for one tier."""
-    # Spread targets evenly across the band so harder tiers include their longest ladders.
+    """Generate PUZZLES_PER_TIER unique shortest-path ladders for one tier.
+
+    Returns (puzzles, single_route_rejected) where single_route_rejected counts otherwise-valid
+    candidate pairs discarded purely because they had only ONE optimal route (i.e. would have
+    been forced single-path puzzles), so the caller can report how many were flagged/replaced."""
     band = list(range(lo, hi + 1))
     # split count across the tier's lengths
     per_len = [PUZZLES_PER_TIER // len(lengths)] * len(lengths)
     for i in range(PUZZLES_PER_TIER - sum(per_len)):
         per_len[i] += 1
 
+    ep_cap = ENDPOINT_USE_CAP.get(tier_id)        # None => uncapped
+    endpoint_use = collections.Counter()
+    single_route_rejected = 0
+
     out = []
     used_pairs = set()
     for li, L in enumerate(lengths):
         words = common_by_len[L]
         adj = build_graph(words)
-        full_adj = full_by_len[L]                 # full-dictionary graph for true-distance checks
+        full_adj = full_by_len[L]                 # full-dictionary graph for true-distance + routes
         floor = min_moves_for_length(L)
         starts = [w for w in words if adj[w]]
         want = per_len[li]
@@ -140,30 +175,45 @@ def gen_tier(tier_id, lengths, lo, hi, common_by_len, full_by_len, rng):
         ti = 0
         while made < want:
             attempts += 1
-            if attempts > want * 4000:
-                raise RuntimeError(f"Tier {tier_id} len{L}: only made {made}/{want} (density?)")
+            if attempts > want * 8000:
+                raise RuntimeError(
+                    f"Tier {tier_id} len{L}: only made {made}/{want} "
+                    f"(density/route/variety constraints too tight?)")
             target = band[ti % len(band)]
             s = rng.choice(starts)
+            if ep_cap is not None and endpoint_use[s] >= ep_cap:
+                continue
             paths = bfs_paths(adj, s, target)
             cands = [w for w, p in paths.items() if len(p) - 1 == target]
+            if ep_cap is not None:
+                cands = [w for w in cands if endpoint_use[w] < ep_cap and w != s]
             if not cands:
                 continue
             e = rng.choice(cands)
             key = (s, e)
             if key in used_pairs or (e, s) in used_pairs:
                 continue
-            # Task 17 — reject any pair with a true full-dictionary shortcut below the floor
-            # (a "looks like N moves" puzzle that is really solvable in fewer).
-            true_d = bfs_dist(full_adj, s, e, hi)
+            # FULL-dictionary truth: distinct optimal routes + true shortest distance in ONE pass.
+            nroutes, true_d = count_optimal_routes(full_adj, s, e)
+            # Stored solution must BE a true optimal path: its length (target) must equal the
+            # true full-dictionary shortest distance (reject "looks like N, really fewer" shortcuts).
+            if true_d != target:
+                continue
             if true_d < floor:
                 continue
-            sol = paths[e]
+            # The new GUARANTEE: every puzzle must have >= 2 distinct optimal-length routes.
+            if nroutes < 2:
+                single_route_rejected += 1
+                continue
+            sol = paths[e]                        # canonical path: deterministic common-graph BFS
             used_pairs.add(key)
+            endpoint_use[s] += 1
+            endpoint_use[e] += 1
             out.append((s, e, sol))
             made += 1
             ti += 1
     rng.shuffle(out)
-    return out
+    return out, single_route_rejected
 
 
 def main():
@@ -174,7 +224,7 @@ def main():
     for w in common:
         common_by_len[len(w)].append(w)
 
-    # Full-dictionary graphs per length — used to verify TRUE shortest distance (Task 17).
+    # Full-dictionary graphs per length — used to verify TRUE shortest distance + count routes.
     lib_by_len = collections.defaultdict(list)
     for w in library:
         lib_by_len[len(w)].append(w)
@@ -186,11 +236,13 @@ def main():
     tiers_json = []
     failures = []
     report = []
+    total_single_rejected = 0
     pid = 0
     for tier_id in range(1, 8):
         lengths, lo, hi = TIER_CURVE[tier_id]
         rng = random.Random(GLOBAL_SEED + tier_id)
-        puzzles = gen_tier(tier_id, lengths, lo, hi, common_by_len, full_by_len, rng)
+        puzzles, single_rej = gen_tier(tier_id, lengths, lo, hi, common_by_len, full_by_len, rng)
+        total_single_rejected += single_rej
 
         pj = []
         steps_seen = []
@@ -215,6 +267,12 @@ def main():
             for w in sol:
                 if w not in library:
                     failures.append(f"tier{tier_id} #{pid} word '{w}' not in dictionary")
+            # re-confirm the >=2-route + true-distance guarantee on the FULL graph
+            nroutes, true_d = count_optimal_routes(full_by_len[len(s)], s, e)
+            if true_d != steps:
+                failures.append(f"tier{tier_id} #{pid} optimalSteps {steps} != true dist {true_d}")
+            if nroutes < 2:
+                failures.append(f"tier{tier_id} #{pid} only {nroutes} optimal route(s) (need >=2)")
             pj.append({
                 "puzzleId": pid,
                 "startWord": s,
@@ -230,7 +288,8 @@ def main():
             "puzzles": pj,
         })
         dist = dict(sorted(collections.Counter(steps_seen).items()))
-        report.append(f"  Tier {tier_id}: len{lengths} band[{lo},{hi}]  n={len(pj)}  step-dist={dist}")
+        report.append(f"  Tier {tier_id}: len{lengths} band[{lo},{hi}]  n={len(pj)}  "
+                      f"step-dist={dist}  single-route-rejected={single_rej}")
 
     print("\nGenerated tiers:")
     print("\n".join(report))
@@ -243,8 +302,9 @@ def main():
             failures.append(f"min steps decreased at tier {i+1}: {min_steps}")
 
     total = sum(len(t["puzzles"]) for t in tiers_json)
-    print(f"\nTOTAL puzzles: {total} (expect 350)")
-    if total != 350 or any(len(t["puzzles"]) != 50 for t in tiers_json):
+    print(f"\nTOTAL puzzles: {total} (expect {TIER_TOTAL})")
+    print(f"Single-route candidates flagged & replaced across all tiers: {total_single_rejected}")
+    if total != TIER_TOTAL or any(len(t["puzzles"]) != PUZZLES_PER_TIER for t in tiers_json):
         failures.append("tier/puzzle counts wrong")
 
     if failures:
@@ -252,7 +312,8 @@ def main():
         for f in failures[:30]:
             print("   ", f)
         sys.exit(1)
-    print("\nValidation: all 350 puzzles solvable, Hamming-1, in-dictionary, unique, in-band.")
+    print(f"\nValidation: all {TIER_TOTAL} puzzles solvable, Hamming-1, in-dictionary, unique, "
+          f"in-band, true-shortest, and >=2 optimal routes.")
 
     if dry:
         print("\n--dry-run: no file written.")
@@ -261,7 +322,7 @@ def main():
     with open(os.path.join(DATA, "tier_definitions.json"), "w", encoding="utf-8", newline="\n") as f:
         json.dump(out, f, indent=2)
         f.write("\n")
-    print("\nWrote tier_definitions.json (7 tiers x 50 = 350).")
+    print(f"\nWrote tier_definitions.json (7 tiers x {PUZZLES_PER_TIER} = {TIER_TOTAL}).")
 
 
 if __name__ == "__main__":

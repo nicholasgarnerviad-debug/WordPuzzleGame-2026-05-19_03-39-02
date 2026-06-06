@@ -5,10 +5,10 @@
   <Project Path="Assembly-CSharp.csproj" />
   <Project Path="Game.Puzzle.csproj" />
   <Project Path="Game.UI.csproj" />
+  <Project Path="Game.Persistence.csproj" />
   <Project Path="GoogleMobileAds.Editor.csproj" />
   <Project Path="Game.Bootstrap.csproj" />
   <Project Path="Game.Modes.csproj" />
-  <Project Path="Game.Persistence.csproj" />
   <Project Path="Tests.csproj" />
   <Project Path="Integration.Tests.csproj" />
   <Project Path="Utils.csproj" />

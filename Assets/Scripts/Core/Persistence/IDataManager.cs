@@ -70,6 +70,33 @@ namespace WordPuzzle.Persistence
         public List<int> inProgressPuzzleIds = new List<int>();  // started but not finished
         public long lastUpdated;
 
+        // Task: Library Path View — per-puzzle best-solve + progressively-revealed optimal path.
+        // JsonUtility auto-defaults this to an empty list for OLD saves (no migration code needed):
+        // a previously-beaten puzzle with no record simply shows nothing extra until next played.
+        public List<PuzzlePathRecord> puzzlePaths = new List<PuzzlePathRecord>();
+
         public PuzzleProgressData() { }
+    }
+
+    /// <summary>
+    /// Library Path View per-puzzle state (one per beaten Puzzle Show puzzle).
+    ///   (A) bestSolvePath — the full word sequence of the player's BEST attempt
+    ///       ("best" = fewest steps == fewest detours, since par == optimalSteps). Only
+    ///       ever IMPROVES: a strictly-shorter replay replaces it; a worse replay changes nothing.
+    ///   (B) revealedOptimalIndices — the accumulating set of canonical-solution slots the
+    ///       player has matched (word + position). Unions on each solve; NEVER shrinks. A
+    ///       perfect/optimal-length solve auto-reveals every slot (confirmed design decision).
+    /// All fields are JsonUtility-friendly (no nullable structs); the pure update logic lives
+    /// in <see cref="PuzzlePathProgress"/>.
+    /// </summary>
+    [Serializable]
+    public class PuzzlePathRecord
+    {
+        public int puzzleId;
+        public string[] bestSolvePath = System.Array.Empty<string>();
+        public int bestSolveSteps = int.MaxValue;          // chain.Count-1; LOWER is better. MaxValue == unset.
+        public List<int> revealedOptimalIndices = new List<int>();
+
+        public PuzzlePathRecord() { }
     }
 }

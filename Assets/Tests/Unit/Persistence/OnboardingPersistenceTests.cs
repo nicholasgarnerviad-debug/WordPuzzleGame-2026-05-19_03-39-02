@@ -43,4 +43,22 @@ public class OnboardingPersistenceTests
         Assert.IsTrue(loaded.completed);
         Assert.IsTrue(loaded.skipped);
     }
+
+    [Test]
+    public async Task ResetProgress_DoesNotClearOnboarding()
+    {
+        // Reset Progress (ResetAllAsync) wipes gameplay/economy progress but must PRESERVE the
+        // tutorial-seen flag — only Replay Tutorial (OnboardingRules.Reset) clears it.
+        var saver = new DataManager();
+        await saver.SaveOnboardingAsync(new OnboardingData { completed = true, skipped = true });
+
+        await saver.ResetAllAsync();
+
+        var loader = new DataManager();
+        var loaded = await loader.LoadOnboardingAsync();
+
+        Assert.IsNotNull(loaded);
+        Assert.IsTrue(loaded.completed, "Reset Progress must NOT clear the tutorial-seen flag.");
+        Assert.IsTrue(loaded.skipped);
+    }
 }
