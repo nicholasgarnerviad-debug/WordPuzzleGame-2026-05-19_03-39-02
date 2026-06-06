@@ -127,9 +127,9 @@ namespace WordPuzzle.UI
             StyleMenuButton(classicModeButton, MenuPalette.ClassicFill,    MenuPalette.ClassicLabel,    FONT_MODE, bold: true);
             StyleMenuButton(puzzleShowButton,  MenuPalette.PuzzleShowFill, MenuPalette.PuzzleShowLabel, FONT_MODE, bold: true);
             StyleMenuButton(timeAttackButton,  MenuPalette.TimeAttackFill, MenuPalette.TimeAttackLabel, FONT_MODE, bold: true);
-            StyleMenuButton(libraryButton,     MenuPalette.SecondaryBorder, MenuPalette.SecondaryLabel, FONT_TERT, bold: false);
-            StyleMenuButton(statsButton,       MenuPalette.SecondaryBorder, MenuPalette.SecondaryLabel, FONT_TERT, bold: false);
-            StyleMenuButton(settingsButton,    MenuPalette.SecondaryBorder, MenuPalette.SecondaryLabel, FONT_TERT, bold: false);
+            StyleMenuButton(libraryButton,     MenuPalette.SecondaryBorder, MenuPalette.SecondaryLabel, FONT_TERT, bold: false, primary: false);
+            StyleMenuButton(statsButton,       MenuPalette.SecondaryBorder, MenuPalette.SecondaryLabel, FONT_TERT, bold: false, primary: false);
+            StyleMenuButton(settingsButton,    MenuPalette.SecondaryBorder, MenuPalette.SecondaryLabel, FONT_TERT, bold: false, primary: false);
 
             // Settings now lives in the shared top-right gear (UIManager.CreateGlobalSettingsButton),
             // so remove the bottom-row Settings from the menu — the tertiary row is Library + Stats.
@@ -157,12 +157,15 @@ namespace WordPuzzle.UI
         // Task 25 — render a button as a coloured rounded OUTLINE (transparent centre over black).
         // `color` is the border colour (its existing identity colour); `hero` adds a faint fill wash so
         // Daily still reads as the primary action. Visual only; never touches onClick/routing.
-        private static void StyleMenuButton(Button btn, Color color, Color labelColor, float fontSize, bool bold, bool hero = false)
+        private static void StyleMenuButton(Button btn, Color color, Color labelColor, float fontSize, bool bold, bool hero = false, bool primary = true)
         {
             if (btn == null) return;
             var img = btn.GetComponent<Image>();
-            if (hero) UIThemeManager.ApplyHeroOutlineButton(img, color);
-            else      UIThemeManager.ApplyOutlineButton(img, color);
+            // Unify the PRIMARY stack onto ONE shared style (Daily's thicker ring; uniform size comes from
+            // ArrangeMenu), so every primary button reads as one set and can't drift — Daily is the hero ONLY
+            // via its brighter glow. Secondary chrome (Library/Stats) keeps the thinner ring + smaller size.
+            if (primary) UIThemeManager.ApplyPrimaryMenuButton(img, color, heroGlow: hero);
+            else         UIThemeManager.ApplyOutlineButton(img, color);
 
             // Task 24 — neutralise the scene's inconsistent per-button ColorBlock. Some menu buttons
             // were authored with a DARK normalColor which (via ColorTint) multiplied the fill down to

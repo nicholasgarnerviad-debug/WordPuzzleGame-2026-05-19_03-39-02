@@ -574,6 +574,18 @@ public static class UIThemeManager
     /// back to the normal ring. Visual only; removes any leftover faint-fill ring child from the old style.
     /// </summary>
     public static void ApplyHeroOutlineButton(UnityEngine.UI.Image img, UnityEngine.Color borderColor)
+        => ApplyPrimaryMenuButton(img, borderColor, heroGlow: true);
+
+    /// <summary>
+    /// Shared PRIMARY menu-button style — the ONE outline geometry every primary-stack button (Daily,
+    /// Classic, Puzzle Show, Time Attack, Resume) uses, so they read as one consistent set and cannot drift
+    /// apart: the SAME thicker hero ring sprite (stroke + 44px corner) over a transparent centre. The only
+    /// hero distinction is the GLOW — <paramref name="heroGlow"/> true = the brighter Daily glow, false = the
+    /// standard glow. SIZE/position come from the menu layout (ArrangeMenu), not here; this only sets the
+    /// sprite/stroke/colour/glow. Visual only; removes any leftover faint-fill ring child; leaves raycast +
+    /// children (labels/icons) untouched.
+    /// </summary>
+    public static void ApplyPrimaryMenuButton(UnityEngine.UI.Image img, UnityEngine.Color borderColor, bool heroGlow)
     {
         if (img == null) return;
         var ring = HeroOutlineButtonSprite != null ? HeroOutlineButtonSprite : OutlineButtonSprite;
@@ -582,7 +594,7 @@ public static class UIThemeManager
         img.pixelsPerUnitMultiplier = 1f;
         img.color = borderColor;
         RemoveRingChild(img.transform); // drop the old faint-fill ring child if it exists
-        ApplyNeonGlow(img, borderColor, hero: true); // Polish — stronger neon halo for the hero action (Daily).
+        ApplyNeonGlow(img, borderColor, hero: heroGlow);
     }
 
     private static void RemoveRingChild(UnityEngine.Transform parent)
@@ -615,9 +627,13 @@ public static class UIThemeManager
     private const float GlowScaleHero   = 1f;
     // Per-copy alpha. MANY faint copies (GlowSamples) build the perceived
     // glow. At the tight radius the copies sit right on the stroke, so the
-    // line reads luminous. Hero is a touch brighter for primary emphasis.
-    private const float GlowAlphaNormal = 0.14f;
-    private const float GlowAlphaHero   = 0.22f;
+    // line reads luminous. EVERY menu/mode button now carries the standard
+    // glow (tinted to its own outline token); Daily is the HERO — a notch
+    // brighter so it clearly leads while the rest stay present-but-gentler.
+    // Two named intensities, tunable; raising these does NOT widen the glow
+    // (radius/scale stay fixed), so it stays a TIGHT soft glow, not a halo.
+    private const float GlowAlphaNormal = 0.22f; // standard — clearly present soft glow (was 0.14, too faint to read)
+    private const float GlowAlphaHero   = 0.32f; // Daily hero — a notch brighter than standard (was 0.22)
 
     // Eight directions (cardinals + diagonals) at the tight radius give an
     // even, ring-shaped tube glow rather than a one-sided shadow.
