@@ -74,7 +74,7 @@ namespace WordPuzzle.UI
 
         private void OnEnable()
         {
-            UIThemeManager.ApplyScreenBackground(gameObject); // shared true-black background
+            UIThemeManager.ApplyScreenBackground(gameObject, UIThemeManager.ReadabilityScrimAlpha); // shared backdrop + readability scrim
             EnsureBuilt();
             if (resetConfirmOverlay != null) resetConfirmOverlay.SetActive(false);
             if (toastRoot != null) toastRoot.SetActive(false);

@@ -17,6 +17,9 @@ namespace WordPuzzle.UI
         [SerializeField] private Button playAgainButton;
         [SerializeField] private Button mainMenuButton;
 
+        // Direction B — rich-text colour tags derive their hex from the canonical Palette (no raw theme hex).
+        private static string Hx(Color c) => ColorUtility.ToHtmlStringRGB(c);
+
         // Task 1C — daily-streak surface. Optional; ShowDailyStreak no-ops if all three
         // are null. When unwired, the streak summary is appended to modeNameText so
         // players still see something without a scene edit.
@@ -125,7 +128,7 @@ namespace WordPuzzle.UI
             if (modeNameText != null && !string.IsNullOrEmpty(message))
             {
                 string original = modeNameText.text;
-                modeNameText.text = $"{original}   <color=#C9B458>· {message}</color>";
+                modeNameText.text = $"{original}   <color=#{Hx(Palette.Coins)}>· {message}</color>";
                 StopAllCoroutines();
                 StartCoroutine(RestoreModeNameAfter(1.6f, original));
             }
@@ -169,7 +172,7 @@ namespace WordPuzzle.UI
         /// </summary>
         public void ShowDailyStreak(int currentStreak, int longestStreak, bool alreadyCountedToday)
         {
-            string streakLine = $"Streak: <color=#C9B458>{currentStreak}</color> days";
+            string streakLine = $"Streak: <color=#{Hx(Palette.Coins)}>{currentStreak}</color> days";
             string bestLine   = $"Best: {longestStreak}";
             string footerLine = alreadyCountedToday
                 ? "Already counted today"
@@ -203,7 +206,7 @@ namespace WordPuzzle.UI
                 && modeNameText != null)
             {
                 modeNameText.richText = true;
-                modeNameText.text += $"\n<size=70%>Streak <color=#C9B458>{currentStreak}</color> · Best {longestStreak} · {footerLine}</size>";
+                modeNameText.text += $"\n<size=70%>Streak <color=#{Hx(Palette.Coins)}>{currentStreak}</color> · Best {longestStreak} · {footerLine}</size>";
             }
         }
 
@@ -241,7 +244,7 @@ namespace WordPuzzle.UI
             string starGlyphs = new string('★', s) + new string('☆', 3 - s);
             string headline = failed
                 ? "Failed today"
-                : $"{DailyGradeName(s)}  <color=#C9B458>{starGlyphs}</color>";
+                : $"{DailyGradeName(s)}  <color=#{Hx(Palette.Coins)}>{starGlyphs}</color>";
             string line = $"{headline}  ·  Par {par}  ·  You got {playerSteps}";
 
             if (wordsFoundText != null)

@@ -36,17 +36,18 @@ namespace WordPuzzle.UI.Components
         [SerializeField] private Button button;             // legacy: optional click target
         [SerializeField] private TMP_FontAsset font;
 
-        // Palette (UI spec v1)
-        private static readonly Color C_BG          = HexToColor("#0F1217");
-        private static readonly Color C_SURFACE     = HexToColor("#1B1F27");
-        private static readonly Color C_SURFACE_2   = HexToColor("#242936");
-        private static readonly Color C_ACCENT      = HexToColor("#6AAA64");
-        private static readonly Color C_ACCENT_SOFT = HexToColor("#538D4E");
-        private static readonly Color C_HINT_GOLD   = HexToColor("#C9B458");
-        private static readonly Color C_DANGER      = HexToColor("#D9534F");
-        private static readonly Color C_TEXT        = HexToColor("#F5F7FA");
-        private static readonly Color C_TEXT_MUTED  = HexToColor("#8A93A6");
-        private static readonly Color C_BORDER      = HexToColor("#3A4150");
+        // Palette — Direction B: forward to the canonical Palette (no raw hex). Correct/changed retires
+        // green → aqua-spark; hint = warm Coins; invalid = warm Alert.
+        private static readonly Color C_BG          = Palette.SurfaceVoid;
+        private static readonly Color C_SURFACE     = Palette.Surface;
+        private static readonly Color C_SURFACE_2   = Palette.Panel;
+        private static readonly Color C_ACCENT      = Palette.AccentAqua;
+        private static readonly Color C_ACCENT_SOFT = Palette.AccentAqua;
+        private static readonly Color C_HINT_GOLD   = Palette.Coins;
+        private static readonly Color C_DANGER      = Palette.Alert;
+        private static readonly Color C_TEXT        = Palette.TextPrimary;
+        private static readonly Color C_TEXT_MUTED  = Palette.TextMuted;
+        private static readonly Color C_BORDER      = Palette.Amethyst;
 
         private RectTransform rectTransform;
         private Image borderImage;       // outline-only child used to draw the border

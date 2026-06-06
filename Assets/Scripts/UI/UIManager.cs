@@ -165,7 +165,7 @@ namespace WordPuzzle.UI
                 irt.sizeDelta = new Vector2(52f, 52f);
                 var icon = iconGO.AddComponent<Image>();
                 icon.sprite = settingsIconSprite;
-                icon.color = new Color(0x8A / 255f, 0x93 / 255f, 0xA1 / 255f, 1f); // muted token #8A93A1
+                icon.color = Palette.TextMuted; // muted token
                 icon.raycastTarget = false;
                 icon.preserveAspect = true;
             }
@@ -196,7 +196,7 @@ namespace WordPuzzle.UI
 
             var bg = go.GetComponent<Image>();
             UIThemeManager.ApplyRoundedButton(bg, 2.5f);
-            bg.color = new Color(0x1B / 255f, 0x1F / 255f, 0x27 / 255f, 0.72f);   // subtle dark pill for legibility
+            bg.color = new Color(Palette.Surface.r, Palette.Surface.g, Palette.Surface.b, 0.72f); // subtle dark pill for legibility
             bg.raycastTarget = true;
             var btn = go.GetComponent<Button>();
             btn.targetGraphic = bg;
@@ -211,7 +211,7 @@ namespace WordPuzzle.UI
             crt.sizeDelta = new Vector2(40f, 40f);
             var coinImg = coinGO.GetComponent<Image>();
             UIThemeManager.ApplyRoundedButton(coinImg, 1f);
-            coinImg.color = new Color(0xC9 / 255f, 0xB4 / 255f, 0x58 / 255f, 1f);   // gold token
+            coinImg.color = Palette.Coins;   // gold token
             coinImg.raycastTarget = false;
 
             var txtGO = new GameObject("Count", typeof(RectTransform));
@@ -223,7 +223,7 @@ namespace WordPuzzle.UI
             coinPillText.text = "0";
             coinPillText.fontSize = 32f;
             coinPillText.fontStyle = FontStyles.Bold;
-            coinPillText.color = new Color(0xC9 / 255f, 0xB4 / 255f, 0x58 / 255f, 1f);
+            coinPillText.color = Palette.Coins;
             coinPillText.alignment = TextAlignmentOptions.MidlineLeft;
             coinPillText.raycastTarget = false;
             coinPillText.enableWordWrapping = false;

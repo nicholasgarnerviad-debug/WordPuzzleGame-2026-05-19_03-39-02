@@ -69,35 +69,33 @@ namespace WordPuzzle.UI
         // Daily 2.0 (Task 36) — when true, the daily HUD owns stepsRemainingText (SetStepsRemaining yields).
         private bool _dailyHudActive;
 
-        // ---------- Spec §3.2 palette ----------
-        private static readonly Color C_TILE_DEFAULT_FILL    = HexToColor("#2A2D3A");
-        private static readonly Color C_TILE_DEFAULT_BORDER  = HexToColor("#3E4250");
-        private static readonly Color C_TILE_TEXT            = HexToColor("#E8E8E8");
-        private static readonly Color C_TILE_CHANGED_FILL    = HexToColor("#6AAA64"); // green — chain CHANGED
-        private static readonly Color C_TILE_CHANGED_TEXT    = HexToColor("#FFFFFF");
-        private static readonly Color C_INPUT_EMPTY_FILL     = HexToColor("#1E2030");
-        private static readonly Color C_INPUT_FILLED_BORDER  = HexToColor("#4A4F5E");
-        private static readonly Color C_HINT_GOLD            = HexToColor("#C9B458"); // gold — hint highlight
-        private static readonly Color C_HINT_TEXT_ON_GOLD    = HexToColor("#1A1B26");
-        private static readonly Color C_REVEAL_BORDER_MUTED  = HexToColor("#5A6270");
-        private static readonly Color C_LABEL_DIM            = HexToColor("#8A8F9C");
-        private static readonly Color C_LABEL_REACHED        = HexToColor("#6AAA64");
+        // ---------- Direction B palette — forward to the canonical Palette (no raw hex) ----------
+        private static readonly Color C_TILE_DEFAULT_FILL    = Palette.Panel;
+        private static readonly Color C_TILE_DEFAULT_BORDER  = Palette.Amethyst;
+        private static readonly Color C_TILE_TEXT            = Palette.TextPrimary;
+        private static readonly Color C_TILE_CHANGED_FILL    = Palette.AccentAqua;   // changed letter — aqua (retired green)
+        private static readonly Color C_TILE_CHANGED_TEXT    = Palette.TextPrimary;
+        private static readonly Color C_INPUT_EMPTY_FILL     = Palette.Surface;
+        private static readonly Color C_INPUT_FILLED_BORDER  = Palette.Amethyst;
+        private static readonly Color C_HINT_GOLD            = Palette.Coins;          // warm gold — hint highlight
+        private static readonly Color C_HINT_TEXT_ON_GOLD    = Palette.SurfaceVoid;    // dark text on the gold fill
+        private static readonly Color C_REVEAL_BORDER_MUTED  = Palette.Amethyst;
+        private static readonly Color C_LABEL_DIM            = Palette.TextMuted;
+        private static readonly Color C_LABEL_REACHED        = Palette.AccentAqua;     // reached — aqua (retired green)
 
         // Task 10B — power-up bar (Hint/Undo/Reveal) styling.
-        private static readonly Color C_PU_SURFACE   = HexToColor("#1B1F27"); // bg-surface panel (legacy)
-        private static readonly Color C_PU_BORDER    = HexToColor("#8A93A1"); // Task 25 — visible muted outline ring
-        private static readonly Color C_PU_LABEL     = HexToColor("#E7E1C4"); // text-primary (enabled)
-        private static readonly Color C_PU_LABEL_DIM = HexToColor("#5A6270"); // text-dim (0-count/disabled)
+        private static readonly Color C_PU_SURFACE   = Palette.Surface;
+        private static readonly Color C_PU_BORDER    = Palette.AccentPeriwinkle; // visible muted ring
+        private static readonly Color C_PU_LABEL     = Palette.TextPrimary;
+        private static readonly Color C_PU_LABEL_DIM = Palette.TextMuted;
 
-        // Legacy label palette (kept for FROM/TO + steps subtitle).
-        // Task 8A: LBL_TO demoted from gold #C9B458 to text-muted #8A93A1.
-        // The TO-row label is secondary info; gold is reserved for focus/hint/win moments.
-        private static readonly Color LBL_FROM       = HexToColor("#7A828F");
-        private static readonly Color LBL_TO         = HexToColor("#8A93A1");
-        private static readonly Color LBL_STEPS      = HexToColor("#8A93A1");
+        // Legacy label palette (kept for FROM/TO + steps subtitle) — all text-muted; gold reserved for focus/hint/win.
+        private static readonly Color LBL_FROM       = Palette.TextMuted;
+        private static readonly Color LBL_TO         = Palette.TextMuted;
+        private static readonly Color LBL_STEPS      = Palette.TextMuted;
 
         // Task 8A/8C — secondary UI labels (score, etc.) use text-muted so they don't compete.
-        private static readonly Color C_LABEL_SECONDARY = HexToColor("#8A93A1");
+        private static readonly Color C_LABEL_SECONDARY = Palette.TextMuted;
 
         // ---------- Spec §3 layout constants — sized for iPhone 13 Pro Max portrait ----------
         // Tile sizing is now ADAPTIVE: computed per-puzzle word length so 3-7 tiles
@@ -181,7 +179,7 @@ namespace WordPuzzle.UI
             // Task 31A — force a fresh full render on (re)show; the guards below then skip unchanged per-frame ticks.
             _seenStartEnd = _seenChain = _seenInput = _seenHint = _seenReveal = false;
             UIThemeManager.ApplyScreenBackground(gameObject); // Task 25 — true-black background
-            // Task 32 — hide the vestigial legacy SubmitButton: a solid green (#6AAA64) rect anchored at the
+            // Task 32 — hide the vestigial legacy SubmitButton: a solid green rect anchored at the
             // bottom that peeked out as a "tiny green bar" at the very bottom of the screen. Submission now
             // goes through the on-screen keyboard's GO key; this button read from the inactive legacy
             // WordInputField, so it did nothing. Deactivated at runtime (no scene edit), which also clears its
@@ -258,7 +256,7 @@ namespace WordPuzzle.UI
             RepositionHeaderBelowNotch();
 
             // Task 8A — tier indicator demoted: secondary info must not compete with gold focal elements.
-            // Changed from Bold+gold(#C9B458)+28pt to Normal+text-muted(#8A93A1)+20pt, still centered.
+            // Changed from Bold+gold+28pt to Normal+text-muted+20pt, still centered.
             if (tierIndicatorText != null)
             {
                 tierIndicatorText.fontStyle = FontStyles.Normal;
@@ -434,7 +432,7 @@ namespace WordPuzzle.UI
                 brt.offsetMin = Vector2.zero;
                 brt.offsetMax = Vector2.zero;
                 var img = go.AddComponent<Image>();
-                img.color = new Color(0xC9 / 255f, 0x21 / 255f, 0x5C / 255f, 0.9f); // #C9215C pill
+                img.color = new Color(Palette.Alert.r, Palette.Alert.g, Palette.Alert.b, 0.9f); // alert-red pill
                 img.raycastTarget = false;
                 go.transform.SetAsFirstSibling();
             }
@@ -1064,7 +1062,7 @@ namespace WordPuzzle.UI
                 {
                     var tile = currentInputRow.GetChild(i).GetComponent<LetterTile>();
                     if (tile != null)
-                        StartCoroutine(tile.FlashColor(HexToColor("#D9534F"), 0.25f));
+                        StartCoroutine(tile.FlashColor(Palette.Alert, 0.25f));
                 }
             }
         }
@@ -1198,7 +1196,7 @@ namespace WordPuzzle.UI
                 new Vector2(0f, -120f), new Color32(0x8A, 0x93, 0xA1, 0xFF), FontStyles.Normal); // muted
 
             // Task 25 — ghost buttons: colour is now the BORDER, labels are LIGHT (the old NEXT label
-            // was near-black #0F1217 and would vanish on the transparent-over-black button).
+            // was near-black surface and would vanish on the transparent-over-black button).
             MakeWinButton(card.transform, "NextButton", "NEXT PUZZLE",
                 new Vector2(0.5f, 0f), new Vector2(0f, 116f), new Vector2(420f, 76f),
                 new Color32(0xC9, 0xB4, 0x58, 0xFF), new Color32(0xF5, 0xF7, 0xFA, 0xFF),

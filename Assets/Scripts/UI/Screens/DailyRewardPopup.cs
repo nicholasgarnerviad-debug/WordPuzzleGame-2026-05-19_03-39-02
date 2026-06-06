@@ -25,13 +25,17 @@ namespace WordPuzzle.UI
         private RectTransform contentRoot;
         private bool built;
 
-        private static readonly Color C_BLACK   = new Color(0x0A / 255f, 0x0A / 255f, 0x0A / 255f, 0.97f);
-        private static readonly Color C_GOLD     = new Color(0xC9 / 255f, 0xB4 / 255f, 0x58 / 255f, 1f);
-        private static readonly Color C_GREEN    = new Color(0x6A / 255f, 0xAA / 255f, 0x64 / 255f, 1f);
-        private static readonly Color C_CREAM    = new Color(0xE7 / 255f, 0xE1 / 255f, 0xC4 / 255f, 1f);
-        private static readonly Color C_MUTED    = new Color(0x8A / 255f, 0x93 / 255f, 0xA1 / 255f, 1f);
-        private static readonly Color C_SECTION  = new Color(0x39 / 255f, 0x43 / 255f, 0x5A / 255f, 1f);
+        // Direction B — forward to the canonical Palette (no raw hex).
+        private static readonly Color C_BLACK   = new Color(Palette.SurfaceVoid.r, Palette.SurfaceVoid.g, Palette.SurfaceVoid.b, 0.97f);
+        private static readonly Color C_GOLD     = Palette.Coins;
+        private static readonly Color C_GREEN    = Palette.AccentAqua; // retired green → aqua
+        private static readonly Color C_CREAM    = Palette.TextPrimary;
+        private static readonly Color C_MUTED    = Palette.TextMuted;
+        private static readonly Color C_SECTION  = Palette.Panel;
         private static readonly Color C_SCRIM    = new Color(0f, 0f, 0f, 0.86f);
+
+        // Rich-text colour tags derive their hex from the tokens above — no raw theme hex scattered.
+        private static string Hx(Color c) => ColorUtility.ToHtmlStringRGB(c);
 
         public void Configure(Action onClosed) { this.onClosed = onClosed; }
 
@@ -110,7 +114,7 @@ namespace WordPuzzle.UI
                 if (!loginClaimed)
                 {
                     Label($"Day {loginDay} reward", C_CREAM, 30f);
-                    Label($"<color=#C9B458>+{loginCoins} coins</color>", C_CREAM, 42f);
+                    Label($"<color=#{Hx(C_GOLD)}>+{loginCoins} coins</color>", C_CREAM, 42f);
                     Btn("CLAIM", C_GOLD, true, () =>
                     {
                         if (claimLogin == null) return;
@@ -119,7 +123,7 @@ namespace WordPuzzle.UI
                 }
                 else
                 {
-                    Label($"<color=#6AAA64>Claimed  ·  +{loginCoins} coins</color>", C_CREAM, 32f);
+                    Label($"<color=#{Hx(C_GREEN)}>Claimed  ·  +{loginCoins} coins</color>", C_CREAM, 32f);
                 }
             }
 
@@ -132,7 +136,7 @@ namespace WordPuzzle.UI
 
                 if (!string.IsNullOrEmpty(repairMsg))
                 {
-                    Label($"<color=#6AAA64>{repairMsg}</color>", C_CREAM, 28f);
+                    Label($"<color=#{Hx(C_GREEN)}>{repairMsg}</color>", C_CREAM, 28f);
                 }
                 else
                 {

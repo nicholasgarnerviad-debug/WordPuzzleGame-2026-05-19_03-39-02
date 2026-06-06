@@ -218,7 +218,7 @@ namespace WordPuzzle.UI
                 iconImg = go.AddComponent<Image>();
             }
             iconImg.sprite = icon;
-            iconImg.color = tint;             // menu muted token (#8A93A1)
+            iconImg.color = tint;             // menu muted token
             iconImg.raycastTarget = false;
             iconImg.preserveAspect = true;
         }

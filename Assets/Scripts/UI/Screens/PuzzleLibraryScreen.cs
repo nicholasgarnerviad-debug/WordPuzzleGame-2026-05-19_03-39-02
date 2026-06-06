@@ -26,32 +26,32 @@ namespace WordPuzzle.UI
         public event Action OnBackToMenu;
         public event Action<int> OnPuzzleSelected;
 
-        // --- Design tokens (README §14) ---
-        private static readonly Color C_LOCKED_BG       = HexC("#060709"); // Task 25 — near-black ghost centre
-        private static readonly Color C_LOCKED_BORDER   = HexC("#454B59"); // Task 25 — dim but visible ring
-        private static readonly Color C_LOCKED_TEXT     = HexC("#5A6270");
+        // --- Design tokens — Direction B: forward to the canonical Palette (no raw hex) ---
+        private static readonly Color C_LOCKED_BG       = Palette.SurfaceVoid;     // near-black ghost centre
+        private static readonly Color C_LOCKED_BORDER   = Palette.Amethyst;        // dim but visible ring
+        private static readonly Color C_LOCKED_TEXT     = Palette.TextMuted;
 
-        private static readonly Color C_UNPLAYED_BG     = HexC("#060709"); // Task 25 — near-black ghost centre
-        private static readonly Color C_UNPLAYED_BORDER = HexC("#6B7689"); // Task 25 — clearly visible ring
-        private static readonly Color C_UNPLAYED_TEXT   = HexC("#E7E1C4");
-        private static readonly Color C_UNPLAYED_ICON   = HexC("#7A828F");
+        private static readonly Color C_UNPLAYED_BG     = Palette.SurfaceVoid;     // near-black ghost centre
+        private static readonly Color C_UNPLAYED_BORDER = Palette.AccentPeriwinkle; // clearly visible ring
+        private static readonly Color C_UNPLAYED_TEXT   = Palette.TextPrimary;
+        private static readonly Color C_UNPLAYED_ICON   = Palette.TextMuted;
 
-        private static readonly Color C_INPROGRESS_BG     = HexC("#060709"); // Task 25 — near-black ghost centre
-        private static readonly Color C_INPROGRESS_BORDER = HexC("#C9B458"); // gold
-        private static readonly Color C_INPROGRESS_TEXT   = HexC("#F5F7FA");
-        private static readonly Color C_INPROGRESS_ICON   = HexC("#C9B458");
+        private static readonly Color C_INPROGRESS_BG     = Palette.SurfaceVoid;   // near-black ghost centre
+        private static readonly Color C_INPROGRESS_BORDER = Palette.ModeDaily;     // current tier — hero accent
+        private static readonly Color C_INPROGRESS_TEXT   = Palette.TextPrimary;
+        private static readonly Color C_INPROGRESS_ICON   = Palette.ModeDaily;
 
-        private static readonly Color C_COMPLETED_BG     = HexC("#0C140C"); // Task 25 — near-black, faint-green ghost centre
-        private static readonly Color C_COMPLETED_BORDER = HexC("#6AAA64"); // green
-        private static readonly Color C_COMPLETED_TEXT   = HexC("#F5F7FA");
-        private static readonly Color C_COMPLETED_ICON   = HexC("#6AAA64");
+        private static readonly Color C_COMPLETED_BG     = Palette.SurfaceVoid;    // near-black ghost centre
+        private static readonly Color C_COMPLETED_BORDER = Palette.AccentAqua;     // completed — aqua (retired green)
+        private static readonly Color C_COMPLETED_TEXT   = Palette.TextPrimary;
+        private static readonly Color C_COMPLETED_ICON   = Palette.AccentAqua;
 
-        private static readonly Color C_HEADER_TIER     = HexC("#F5F7FA");
-        private static readonly Color C_HEADER_TIER_LK  = HexC("#5A6270");
-        private static readonly Color C_HEADER_COUNT    = HexC("#8A93A1");
-        private static readonly Color C_SUBTITLE        = HexC("#8A93A1");
-        private static readonly Color C_PUZZLE_ID       = HexC("#7A828F");
-        private static readonly Color C_GOLD            = HexC("#C9B458"); // current/next tier accent
+        private static readonly Color C_HEADER_TIER     = Palette.TextPrimary;
+        private static readonly Color C_HEADER_TIER_LK  = Palette.TextMuted;
+        private static readonly Color C_HEADER_COUNT    = Palette.TextMuted;
+        private static readonly Color C_SUBTITLE        = Palette.TextMuted;
+        private static readonly Color C_PUZZLE_ID       = Palette.TextMuted;
+        private static readonly Color C_GOLD            = Palette.ModeDaily;       // current/next tier accent
 
         // --- View state ---
         private enum ViewMode { TierSelect, PuzzleGrid }
@@ -73,14 +73,14 @@ namespace WordPuzzle.UI
 
         // Path View palette (on-brand: black + outline, no gold accents on the path itself).
         private static readonly Color C_DETAIL_SCRIM   = new Color(0f, 0f, 0f, 0.82f);
-        private static readonly Color C_PANEL_BG       = HexC("#0C0E12");
-        private static readonly Color C_PANEL_BORDER   = HexC("#6B7689");
-        private static readonly Color C_SLOT_BG        = HexC("#10131A");
-        private static readonly Color C_SLOT_BORDER    = HexC("#3A4150"); // blank slot ring
-        private static readonly Color C_SLOT_REVEALED  = HexC("#6AAA64"); // matched optimal word (green, like completed)
-        private static readonly Color C_SLOT_BLANK_TXT = HexC("#5A6270");
-        private static readonly Color C_BEST_WORD      = HexC("#E7E1C4");
-        private static readonly Color C_PERFECT_TXT    = HexC("#6AAA64");
+        private static readonly Color C_PANEL_BG       = Palette.SurfaceVoid;
+        private static readonly Color C_PANEL_BORDER   = Palette.AccentPeriwinkle;
+        private static readonly Color C_SLOT_BG        = Palette.Surface;
+        private static readonly Color C_SLOT_BORDER    = Palette.Amethyst;     // blank slot ring
+        private static readonly Color C_SLOT_REVEALED  = Palette.AccentAqua;   // matched optimal word — aqua (retired green)
+        private static readonly Color C_SLOT_BLANK_TXT = Palette.TextMuted;
+        private static readonly Color C_BEST_WORD      = Palette.TextPrimary;
+        private static readonly Color C_PERFECT_TXT    = Palette.AccentAqua;
 
         /// <summary>
         /// Task 15C — orchestrator injects the saved Puzzle Show progress before Show().
@@ -110,7 +110,7 @@ namespace WordPuzzle.UI
 
         private void OnEnable()
         {
-            UIThemeManager.ApplyScreenBackground(gameObject); // Task 25 — true-black background
+            UIThemeManager.ApplyScreenBackground(gameObject, UIThemeManager.ReadabilityScrimAlpha); // Task 25 backdrop + readability scrim
             if (backButton != null)
             {
                 backButton.onClick.AddListener(HandleTopBack);

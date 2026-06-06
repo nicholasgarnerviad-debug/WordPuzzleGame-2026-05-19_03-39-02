@@ -56,7 +56,7 @@ namespace WordPuzzle.UI.Components
             }
 
             // Task 32 — the keyboard panel is TRANSPARENT so the static space background fills the whole
-            // lower screen; the rounded keys (solid #242936 + white letters) float on top and stay legible.
+            // lower screen; the rounded keys (solid deep-indigo Panel + bright letters) float on top and stay legible.
             // The Image is kept (not removed) but raycastTarget stays false — it's now an invisible layer,
             // never a tap surface (each key carries its own raycast target), so taps are unaffected.
             var bgImg = GetComponent<UnityEngine.UI.Image>();

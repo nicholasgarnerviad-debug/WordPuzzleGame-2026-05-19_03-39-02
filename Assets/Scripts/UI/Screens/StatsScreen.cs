@@ -94,7 +94,7 @@ namespace WordPuzzle.UI
 
         private void OnEnable()
         {
-            UIThemeManager.ApplyScreenBackground(gameObject); // shared true-black background
+            UIThemeManager.ApplyScreenBackground(gameObject, UIThemeManager.ReadabilityScrimAlpha); // shared backdrop + readability scrim
             if (homeButton != null)
                 homeButton.onClick.AddListener(OnHomeClicked);
         }

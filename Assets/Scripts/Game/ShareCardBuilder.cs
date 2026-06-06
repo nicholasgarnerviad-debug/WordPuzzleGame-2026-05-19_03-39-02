@@ -157,9 +157,10 @@ namespace WordPuzzle.Game
             int w = cols * CELL + (cols + 1) * GAP;
             int h = rows * CELL + (rows + 1) * GAP;
 
-            var bg = new Color(0.059f, 0.071f, 0.090f, 1f);    // #0F1217
-            var changed = new Color(0.416f, 0.667f, 0.392f, 1f); // #6AAA64
-            var unchanged = new Color(0.169f, 0.184f, 0.224f, 1f); // #2A2D3A
+            // Direction B share-card palette (Game assembly can't reference UI.Palette — values mirror the tokens).
+            var bg = new Color(0.051f, 0.039f, 0.122f, 1f);    // Palette.SurfaceVoid
+            var changed = new Color(0.329f, 0.659f, 0.706f, 1f); // Palette.AccentAqua (retired green)
+            var unchanged = new Color(0.180f, 0.145f, 0.376f, 1f); // Palette.Panel
 
             var tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
             var pixels = new Color[w * h];

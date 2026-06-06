@@ -10,10 +10,10 @@ using WordPuzzle.Persistence;
 //  established color-theme file; LetterTile reads these accessors
 //  instead of its private hardcoded constants for state-dependent hues.
 //
-//  Off (default):
-//    Correct  #6AAA64  (green)
-//    Error    #D9534F  (red)
-//    Hint     #C9B458  (gold)
+//  Off (default) — Direction B (forwards to Palette):
+//    Correct  Palette.AccentAqua  (#54A8B4 aqua-spark — retired green)
+//    Error    Palette.Alert       (#E08A8A warm red)
+//    Hint     Palette.Coins       (#E9C98C warm gold)
 //
 //  Deuteranopia / highContrast:
 //    Correct  #3A7CA5  (blue  — no red/green reliance)
@@ -25,12 +25,56 @@ using WordPuzzle.Persistence;
 // ============================================================
 namespace WordPuzzle.UI
 {
+    /// <summary>
+    /// Direction B — the SINGLE source of truth for the app's purple-dominant palette, sampled from the
+    /// cloud-scape backdrop (Assets/ui/back grounds/lucid pixel art.jpg). Tokens are named by ROLE so screens
+    /// reference meaning, not hex. This is the ONLY place raw theme hex literals live; every other palette
+    /// class and screen forwards to these. Modes differ by hue-spacing + brightness (NOT temperature) and
+    /// walk one cool family; Daily is the hero by brightness + a heavier stroke. Aqua-spark is the one cool
+    /// accent; warm Coins + Alert are the only warm notes — kept minimal so the purple reads rich, not flat.
+    /// Depth-floor rule: outlines may go as deep as the foundation, but LABELS use a bright token
+    /// (<see cref="ModeLabel"/>/<see cref="TextPrimary"/>), never the deep outline colour.
+    /// </summary>
+    public static class Palette
+    {
+        // Foundation (surfaces) — purple-black void up through amethyst.
+        public static readonly Color SurfaceVoid = Hex("#0D0A1F");
+        public static readonly Color Surface     = Hex("#1C1640");
+        public static readonly Color Panel       = Hex("#2E2560");
+        public static readonly Color Amethyst    = Hex("#473A7E");
+
+        // Accents (deep jewel). Aqua is the ONE cool non-purple highlight.
+        public static readonly Color AccentLavender   = Hex("#9F7ED6");
+        public static readonly Color AccentPeriwinkle = Hex("#8E78C8");
+        public static readonly Color AccentOrchid     = Hex("#B072BC");
+        public static readonly Color AccentAqua       = Hex("#54A8B4");
+
+        // Mode buttons — one cool family, hue-spaced; Daily is the hero (brightest + heavier stroke).
+        public static readonly Color ModeDaily      = Hex("#BE84E2"); // orchid hero
+        public static readonly Color ModeClassic    = Hex("#6E84D6"); // blue-violet
+        public static readonly Color ModePuzzleShow = Hex("#8160D2"); // deep violet
+        public static readonly Color ModeTimeAttack = Hex("#B25EB8"); // magenta-violet
+
+        // Text & semantic. Coins + Alert are WARM — the only warm notes; keep.
+        public static readonly Color TextPrimary = Hex("#EFEAF8");
+        public static readonly Color TextMuted   = Hex("#9A8FBE");
+        public static readonly Color Coins       = Hex("#E9C98C"); // warm gold — in-game accent, hints, streak
+        public static readonly Color Alert       = Hex("#E08A8A"); // warm red — errors, destructive actions
+
+        // Derived role helpers (no new hex) — keep call-sites semantic.
+        public static Color OutlineMuted => AccentPeriwinkle; // calm purple ring (secondary chrome)
+        public static Color CardOutline  => Amethyst;          // subtle card-grouping ring
+        public static Color ModeLabel    => TextPrimary;       // button labels — always bright (depth-floor rule)
+
+        private static Color Hex(string h) => ColorUtility.TryParseHtmlString(h, out var c) ? c : Color.magenta;
+    }
+
     public static class AccessiblePalette
     {
-        // --- Default hues (Off mode) ---
-        private static readonly Color DefaultCorrect = HexToColor("#6AAA64");
-        private static readonly Color DefaultError   = HexToColor("#D9534F");
-        private static readonly Color DefaultHint    = HexToColor("#C9B458");
+        // --- Default hues (Off mode) — Direction B: forward to the canonical Palette ---
+        private static readonly Color DefaultCorrect = Palette.AccentAqua; // retired green → aqua-spark
+        private static readonly Color DefaultError   = Palette.Alert;
+        private static readonly Color DefaultHint    = Palette.Coins;
 
         // --- Colorblind-safe hues (Deuteranopia / highContrast) ---
         private static readonly Color CbCorrect = HexToColor("#3A7CA5");
@@ -86,26 +130,24 @@ namespace WordPuzzle.UI
     // ============================================================
     public static class MenuPalette
     {
-        // Task 24 — ONE cohesive jewel-tone family: medium-deep fills at similar saturation/lightness,
-        // evenly-spaced hues, so the buttons read as a designed set (not random). Every fill is deep
-        // enough that a LIGHT label (#F5F7FA) sits on it with strong contrast — no dark-on-dark.
-        public static readonly Color ResumeFill      = Hex("#1B9E8F"); // teal — "continue"
-        public static readonly Color ResumeLabel     = Hex("#F5F7FA");
-        public static readonly Color DailyFill       = Hex("#FF8A2E"); // Task 26 — bright clear orange hero border (thicker ring, no fill)
-        public static readonly Color DailyLabel      = Hex("#F5F7FA");
-        public static readonly Color ClassicFill     = Hex("#3D9E54"); // green
-        public static readonly Color ClassicLabel    = Hex("#F5F7FA");
-        public static readonly Color PuzzleShowFill  = Hex("#7B5FD4"); // violet
-        public static readonly Color PuzzleShowLabel = Hex("#F5F7FA");
-        public static readonly Color TimeAttackFill  = Hex("#D23F58"); // rose-red — urgency suits the timer
-        public static readonly Color TimeAttackLabel = Hex("#F5F7FA");
-        public static readonly Color SecondaryFill   = Hex("#39435A"); // calm slate family member — Library/Stats
-        public static readonly Color SecondaryBorder = Hex("#8A93A1"); // Task 25 — visible muted ring for outline Library/Stats
-        public static readonly Color SecondaryLabel  = Hex("#E7E1C4"); // cream — legible, slightly calmer
-        public static readonly Color TitleColor      = Hex("#45E0E0"); // Task 28 — cyan WORD LADDER header
-        public static readonly Color ChainOutline    = Hex("#45E0E0"); // Task 30 — played chain rows: see-through cyan outline (distinct from teal start / orange target / green highlight)
-
-        private static Color Hex(string h) => ColorUtility.TryParseHtmlString(h, out var c) ? c : Color.magenta;
+        // Direction B — forwards to the canonical Palette (one source of truth). Mode fills are the cool
+        // family; Daily is the hero (brightest, heavier ring). Labels are always TextPrimary (bright) per the
+        // depth-floor rule. Library/Stats stay secondary chrome (panel fill + periwinkle ring).
+        public static readonly Color ResumeFill      = Palette.AccentAqua;     // "continue" — calm cool highlight
+        public static readonly Color ResumeLabel     = Palette.TextPrimary;
+        public static readonly Color DailyFill       = Palette.ModeDaily;      // orchid hero (retired warm orange)
+        public static readonly Color DailyLabel      = Palette.TextPrimary;
+        public static readonly Color ClassicFill     = Palette.ModeClassic;    // blue-violet
+        public static readonly Color ClassicLabel    = Palette.TextPrimary;
+        public static readonly Color PuzzleShowFill  = Palette.ModePuzzleShow; // deep violet
+        public static readonly Color PuzzleShowLabel = Palette.TextPrimary;
+        public static readonly Color TimeAttackFill  = Palette.ModeTimeAttack; // magenta-violet
+        public static readonly Color TimeAttackLabel = Palette.TextPrimary;
+        public static readonly Color SecondaryFill   = Palette.Panel;
+        public static readonly Color SecondaryBorder = Palette.AccentPeriwinkle;
+        public static readonly Color SecondaryLabel  = Palette.TextPrimary;
+        public static readonly Color TitleColor      = Palette.AccentAqua;     // hero header ties to the bright star
+        public static readonly Color ChainOutline    = Palette.AccentPeriwinkle; // played chain rows — on-purple
     }
 
     /// <summary>
@@ -116,11 +158,10 @@ namespace WordPuzzle.UI
     /// </summary>
     public static class GameAccents
     {
-        public static readonly Color Gold        = Hex("#C9B458");
-        public static readonly Color CardOutline = Hex("#39435A");
-        public static readonly Color Danger      = Hex("#C9215C"); // accent-red — destructive actions (Reset Progress ring)
-
-        private static Color Hex(string h) => ColorUtility.TryParseHtmlString(h, out var c) ? c : Color.magenta;
+        // Direction B — forward to the canonical Palette. Gold is the warm in-game accent (kept).
+        public static readonly Color Gold        = Palette.Coins;
+        public static readonly Color CardOutline = Palette.CardOutline;
+        public static readonly Color Danger      = Palette.Alert; // warm red — destructive actions (Reset Progress ring)
     }
 
     /// <summary>
@@ -132,13 +173,12 @@ namespace WordPuzzle.UI
     /// </summary>
     public static class KeyboardPalette
     {
-        public static readonly Color KeyFill  = Hex("#2A2440"); // deep indigo-purple key background (NEW)
-        public static readonly Color KeyText  = Hex("#E7E1C4"); // cream "white" letters (kept)
-        public static readonly Color DelFill  = Hex("#C9215C"); // accent red (DEL)
-        public static readonly Color GoFill   = Hex("#6AAA64"); // accent green (GO)
-        public static readonly Color KeyFlash = Hex("#C9B458"); // gold highlight pulse
-
-        private static Color Hex(string h) => ColorUtility.TryParseHtmlString(h, out var c) ? c : Color.magenta;
+        // Direction B — forward to the canonical Palette. Deep-indigo keys, bright letters, warm flash.
+        public static readonly Color KeyFill  = Palette.Panel;       // deep indigo-purple key background
+        public static readonly Color KeyText  = Palette.TextPrimary; // bright letters
+        public static readonly Color DelFill  = Palette.Alert;       // warm red (DEL)
+        public static readonly Color GoFill   = Palette.AccentAqua;  // aqua (GO) — matches new correct=aqua
+        public static readonly Color KeyFlash = Palette.Coins;       // warm gold highlight pulse
     }
 }
 
@@ -284,9 +324,9 @@ public static class UIThemeManager
     //  Task 25 — true-black background + outline ("ghost") buttons.
     // ============================================================
 
-    /// <summary>App background — neutral near-black #0A0A0A (Task 26: no blue/teal cast; reads as genuine black).</summary>
-    public static readonly UnityEngine.Color AppBackground =
-        new UnityEngine.Color(0x0A / 255f, 0x0A / 255f, 0x0A / 255f, 1f);
+    /// <summary>App background — Direction B purple-black void (Palette.SurfaceVoid #0D0A1F), the base behind
+    /// the cloud-scape backdrop video.</summary>
+    public static readonly UnityEngine.Color AppBackground = WordPuzzle.UI.Palette.SurfaceVoid;
 
     private const string BackgroundLayerName = "BackgroundLayer";
 
@@ -295,12 +335,25 @@ public static class UIThemeManager
     /// Image is made transparent (so the layer shows through) and the layer is ensured behind all UI.
     /// Also forces the main camera's clear colour to black. Runtime only — no scene edit.
     /// </summary>
-    public static void ApplyScreenBackground(UnityEngine.GameObject root)
+    /// <summary>Default readability-scrim alpha for text-heavy menu screens — a soft black veil over the
+    /// shared backdrop video so its art (e.g. the space-scene rocket) stops competing with foreground text.</summary>
+    public const float ReadabilityScrimAlpha = 0.4f;
+
+    public static void ApplyScreenBackground(UnityEngine.GameObject root, float scrimAlpha = 0f)
     {
         if (root != null)
         {
             var img = root.GetComponent<UnityEngine.UI.Image>();
-            if (img != null) img.color = new UnityEngine.Color(0f, 0f, 0f, 0f); // transparent — shared layer shows through
+            // scrimAlpha 0  -> fully transparent: the shared backdrop video shows through (original behaviour).
+            // scrimAlpha >0 -> a dark readability scrim painted OVER the shared video but UNDER this screen's
+            //                  content (a GameObject's own Image renders behind its children), so busy backdrop
+            //                  art no longer overlaps text. Ensure an Image exists when a scrim is requested.
+            if (img == null && scrimAlpha > 0f)
+            {
+                img = root.AddComponent<UnityEngine.UI.Image>();
+                img.raycastTarget = false; // visual only — do not change tap behaviour
+            }
+            if (img != null) img.color = new UnityEngine.Color(0f, 0f, 0f, UnityEngine.Mathf.Clamp01(scrimAlpha));
             EnsureBackgroundLayer(root.transform);
         }
         var cam = UnityEngine.Camera.main;

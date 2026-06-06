@@ -193,8 +193,8 @@ namespace WordPuzzle.UI
             }
 
             int reward = Mathf.RoundToInt(TimeAttackConfig.DefaultSurvival().survivalRewardSeconds);
-            string gold  = "#C9B458";
-            string green = "#6AAA64";
+            string gold  = "#" + ColorUtility.ToHtmlStringRGB(Palette.Coins);
+            string green = "#" + ColorUtility.ToHtmlStringRGB(Palette.AccentAqua); // retired green → aqua
             explainerText.richText = true;
             explainerText.text =
                 $"<color={gold}><b>TIMED</b></color>  ·  fixed countdown — beat the clock\n" +
