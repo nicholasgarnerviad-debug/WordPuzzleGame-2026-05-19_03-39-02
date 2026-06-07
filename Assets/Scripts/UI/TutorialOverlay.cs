@@ -38,7 +38,7 @@ namespace WordPuzzle.UI
         public event Action OnSuccessBeatFinished;
 
         // --- Centralized copy (no scattered magic strings) ---
-        private const string WelcomeTitle = "Welcome to Word Ladder";
+        private const string WelcomeTitle = "Welcome to Star Ladder";
         private const string WelcomeBody  = "New here? Take a quick, hands-on tour of the basics.";
         private const string PlayLabel    = "PLAY TUTORIAL";
         private const string SkipLabel    = "SKIP";

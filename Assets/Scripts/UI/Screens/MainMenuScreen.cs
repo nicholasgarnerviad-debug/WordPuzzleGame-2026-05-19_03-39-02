@@ -145,7 +145,7 @@ namespace WordPuzzle.UI
             var t = transform.Find("TitleText");
             var title = t != null ? t.GetComponent<TextMeshProUGUI>() : null;
             if (title == null) return;
-            title.text = "WORD LADDER";
+            title.text = "STAR LADDER";
             title.color = MenuPalette.TitleColor; // Task 23C — clean flat title, bright + non-gold
             title.fontStyle = FontStyles.Bold;
             title.fontSize = 92f;

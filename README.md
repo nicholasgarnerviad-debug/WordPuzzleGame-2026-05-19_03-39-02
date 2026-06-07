@@ -1,4 +1,4 @@
-# Word Ladder
+# Star Ladder
 
 A modern, mobile-portrait word-ladder puzzle game built in **Unity 6000.4.6f1** (Unity 6 LTS), portrait **1080×1920**. Transform a start word into an end word one letter at a time — every intermediate step must be a real English word that differs from the previous word by exactly one letter.
 
@@ -13,8 +13,8 @@ FROM  C  A  T            FROM  S  T  O  N  E
 > **This README is also the canonical context document for AI-assisted development.** It is written so an LLM (e.g. Claude Opus) can read it and author precise, surgical task prompts ("meta prompts") for this repo. See **[§14 Writing a master prompt](#14-writing-a-master-prompt-for-this-repo)** and the **[Shared Context Block](#shared-context-block-paste-into-every-task-prompt)** at the end.
 
 <p align="center">
-  <img src="docs/screenshots/menu-hero.png" width="300" alt="Word Ladder main menu with the Daily Rewards overlay — black pixel-space backdrop, cyan WORD LADDER header, a gold coin pill, and a 'Day 1 reward · +25 coins' claim popup">
-  <br><em>Main menu with the <strong>Daily Rewards</strong> overlay — a pixel-space backdrop, a softly-floating <strong>WORD LADDER</strong> title, a <strong>coin pill</strong> (top-left), and colored glowing-outline (“ghost”) buttons on the purple <strong>"Direction B"</strong> palette (Tasks 22–28, 36; palette since recaptured).</em>
+  <img src="docs/screenshots/menu-hero.png" width="300" alt="Star Ladder main menu with the Daily Rewards overlay — pixel-space backdrop, STAR LADDER header, a coin pill, and a 'Day 1 reward · +25 coins' claim popup">
+  <br><em>Main menu with the <strong>Daily Rewards</strong> overlay — a pixel-space backdrop, a softly-floating <strong>STAR LADDER</strong> title, a <strong>coin pill</strong> (top-left), and colored glowing-outline (“ghost”) buttons on the purple <strong>"Direction B"</strong> palette (Tasks 22–28, 36; palette since recaptured).</em>
 </p>
 
 ---
@@ -22,7 +22,7 @@ FROM  C  A  T            FROM  S  T  O  N  E
 ## Table of contents
 **📱 [Screens](#screens)** — a visual tour of every screen
 
-- [Word Ladder](#word-ladder)
+- [Star Ladder](#star-ladder)
   - [Table of contents](#table-of-contents)
   - [Screens](#screens)
   - [1. Game modes](#1-game-modes)
@@ -60,7 +60,7 @@ FROM  C  A  T            FROM  S  T  O  N  E
 
 | Screen | |
 |---|---|
-| **Main Menu** — white `WORD LADDER` masthead on black. Buttons are **colored rounded outlines** (transparent centers): **DAILY** is the hero — the **same shared button shape** as the rest, set apart by a **brighter glow** + a hair-heavier **orchid** ring (shows the streak once today is solved). The modes each carry their own purple-family token — **Classic** blue-violet, **Puzzle Show** deep-violet, **Time Attack** magenta, **Resume** (only with an in-progress save) periwinkle. **Puzzle Library / Stats** are a periwinkle side-by-side row (Settings lives in the shared top-right gear). A **coin pill** (top-left) shows the balance and opens the Shop; the **Daily Rewards** overlay (shown here) surfaces the daily login claim + streak repair ([§3](#3-economy--monetization)). | <img src="docs/screenshots/main-menu.png" width="250"> |
+| **Main Menu** — white `STAR LADDER` masthead on black. Buttons are **colored rounded outlines** (transparent centers): **DAILY** is the hero — the **same shared button shape** as the rest, set apart by a **brighter glow** + a hair-heavier **orchid** ring (shows the streak once today is solved). The modes each carry their own purple-family token — **Classic** blue-violet, **Puzzle Show** deep-violet, **Time Attack** magenta, **Resume** (only with an in-progress save) periwinkle. **Puzzle Library / Stats** are a periwinkle side-by-side row (Settings lives in the shared top-right gear). A **coin pill** (top-left) shows the balance and opens the Shop; the **Daily Rewards** overlay (shown here) surfaces the daily login claim + streak repair ([§3](#3-economy--monetization)). | <img src="docs/screenshots/main-menu.png" width="250"> |
 | **Classic Mode** — the core word ladder on black. The **start** word is a row of **teal see-through outline tiles** (the origin), the **target** is **orange** outline tiles (the goal), and the played **chain** rows are **cyan** see-through outlines; only the **active input row stays solid** (the "fill here" zone, gold-edged as you type). Tiles carry **bold ~7px rings** and **ladder-feel motion** (letters drop in, accepted rows climb). Below: the Hint / Undo / Reveal **power-up bar** over a **rounded** QWERTY keyboard (red `DEL`, green `GO`) **floating on a transparent panel** — the space backdrop runs edge-to-edge. An icon **HOME** (top-left) and the shared **Settings** gear (top-right) flank a calm score header. Random 3–7-letter puzzles; on a solve a **compact win panel** ("Next Puzzle" / "Home") keeps you in the loop ([§1](#1-game-modes)). | <img src="docs/screenshots/classic-mode.png" width="250"> |
 | **Daily 2.0** (Task 36) — one shared puzzle a day, now **par-scored with stakes**. Same start (teal) → input → target (orange) board as Classic, plus a **"Par N · Mistakes left M"** HUD. You get a **3-mistake budget** (an invalid guess spends one; running out **fails** the run) while **detours** (valid but non-progress moves) cost your **grade**, not the run. Finishing scores **Perfect / Good / Solved / Failed** (★★★–☆) + par-scaled coins, advances your **played-streak** (a *failed* day still counts — only a missed calendar day breaks it), and logs a trailing-365 **W/L record + win%**. Results add a spoiler-free **path-shape share card** and a **watch-to-double** reward ([§1](#1-game-modes)). | <img src="docs/screenshots/daily.png" width="250"> |
 | **Puzzle Show** — tier-progression play on the same gameplay screen, with a `Tier X / Y` indicator under the score. **700 curated ladders (7 tiers × 100)** on a length/difficulty curve (Tier 1 easy 3-letter → Tier 7 hard 7-letter, up to 8-step ladders), every one with **≥ 2 distinct optimal routes** (multiple ways to solve, guaranteed). Solving shows a stat screen offering **Next Puzzle / Tier N ▸ / Home** ([§7](#7-puzzle-show-tiers)). | <img src="docs/screenshots/puzzle-show.png" width="250"> |
@@ -91,7 +91,7 @@ FROM  C  A  T            FROM  S  T  O  N  E
 
 **Played-streak** (`DailyStreakRules.ApplyPlayed`, pure/testable — the streak authority, replacing completion-only `ApplyCompletion`; never call both): a **played** day (solve OR fail) advances `currentStreak` iff yesterday was played; only a **missed calendar day** resets it; same-day replay never double-counts. A **trailing-365-day W/L record** (`outcomes` ledger of `DayOutcome{dateIso,won}`; `Wins`/`Losses`/`WinRatePct`, `RecordWindowDays = 365`) tracks skill alongside the habit streak. **Streak repair** (`CanRepair`/`ApplyRepair`): if *only yesterday* was missed, bridge the gap for `StreakRepairCoinCost` (150) coins **or** a rewarded ad, once per `StreakRepairCooldownDays` (7) — a bridge only (does **not** auto-play today). One-and-done (Task 38): once today is played, the menu **DAILY** button shows the streak and **re-tapping re-shows today's stored result** (grade/stars + streak) instead of starting a fresh scored run — no replay, no reward re-grant. Persisted under `daily_v1`.
 
-**Path-shape share card** (`ShareCardBuilder.BuildDailyShapeCard`) — a **spoiler-free** daily result: a header (`Word Ladder Daily #n · Par p · X/p · ★★☆`), one glyph row per step (`🟩` progress / `🟨` detour / `⬛` mistake-step), and the streak line — **no words**. Copied via `ClipboardShareService`.
+**Path-shape share card** (`ShareCardBuilder.BuildDailyShapeCard`) — a **spoiler-free** daily result: a header (`Star Ladder Daily #n · Par p · X/p · ★★☆`), one glyph row per step (`🟩` progress / `🟨` detour / `⬛` mistake-step), and the streak line — **no words**. Copied via `ClipboardShareService`.
 
 **Time Attack sub-modes** — **Timed**: fixed countdown (60s/120s), no rewards. **Survival**: each solve grants `BalanceConfig.SurvivalRewardSeconds` (15s) so a skilled player can sustain. Configured via `TimeAttackConfig` (factories `Default60`/`Default120`/`DefaultSurvival`, all read `BalanceConfig`).
 
@@ -183,7 +183,7 @@ True-black, **outline ("ghost")** identity with a vertical ladder/ascent metapho
 - **Gameplay motion (Task 29):** subtle **ladder-feel** animations — a letter **drops into** its tile as you type, a valid word's row **climbs** up into place, the win beat pulses, an invalid word shakes — all `ReduceMotion`-gated and clamped-`dt` smoothed.
 - **Shop (Task 33):** the same identity — purple-black, **aqua** title, **gold** balance, colored rounded-outline buttons — reached via a tappable **coin pill** on the menu.
 - **Warm gold is in-game only:** `Coins #E9C98C` (the warm gold; `GameAccents.Gold` forwards here) is reserved for in-game focus — hint / active-input tiles, the win "Next Puzzle", in-progress & current-tier rings, the streak headline, and the coin icon/number. (The coin pill's *ring* is periwinkle; only the coin glyph + number stay gold.)
-- **Menu motion (Task 28):** the aqua **WORD LADDER** title does a one-time entrance then a slow, subtle vertical float; the buttons **cascade** in on open and give a tactile **press-punch** on tap. All coroutine/`Mathf`-based, **clamped-`dt` smoothed** so it rides through screen-transition hitches, and **fully gated by `UIAnimations.ReduceMotion`** (ON ⇒ static).
+- **Menu motion (Task 28):** the aqua **STAR LADDER** title does a one-time entrance then a slow, subtle vertical float; the buttons **cascade** in on open and give a tactile **press-punch** on tap. All coroutine/`Mathf`-based, **clamped-`dt` smoothed** so it rides through screen-transition hitches, and **fully gated by `UIAnimations.ReduceMotion`** (ON ⇒ static).
 - **Ascent:** the chain climbs toward the anchored TO row at the bottom; the win beat reinforces upward motion.
 - **Motion vocabulary** (one place: `UIAnimations`): `MICRO = 0.16s` (micro-interactions), `STANDARD = 0.22s` (transitions), `EaseOutCubic`. Deliberate and weighted — no cartoon bounce. All restyles are static and honor ReduceMotion.
 
@@ -419,7 +419,7 @@ Tasks here are driven by a consistent **meta-prompt** format — paste the whole
 
 ### Shared Context Block (paste into every task prompt)
 ```
-Repo: Unity 6000.4.6f1 mobile word-ladder game ("Word Ladder"). Portrait 1080x1920.
+Repo: Unity 6000.4.6f1 mobile word-ladder game ("Star Ladder"). Portrait 1080x1920.
 Single live scene: Assets/Scenes/GameUI.unity. Architecture: immutable GameState + Dispatch
 (GameStateManager; handlers HandlePressLetter/HandleDeleteLetter/HandleSubmitWord/HandleUseHint/
 HandleUseReveal/HandleUseAddTime/HandleUndo; events OnWordSubmissionResult, OnTimeAdded).

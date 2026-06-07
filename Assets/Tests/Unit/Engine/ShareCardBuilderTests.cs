@@ -39,7 +39,7 @@ public class ShareCardBuilderTests
         var input = BaseInput("cat", "bat", "bag");
         string text = ShareCardBuilder.Build(input);
 
-        StringAssert.StartsWith("Word Ladder — Classic", text);
+        StringAssert.StartsWith("Star Ladder — Classic", text);
         StringAssert.Contains("CAT → BAG", text);
         StringAssert.Contains("2 steps", text);
     }
@@ -106,7 +106,7 @@ public class ShareCardBuilderTests
         };
         string text = ShareCardBuilder.Build(input);
 
-        StringAssert.StartsWith("Word Ladder — Classic", text);
+        StringAssert.StartsWith("Star Ladder — Classic", text);
         StringAssert.Contains("0 steps", text);
     }
 
@@ -155,7 +155,7 @@ public class ShareCardBuilderTests
         var input = DailyShapeInput(new[] { 0, 0, 0 }, par: 3, steps: 3, stars: 3, failed: false);
         string text = ShareCardBuilder.Build(input);
 
-        StringAssert.StartsWith("Word Ladder Daily #42", text);
+        StringAssert.StartsWith("Star Ladder Daily #42", text);
         StringAssert.Contains("Par 3", text);
         StringAssert.Contains("3/3", text);
         StringAssert.Contains("Streak 7 · Best 9", text);

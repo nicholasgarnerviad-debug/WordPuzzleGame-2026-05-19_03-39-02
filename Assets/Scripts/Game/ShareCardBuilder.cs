@@ -52,7 +52,7 @@ namespace WordPuzzle.Game
 
             var sb = new StringBuilder(256);
 
-            sb.Append("Word Ladder — ");
+            sb.Append("Star Ladder — ");
             sb.AppendLine(ModeLabel(input));
 
             int steps = (input.chain != null && input.chain.Count > 1)
@@ -110,7 +110,7 @@ namespace WordPuzzle.Game
             string starGlyphs = new string('★', stars) + new string('☆', 3 - stars); // ★ filled / ☆ empty
             string score = input.dailyFailed ? "X" : (input.playerSteps ?? 0).ToString();
 
-            sb.Append("Word Ladder Daily #").Append(n)
+            sb.Append("Star Ladder Daily #").Append(n)
               .Append(" · Par ").Append(par)
               .Append(" · ").Append(score).Append('/').Append(par)
               .Append(" · ").Append(starGlyphs).Append('\n');
