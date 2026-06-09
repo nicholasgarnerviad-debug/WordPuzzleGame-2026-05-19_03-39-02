@@ -421,11 +421,9 @@ namespace WordPuzzle.UI
         /// </summary>
         public void ShowDailyResult(int stars, int par, int playerSteps, bool failed, int dailyNumber, int streak)
         {
+            EnsureStarFallback(); // ★/☆ aren't in the bundled font — add an Arial fallback so they render (not □)
             int s = Mathf.Clamp(stars, 0, 3);
-            // Use Dingbats stars (U+272D/U+2729): the plain ★ (U+2605, Misc-Symbols block) isn't in the
-            // dynamic fallback font's source → it rendered as a □ tofu box. The font demonstrably covers the
-            // Dingbats block (the ✓ state-icon renders), so these five-pointed stars render where ★ didn't.
-            string starGlyphs = new string('✭', s) + new string('✩', 3 - s);
+            string starGlyphs = new string('★', s) + new string('☆', 3 - s);
             string headline = failed
                 ? "Failed today"
                 : $"{DailyGradeName(s)}  <color=#{Hx(Palette.Coins)}>{starGlyphs}</color>";
@@ -445,6 +443,33 @@ namespace WordPuzzle.UI
 
         private static string DailyGradeName(int stars) =>
             stars >= 3 ? "Perfect" : stars == 2 ? "Good" : stars == 1 ? "Solved" : "Failed";
+
+        // The bundled LiberationSans font (and its dynamic fallback) has NO star glyph, so ★/☆ (U+2605/2606)
+        // rendered as □ tofu boxes — and the Dingbats stars aren't there either. Unity's built-in Arial DOES
+        // include ★/☆, so we add it as a runtime font fallback: TMP then resolves the stars from Arial and
+        // renders real gold stars. Idempotent (guarded), app-wide, no asset/scene edit. If the built-in font
+        // can't be found the stars stay boxes, but the grade WORD (Perfect/Good/Solved) still carries the result.
+        private static bool _starFallbackReady;
+        private void EnsureStarFallback()
+        {
+            if (_starFallbackReady) return;
+            var tmp = wordsFoundText != null ? wordsFoundText : modeNameText;
+            if (tmp == null || tmp.font == null) return;
+            var arial = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf")
+                     ?? Resources.GetBuiltinResource<Font>("Arial.ttf");
+            if (arial == null) return;
+            var symbolFont = TMP_FontAsset.CreateFontAsset(arial); // dynamic — rasterizes ★/☆ on demand
+            if (symbolFont == null) return;
+            symbolFont.name = "RuntimeSymbolFallback (Arial)";
+            var table = tmp.font.fallbackFontAssetTable;
+            if (table == null)
+            {
+                table = new System.Collections.Generic.List<TMP_FontAsset>();
+                tmp.font.fallbackFontAssetTable = table;
+            }
+            table.Add(symbolFont);
+            _starFallbackReady = true;
+        }
 
         /// <summary>
         /// Puzzle Show: "Next Puzzle" (another in the current tier) + optional "Tier N ▸"
