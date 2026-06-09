@@ -195,4 +195,54 @@ public class ShareCardBuilderTests
         string text = ShareCardBuilder.Build(BaseInput("cat", "bat", "bag"));
         StringAssert.DoesNotContain("\r\n", text);
     }
+
+    // ── Task 40B — assisted-run ⚡ disclosure on the daily card ──
+
+    [Test]
+    public void BuildDaily_UsedPowerUp_AppendsZapToHeaderStarBlock()
+    {
+        var input = DailyShapeInput(new[] { 0, 0, 0 }, par: 3, steps: 3, stars: 2, failed: false);
+        input.usedPowerUp = true;
+        string text = ShareCardBuilder.Build(input);
+
+        string header = text.Split('\n')[0];
+        StringAssert.Contains("★★☆" + ShareCardBuilder.POWERUP_GLYPH, header,
+            "the ⚡ rides the star block in the header");
+        Assert.AreEqual(1, CountOf(text, ShareCardBuilder.POWERUP_GLYPH),
+            "exactly one ⚡ — header only, never in the rows");
+    }
+
+    [Test]
+    public void BuildDaily_NoPowerUp_OmitsZapEntirely()
+    {
+        var input = DailyShapeInput(new[] { 0, 0, 0 }, par: 3, steps: 3, stars: 3, failed: false);
+        string text = ShareCardBuilder.Build(input);
+        // Ordinal count, NOT StringAssert.DoesNotContain: under ICU, culture-sensitive IndexOf
+        // gives ⚡ zero collation weight, so it "matches" inside any string.
+        Assert.AreEqual(0, CountOf(text, ShareCardBuilder.POWERUP_GLYPH),
+            "a clean run must carry no ⚡ anywhere");
+    }
+
+    [Test]
+    public void BuildDaily_ZapChangesHeaderOnly_RowsByteIdentical()
+    {
+        var clean = DailyShapeInput(new[] { 0, 1, 0 }, par: 3, steps: 3, stars: 2, failed: false);
+        var assisted = DailyShapeInput(new[] { 0, 1, 0 }, par: 3, steps: 3, stars: 2, failed: false);
+        assisted.usedPowerUp = true;
+
+        string cleanText = ShareCardBuilder.Build(clean);
+        string assistedText = ShareCardBuilder.Build(assisted);
+
+        // Everything below the header (glyph rows + streak) is byte-identical.
+        string cleanBody = cleanText.Substring(cleanText.IndexOf('\n'));
+        string assistedBody = assistedText.Substring(assistedText.IndexOf('\n'));
+        Assert.AreEqual(cleanBody, assistedBody, "the ⚡ must not perturb the shape rows or footer");
+    }
+
+    private static int CountOf(string haystack, string needle)
+    {
+        int count = 0, i = 0;
+        while ((i = haystack.IndexOf(needle, i, System.StringComparison.Ordinal)) >= 0) { count++; i += needle.Length; }
+        return count;
+    }
 }

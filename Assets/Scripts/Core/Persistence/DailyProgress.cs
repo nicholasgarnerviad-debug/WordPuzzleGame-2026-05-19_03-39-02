@@ -33,6 +33,9 @@ namespace WordPuzzle.Persistence
         public int todayResultPar = 0;
         public int todayResultPlayerSteps = 0;
         public bool todayResultFailed = false;
+        // Task 40B — assisted-run disclosure must survive the re-show (otherwise re-opening the
+        // results would launder the "assisted" marker). Legacy saves auto-default to false.
+        public bool todayResultUsedPowerUp = false;
 
         public DailyProgress() { }
 

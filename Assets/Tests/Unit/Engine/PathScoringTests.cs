@@ -79,15 +79,63 @@ public class PathScoringTests
         }
     }
 
+    // ── Task 40A — power-up assistance caps the grade at BalanceConfig.PowerUpMaxGrade ──
+
     [Test]
-    public void UsedPowerUp_DoesNotChangeGrade_ButIsRecorded()
+    public void UsedPowerUp_FlawlessRun_CappedAtPowerUpMaxGrade()
     {
-        var withoutPU = PathScoring.Score(Par, Par, 0, 0, false, usedPowerUp: false);
-        var withPU    = PathScoring.Score(Par, Par, 0, 0, false, usedPowerUp: true);
-        Assert.AreEqual(withoutPU.grade, withPU.grade);
-        Assert.AreEqual(withoutPU.stars, withPU.stars);
-        Assert.IsTrue(withPU.usedPowerUp);
-        Assert.IsFalse(withoutPU.usedPowerUp);
+        // (a) 0 detours + power-up: would be Perfect, capped to Good (★★) — and still recorded.
+        var r = PathScoring.Score(Par, Par, 0, 0, false, usedPowerUp: true);
+        Assert.AreEqual(BalanceConfig.PowerUpMaxGrade, r.grade,
+            "an assisted flawless run grades at the cap, never Perfect");
+        Assert.AreEqual((int)BalanceConfig.PowerUpMaxGrade, r.stars);
+        Assert.IsTrue(r.usedPowerUp);
+    }
+
+    [Test]
+    public void NoPowerUp_FlawlessRun_PerfectUnchanged()
+    {
+        // (b) the unassisted Perfect is untouched by the cap.
+        var r = PathScoring.Score(Par, Par, 0, 0, false, usedPowerUp: false);
+        Assert.AreEqual(PathGrade.Perfect, r.grade);
+        Assert.AreEqual(3, r.stars);
+        Assert.IsFalse(r.usedPowerUp);
+    }
+
+    [Test]
+    public void UsedPowerUp_AlreadyAtOrBelowCap_GradeUnchanged_CapNeverRaises()
+    {
+        // (c) detoured runs already at Good / Solved keep their grade — the cap only lowers.
+        var good   = PathScoring.Score(Par, Par + 1, 1, 0, false, usedPowerUp: true);
+        Assert.AreEqual(PathGrade.Good, good.grade, "Good stays Good under the cap");
+
+        var solved = PathScoring.Score(Par, Par + 3, 3, 0, false, usedPowerUp: true);
+        Assert.AreEqual(PathGrade.Solved, solved.grade, "the cap must never RAISE Solved to Good");
+        Assert.AreEqual(1, solved.stars);
+    }
+
+    [Test]
+    public void UsedPowerUp_RanOutOfMistakes_StillFailed()
+    {
+        // (d) a hard fail overrides everything; the cap does not resurrect it.
+        var r = PathScoring.Score(Par, 2, 0, 3, ranOutOfMistakes: true, usedPowerUp: true);
+        Assert.AreEqual(PathGrade.Failed, r.grade);
+        Assert.AreEqual(0, r.stars);
+        Assert.IsTrue(r.failed);
+    }
+
+    [Test]
+    public void UsedPowerUp_CappedResult_PaysTheGoodCoinRate()
+    {
+        // (e) coins follow the capped stars naturally — an assisted flawless run pays
+        // the Good rate, not the Perfect rate.
+        var capped = PathScoring.Score(Par, Par, 0, 0, false, usedPowerUp: true);
+        Assert.AreEqual(BalanceConfig.DailyRewardGood,
+            BalanceConfig.DailyCoinReward(capped.stars, capped.failed),
+            "the capped result must pay the Good coin rate");
+        Assert.AreNotEqual(BalanceConfig.DailyRewardPerfect,
+            BalanceConfig.DailyCoinReward(capped.stars, capped.failed),
+            "an assisted run must never pay the Perfect rate");
     }
 
     [Test]

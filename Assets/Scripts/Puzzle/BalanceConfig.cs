@@ -208,6 +208,14 @@ public static class BalanceConfig
     /// </summary>
     public const int GoodMaxDetours = 2;
 
+    /// <summary>
+    /// Grade ceiling for a power-up-assisted daily (Task 40A). An assisted solve can never
+    /// grade above this — Perfect is reserved for unassisted runs, keeping the share card
+    /// and the trailing-365 record honest. Failed stays Failed; the cap never raises a grade.
+    /// The cap LEVEL is the tunable (not a bool) so balance can harshen it to Solved later.
+    /// </summary>
+    public const WordPuzzle.Puzzle.PathGrade PowerUpMaxGrade = WordPuzzle.Puzzle.PathGrade.Good;
+
     /// <summary>Local-day cooldown between streak repairs (yesterday-only window). Default 7.</summary>
     public const int StreakRepairCooldownDays = 7;
 

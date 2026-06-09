@@ -15,6 +15,7 @@ namespace WordPuzzle.Game
         public const string CHANGED_GLYPH    = "\U0001F7E9"; // 🟩 optimal move
         public const string UNCHANGED_GLYPH  = "⬛";     // ⬛ mistake (also "unchanged" in the classic grid)
         public const string DETOUR_GLYPH     = "\U0001F7E8"; // 🟨 detour
+        public const string POWERUP_GLYPH    = "⚡";     // ⚡ power-up-assisted (Task 40B)
 
         public enum ModeKind { Classic, Daily, PuzzleShow, TimeAttack }
 
@@ -40,6 +41,7 @@ namespace WordPuzzle.Game
             public int? playerSteps;
             public int? stars;
             public bool dailyFailed;
+            public bool usedPowerUp;          // Task 40B — assisted run: header star block gains ⚡
         }
 
         public static string Build(ShareInput input)
@@ -113,7 +115,12 @@ namespace WordPuzzle.Game
             sb.Append("Star Ladder Daily #").Append(n)
               .Append(" · Par ").Append(par)
               .Append(" · ").Append(score).Append('/').Append(par)
-              .Append(" · ").Append(starGlyphs).Append('\n');
+              .Append(" · ").Append(starGlyphs);
+
+            // Task 40B — honest disclosure: a power-up-assisted run carries one ⚡ on the star
+            // block so an assisted card is distinguishable. Glyph rows stay byte-identical.
+            if (input.usedPowerUp) sb.Append(POWERUP_GLYPH);
+            sb.Append('\n');
 
             if (input.dailyStepClasses != null)
                 foreach (int cls in input.dailyStepClasses)

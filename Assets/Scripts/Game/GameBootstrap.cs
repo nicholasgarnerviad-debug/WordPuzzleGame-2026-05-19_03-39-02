@@ -862,7 +862,8 @@ namespace WordPuzzle
                 cachedDailyProgress.todayResultPlayerSteps,
                 cachedDailyProgress.todayResultFailed,
                 dailyPuzzleService != null ? dailyPuzzleService.TodayIndex() : 0,
-                cachedDailyProgress.currentStreak);
+                cachedDailyProgress.currentStreak,
+                cachedDailyProgress.todayResultUsedPowerUp);   // Task 40B — re-show keeps the disclosure
             results.ShowDailyStreak(cachedDailyProgress.currentStreak, cachedDailyProgress.longestStreak, true);
             lastWinContext = PostWin.Daily;         // Home routes correctly
             uiManager.ShowResults();
@@ -1874,6 +1875,7 @@ namespace WordPuzzle
                         input.playerSteps = dr.Value.playerSteps;
                         input.stars = dr.Value.stars;
                         input.dailyFailed = dr.Value.failed;
+                        input.usedPowerUp = dr.Value.usedPowerUp;   // Task 40B — ⚡ disclosure
                     }
                 }
                 else if (activeMode is PuzzleShowMode psm)
@@ -1947,6 +1949,7 @@ namespace WordPuzzle
                 cachedDailyProgress.todayResultPar         = psr.par;
                 cachedDailyProgress.todayResultPlayerSteps = psr.playerSteps;
                 cachedDailyProgress.todayResultFailed      = psr.failed;
+                cachedDailyProgress.todayResultUsedPowerUp = psr.usedPowerUp;  // Task 40B
             }
 
             if (dataManagerRef != null)
@@ -1960,7 +1963,7 @@ namespace WordPuzzle
             {
                 var ps = pathScore.Value;
                 uiManager.GetResults().ShowDailyResult(ps.stars, ps.par, ps.playerSteps, ps.failed,
-                    puzzleIndex, cachedDailyProgress.currentStreak);
+                    puzzleIndex, cachedDailyProgress.currentStreak, ps.usedPowerUp);
 
                 // Phase 5 (36K) — par-scaled daily coin reward (replaces the flat daily bonus). Granted on
                 // solve OR fail (Failed = consolation); GrantPuzzleReward skips the daily to avoid double-pay.

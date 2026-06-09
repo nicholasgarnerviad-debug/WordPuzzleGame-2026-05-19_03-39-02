@@ -435,13 +435,17 @@ namespace WordPuzzle.UI
         /// <summary>
         /// Daily 2.0 (Task 36) — headline the par-scored result: grade + stars, or "Failed today",
         /// then "Par N · You got X". Reuses the words-found line (falls back to the mode-name line).
+        /// Task 40B — an assisted run discloses with a muted "assisted" segment (text, not ⚡:
+        /// the bundled font has no U+26A1 glyph — same tofu class as the ★ that became meshes).
         /// </summary>
-        public void ShowDailyResult(int stars, int par, int playerSteps, bool failed, int dailyNumber, int streak)
+        public void ShowDailyResult(int stars, int par, int playerSteps, bool failed, int dailyNumber, int streak,
+                                    bool usedPowerUp = false)
         {
             int s = Mathf.Clamp(stars, 0, 3);
             string headline = failed ? "Failed today" : DailyGradeName(s);
             // Tint just the grade name — gold to tie it to the gold stars; muted for a failed day.
-            string line = $"<color=#{Hx(failed ? Palette.TextMuted : Palette.Coins)}>{headline}</color>  ·  Par {par}  ·  You got {playerSteps}";
+            string assisted = usedPowerUp ? $"  ·  <color=#{Hx(Palette.TextMuted)}>assisted</color>" : "";
+            string line = $"<color=#{Hx(failed ? Palette.TextMuted : Palette.Coins)}>{headline}</color>{assisted}  ·  Par {par}  ·  You got {playerSteps}";
 
             if (wordsFoundText != null)
             {

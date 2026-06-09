@@ -27,7 +27,7 @@ namespace WordPuzzle.Puzzle
         public readonly PathGrade grade;
         public readonly int stars;        // == (int)grade by construction
         public readonly bool failed;      // true iff the run ended by exhausting the mistake budget
-        public readonly bool usedPowerUp; // recorded only; never affects grade
+        public readonly bool usedPowerUp; // true when any power-up was spent; caps the grade (Task 40A)
 
         public PathScoreResult(int par, int playerSteps, int detours, int mistakesUsed,
                                PathGrade grade, int stars, bool failed, bool usedPowerUp)
@@ -49,7 +49,8 @@ namespace WordPuzzle.Puzzle
     /// (accepted moves that did not get strictly closer to the target); an optimal-length
     /// path — via ANY route — is Perfect. Running out of mistakes is a hard Fail that
     /// overrides everything. Cutoffs live in <see cref="BalanceConfig"/> (no magic numbers);
-    /// power-ups are recorded but never change the grade. No Unity / State / SDK dependency.
+    /// a power-up-assisted solve is CAPPED at <see cref="BalanceConfig.PowerUpMaxGrade"/>
+    /// (Task 40A — Perfect is unassisted-only). No Unity / State / SDK dependency.
     /// </summary>
     public static class PathScoring
     {
@@ -58,7 +59,8 @@ namespace WordPuzzle.Puzzle
         /// <param name="detours">Accepted moves that did NOT reduce distance-to-target.</param>
         /// <param name="mistakesUsed">Invalid submissions spent this run.</param>
         /// <param name="ranOutOfMistakes">True when the run ended by exhausting the mistake budget.</param>
-        /// <param name="usedPowerUp">Recorded on the result only; never affects grade or stars.</param>
+        /// <param name="usedPowerUp">True when any power-up was spent; caps a solve's grade at
+        /// <see cref="BalanceConfig.PowerUpMaxGrade"/> (Task 40A). Failed is unaffected.</param>
         public static PathScoreResult Score(int par, int playerSteps, int detours, int mistakesUsed,
                                             bool ranOutOfMistakes, bool usedPowerUp)
         {
@@ -79,6 +81,11 @@ namespace WordPuzzle.Puzzle
             {
                 grade = PathGrade.Solved;                       // solved but wandered — never 0★ on a solve
             }
+
+            // Task 40A — assistance caps the grade (cap level lives in BalanceConfig).
+            // Solves only: Failed stays Failed, and the cap never RAISES a grade.
+            if (usedPowerUp && !ranOutOfMistakes && grade > BalanceConfig.PowerUpMaxGrade)
+                grade = BalanceConfig.PowerUpMaxGrade;
 
             int stars = (int)grade;                             // enum value == star count by construction
             return new PathScoreResult(par, playerSteps, detours, mistakesUsed,
