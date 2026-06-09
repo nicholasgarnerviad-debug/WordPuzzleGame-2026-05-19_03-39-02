@@ -189,6 +189,13 @@ namespace WordPuzzle.UI
                 label.color = labelColor;
                 label.fontStyle = bold ? FontStyles.Bold : FontStyles.Normal;
                 label.fontSize = fontSize;
+                // Root cause of the tiny STATS label: its Label child carried a stray localScale (~0.53) that
+                // shrank the rendered text by ~half even though its fontSize matched its Library pair (both 30).
+                // ArrangeMenu/PlaceMenuRowAtX only normalizes the BUTTON's scale, not the label child — so
+                // normalize the label here too (project rule: menu labels/panels sit at scale 1.0).
+                label.rectTransform.localScale = Vector3.one;
+                // Guard: a scene label with TMP auto-sizing ON would ignore fontSize and use its own min/max.
+                label.enableAutoSizing = false;
             }
         }
 
