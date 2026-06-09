@@ -249,4 +249,14 @@ public static class BalanceConfig
 
     /// <summary>Minimum completed puzzles between interstitial impressions.</summary>
     public const int InterstitialPuzzleCap = 5;
+
+    // ─── Ad load-retry backoff (Task 39B) ────────────────────────────────────
+    // Standard AdMob guidance: retry failed loads with exponential backoff so a
+    // flaky network at boot can't permanently kill the rewarded faucets.
+
+    /// <summary>Base delay (seconds) for ad load-retry attempt 0; doubles each attempt.</summary>
+    public const int AdRetryBaseDelaySeconds = 1;
+
+    /// <summary>Ceiling (seconds) for the ad load-retry doubling curve.</summary>
+    public const int AdRetryMaxDelaySeconds = 64;
 }

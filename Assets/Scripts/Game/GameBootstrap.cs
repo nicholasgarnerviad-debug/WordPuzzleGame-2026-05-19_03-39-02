@@ -398,6 +398,20 @@ namespace WordPuzzle
             uiManager.GetResults().OnDoubleReward += OnDoubleDailyReward;
         }
 
+        // Task 39D — belt-and-suspenders durability flush. Android can kill a
+        // backgrounded app without further callbacks, which would drop any
+        // in-memory-only PlayerPrefs writes (e.g. the per-keystroke
+        // wordpuzzle_save snapshot, which deliberately skips Save() for perf).
+        private void OnApplicationPause(bool paused)
+        {
+            if (paused) PlayerPrefs.Save();
+        }
+
+        private void OnApplicationQuit()
+        {
+            PlayerPrefs.Save();
+        }
+
         private void OnDestroy()
         {
             // Spec §3.3.6 — detach mode events to prevent leaks.
@@ -1654,6 +1668,11 @@ namespace WordPuzzle
         {
             awaitingClassicNext = false;
             uiManager.GetGameplay().HideWinPanel();
+            // Task 39E — the one safe Classic interstitial slot: the board is between
+            // puzzles right here (never mid-puzzle). Cooldown + puzzle cap + AdsRemoved
+            // all gate inside TryShowInterstitial; RecordPuzzleCompleted already ticked
+            // in ShowClassicWinPanel, so no double-count.
+            adPolicy?.TryShowInterstitial();
             StartNewGame();   // activeMode is still the live ClassicMode
         }
 

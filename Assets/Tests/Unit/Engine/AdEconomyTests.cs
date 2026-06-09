@@ -180,6 +180,48 @@ public class AdEconomyTests
         Assert.AreEqual(2, ad.InterstitialShowCount);
     }
 
+    [Test]
+    public void Interstitial_ClassicGrinderCadence_CapPlusCooldown_OneImpressionThenReset()
+    {
+        // Task 39E — the cadence a Classic grinder experiences via the compact win
+        // panel: each win ticks RecordPuzzleCompleted (ShowClassicWinPanel) and each
+        // "Next Puzzle" tap calls TryShowInterstitial (OnWinNextPuzzle).
+        float t = 1000f;
+        var ad = new MockAdService();
+        var policy = new WordPuzzle.AdPolicyService(ad, () => t);
+
+        // Wins 1..cap-1: every "Next Puzzle" tap stays ad-free.
+        for (int i = 0; i < BalanceConfig.InterstitialPuzzleCap - 1; i++)
+        {
+            policy.RecordPuzzleCompleted();
+            Assert.IsFalse(policy.TryShowInterstitial(),
+                $"No interstitial before the puzzle cap (completion {i + 1}).");
+        }
+
+        // Win #cap, cooldown satisfied (first impression: elapsed from -inf) → one ad.
+        policy.RecordPuzzleCompleted();
+        Assert.IsTrue(policy.TryShowInterstitial(),
+            "Cap met + cooldown elapsed → exactly one impression.");
+        Assert.AreEqual(1, ad.InterstitialShowCount);
+        Assert.AreEqual(0, policy.PuzzlesSinceLastInterstitial,
+            "Puzzle counter resets after the impression.");
+
+        // Grinding straight on: cap refills but the cooldown blocks until it elapses.
+        for (int i = 0; i < BalanceConfig.InterstitialPuzzleCap; i++)
+        {
+            policy.RecordPuzzleCompleted();
+            Assert.IsFalse(policy.TryShowInterstitial(),
+                "Cooldown must block even a fast grinder who refills the puzzle cap.");
+        }
+        Assert.AreEqual(1, ad.InterstitialShowCount);
+
+        // Cooldown elapses → the next "Next Puzzle" tap shows the second ad.
+        t += BalanceConfig.InterstitialCooldownSeconds + 1f;
+        Assert.IsTrue(policy.TryShowInterstitial());
+        Assert.AreEqual(2, ad.InterstitialShowCount);
+        Assert.AreEqual(0, policy.PuzzlesSinceLastInterstitial);
+    }
+
     // ── 6A: Economy faucet / sink correctness ────────────────────────────────
 
     [Test]

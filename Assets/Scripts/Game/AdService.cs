@@ -1,6 +1,8 @@
 using System;
+using System.Collections;
 using UnityEngine;
 using GoogleMobileAds.Api;
+using WordPuzzle.Puzzle;
 
 namespace WordPuzzle
 {
@@ -16,6 +18,13 @@ namespace WordPuzzle
     /// • Rewarded: reward fires only on OnUserEarnedReward; never on dismiss/failure.
     /// • Interstitial: caller (AdPolicyService) enforces frequency cap before Show.
     /// • MobileAds.Initialize is called once at startup in GameBootstrap.
+    ///
+    /// Task 39 hardening:
+    /// • 39A: ad events are forced onto the Unity main thread (see Awake).
+    /// • 39B: failed loads retry with AdRetryPolicy exponential backoff instead of
+    ///   silently killing the rewarded faucets for the session.
+    /// • 39C: the reward callback is deferred to the closed handler (matching the
+    ///   documented contract) and event unsubscribes use stored delegate fields.
     /// </summary>
     public class AdService : MonoBehaviour, IAdService
     {
@@ -36,6 +45,23 @@ namespace WordPuzzle
         private Action pendingRewardCallback;
         private Action pendingRewardedClosedCallback;
         private Action pendingInterstitialClosedCallback;
+
+        // 39C — the SDK reported OnUserEarnedReward for the showing ad; the reward
+        // callback fires from the closed handler so UI is fully restored first.
+        private bool rewardEarned;
+
+        // 39C — registered event handlers, stored so DestroyRewarded/DestroyInterstitial
+        // can unsubscribe the EXACT delegate instances (a `-= new lambda` is a no-op).
+        private Action rewardedClosedHandler;
+        private Action<AdError> rewardedFailedHandler;
+        private Action interstitialClosedHandler;
+        private Action<AdError> interstitialFailedHandler;
+
+        // 39B — load-retry state, tracked per ad type. Counters reset on success.
+        private int rewardedRetryAttempt;
+        private int interstitialRetryAttempt;
+        private Coroutine rewardedRetryRoutine;
+        private Coroutine interstitialRetryRoutine;
 
         // ── IAdService ───────────────────────────────────────────────────────
 
@@ -67,6 +93,7 @@ namespace WordPuzzle
                 return;
             }
 
+            rewardEarned = false;
             pendingRewardCallback       = onRewarded;
             pendingRewardedClosedCallback = onClosed;
             rewardedAd.Show(OnUserEarnedReward);
@@ -89,6 +116,10 @@ namespace WordPuzzle
 
         private void Awake()
         {
+            // 39A — the SDK raises ad events on background threads by default; our
+            // callbacks touch Unity objects and the economy, so force main-thread.
+            MobileAds.RaiseAdEventsOnUnityMainThread = true;
+
             MobileAds.Initialize(status =>
             {
                 sdkInitialized = true;
@@ -100,6 +131,8 @@ namespace WordPuzzle
 
         private void OnDestroy()
         {
+            CancelRewardedRetry();
+            CancelInterstitialRetry();
             DestroyRewarded();
             DestroyInterstitial();
         }
@@ -111,12 +144,17 @@ namespace WordPuzzle
             if (error != null)
             {
                 Debug.LogWarning($"[AdService] Rewarded load failed: {error.GetMessage()}");
+                ScheduleRewardedRetry();
                 return;
             }
 
+            rewardedRetryAttempt = 0;   // success resets the backoff curve
+
             rewardedAd = ad;
-            rewardedAd.OnAdFullScreenContentClosed  += OnRewardedClosed;
-            rewardedAd.OnAdFullScreenContentFailed  += _ => { OnRewardedClosed(); };
+            rewardedClosedHandler = OnRewardedClosed;
+            rewardedFailedHandler = OnRewardedShowFailed;
+            rewardedAd.OnAdFullScreenContentClosed += rewardedClosedHandler;
+            rewardedAd.OnAdFullScreenContentFailed += rewardedFailedHandler;
         }
 
         private void OnInterstitialLoaded(InterstitialAd ad, LoadAdError error)
@@ -124,12 +162,65 @@ namespace WordPuzzle
             if (error != null)
             {
                 Debug.LogWarning($"[AdService] Interstitial load failed: {error.GetMessage()}");
+                ScheduleInterstitialRetry();
                 return;
             }
 
+            interstitialRetryAttempt = 0;   // success resets the backoff curve
+
             interstitialAd = ad;
-            interstitialAd.OnAdFullScreenContentClosed += OnInterstitialClosed;
-            interstitialAd.OnAdFullScreenContentFailed += _ => { OnInterstitialClosed(); };
+            interstitialClosedHandler = OnInterstitialClosed;
+            interstitialFailedHandler = OnInterstitialShowFailed;
+            interstitialAd.OnAdFullScreenContentClosed += interstitialClosedHandler;
+            interstitialAd.OnAdFullScreenContentFailed += interstitialFailedHandler;
+        }
+
+        // ── 39B: load retry with exponential backoff ────────────────────────
+
+        private void ScheduleRewardedRetry()
+        {
+            CancelRewardedRetry();
+            float delay = AdRetryPolicy.NextDelaySeconds(rewardedRetryAttempt);
+            rewardedRetryAttempt++;
+            rewardedRetryRoutine = StartCoroutine(RetryAfter(delay, () =>
+            {
+                rewardedRetryRoutine = null;
+                LoadRewarded();
+            }));
+        }
+
+        private void ScheduleInterstitialRetry()
+        {
+            CancelInterstitialRetry();
+            float delay = AdRetryPolicy.NextDelaySeconds(interstitialRetryAttempt);
+            interstitialRetryAttempt++;
+            interstitialRetryRoutine = StartCoroutine(RetryAfter(delay, () =>
+            {
+                interstitialRetryRoutine = null;
+                LoadInterstitial();
+            }));
+        }
+
+        private static IEnumerator RetryAfter(float delaySeconds, Action retry)
+        {
+            // Realtime so the timer keeps ticking through timescale changes and
+            // resumes correctly after paused/backgrounded states.
+            yield return new WaitForSecondsRealtime(delaySeconds);
+            retry();
+        }
+
+        private void CancelRewardedRetry()
+        {
+            if (rewardedRetryRoutine == null) return;
+            StopCoroutine(rewardedRetryRoutine);
+            rewardedRetryRoutine = null;
+        }
+
+        private void CancelInterstitialRetry()
+        {
+            if (interstitialRetryRoutine == null) return;
+            StopCoroutine(interstitialRetryRoutine);
+            interstitialRetryRoutine = null;
         }
 
         // ── Ad event handlers ────────────────────────────────────────────────
@@ -140,19 +231,33 @@ namespace WordPuzzle
         /// </summary>
         private void OnUserEarnedReward(Reward reward)
         {
-            // Fire via the closed handler so reward is always granted after overlay dismissal.
-            var cb = pendingRewardCallback;
-            pendingRewardCallback = null;
-            cb?.Invoke();
+            // 39C — flag only; OnRewardedClosed grants so the overlay is gone first.
+            rewardEarned = true;
         }
 
         private void OnRewardedClosed()
         {
+            // 39C — grant the earned reward (if any) BEFORE the closed callback so
+            // callers observe the documented order. Dismiss/failure never grants.
+            var rewardCb = pendingRewardCallback;
+            pendingRewardCallback = null;
+            if (rewardEarned)
+            {
+                rewardEarned = false;
+                rewardCb?.Invoke();
+            }
+
             var cb = pendingRewardedClosedCallback;
             pendingRewardedClosedCallback = null;
             cb?.Invoke();
             DestroyRewarded();
             LoadRewarded();   // Pre-load next.
+        }
+
+        private void OnRewardedShowFailed(AdError error)
+        {
+            // Show failed → no reward was earned; closed callback only.
+            OnRewardedClosed();
         }
 
         private void OnInterstitialClosed()
@@ -164,13 +269,23 @@ namespace WordPuzzle
             LoadInterstitial();  // Pre-load next.
         }
 
+        private void OnInterstitialShowFailed(AdError error)
+        {
+            OnInterstitialClosed();
+        }
+
         // ── Cleanup helpers ──────────────────────────────────────────────────
 
         private void DestroyRewarded()
         {
             if (rewardedAd == null) return;
-            rewardedAd.OnAdFullScreenContentClosed -= OnRewardedClosed;
-            rewardedAd.OnAdFullScreenContentFailed -= _ => { OnRewardedClosed(); };
+            // 39C — unsubscribe the exact registered delegate instances.
+            if (rewardedClosedHandler != null)
+                rewardedAd.OnAdFullScreenContentClosed -= rewardedClosedHandler;
+            if (rewardedFailedHandler != null)
+                rewardedAd.OnAdFullScreenContentFailed -= rewardedFailedHandler;
+            rewardedClosedHandler = null;
+            rewardedFailedHandler = null;
             rewardedAd.Destroy();
             rewardedAd = null;
         }
@@ -178,8 +293,13 @@ namespace WordPuzzle
         private void DestroyInterstitial()
         {
             if (interstitialAd == null) return;
-            interstitialAd.OnAdFullScreenContentClosed -= OnInterstitialClosed;
-            interstitialAd.OnAdFullScreenContentFailed -= _ => { OnInterstitialClosed(); };
+            // 39C — unsubscribe the exact registered delegate instances.
+            if (interstitialClosedHandler != null)
+                interstitialAd.OnAdFullScreenContentClosed -= interstitialClosedHandler;
+            if (interstitialFailedHandler != null)
+                interstitialAd.OnAdFullScreenContentFailed -= interstitialFailedHandler;
+            interstitialClosedHandler = null;
+            interstitialFailedHandler = null;
             interstitialAd.Destroy();
             interstitialAd = null;
         }

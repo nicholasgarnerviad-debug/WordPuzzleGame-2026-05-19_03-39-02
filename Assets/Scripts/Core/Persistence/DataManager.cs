@@ -105,6 +105,10 @@ namespace WordPuzzle.Persistence
 
         string json = JsonUtility.ToJson(ConvertProgressToData(progress));
         PlayerPrefs.SetString(PROGRESS_FILE_KEY, json);
+        // Task 39D — this path carries MONEY (coins, owned inventory, removeAds,
+        // starterPackOwned, adFreeUntilUnix); flush so an app kill can't drop a
+        // real-money purchase grant. Mirrors SavePuzzleProgressAsync et al.
+        PlayerPrefs.Save();
 
         await Task.Delay(0);
     }
