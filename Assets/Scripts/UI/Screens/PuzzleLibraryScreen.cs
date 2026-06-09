@@ -260,7 +260,7 @@ namespace WordPuzzle.UI
                 FontStyles.Bold, new Vector2(0f, 1f), new Vector2(0f, 1f),
                 new Vector2(24f, -16f), new Vector2(300f, 38f));
 
-            CreateAnchored(fill.transform, "TierTheme", TierTheme(tier.tierId), 18,
+            CreateAnchored(fill.transform, "TierTheme", TierTheme(tier.tierId), 22,
                 TextAlignmentOptions.BottomLeft, C_SUBTITLE, FontStyles.Normal,
                 new Vector2(0f, 0f), new Vector2(0f, 0f),
                 new Vector2(24f, 18f), new Vector2(360f, 26f));
@@ -283,7 +283,7 @@ namespace WordPuzzle.UI
                     new Vector2(-24f, -16f), new Vector2(40f, 32f));
                 // Polish — was C_SUBTITLE @18 (flagged low-contrast/tiny); brighter + larger for legibility.
                 CreateAnchored(fill.transform, "UnlockHint",
-                    $"Clear {need} in Tier {tier.tierId - 1} to unlock", 19,
+                    $"Clear {need} in Tier {tier.tierId - 1} to unlock", 24,
                     TextAlignmentOptions.BottomRight, C_HEADER_COUNT, FontStyles.Normal,
                     new Vector2(1f, 0f), new Vector2(1f, 0f),
                     new Vector2(-24f, 18f), new Vector2(360f, 28f));
@@ -350,14 +350,14 @@ namespace WordPuzzle.UI
                     StartCoroutine(UIAnimations.ScaleButtonTap(brt));
                 BackToTierSelect();
             });
-            CreateText(backGo.transform, "BackLabel", "‹ Back", 20,
+            CreateText(backGo.transform, "BackLabel", "‹ Back", 24,
                 TextAlignmentOptions.Center, C_UNPLAYED_TEXT, FontStyles.Bold);
 
             CreateAnchored(go.transform, "GridTitle", $"Tier {tier.tierId}", 28,
                 TextAlignmentOptions.Top, C_HEADER_TIER, FontStyles.Bold,
                 new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
                 new Vector2(0f, -8f), new Vector2(360f, 34f));
-            CreateAnchored(go.transform, "GridTheme", $"{TierTheme(tier.tierId)}   ·   {completed}/{total}", 16,
+            CreateAnchored(go.transform, "GridTheme", $"{TierTheme(tier.tierId)}   ·   {completed}/{total}", 22,
                 TextAlignmentOptions.Bottom, C_SUBTITLE, FontStyles.Normal,
                 new Vector2(0.5f, 0f), new Vector2(0.5f, 0f),
                 new Vector2(0f, 12f), new Vector2(420f, 24f));
@@ -430,11 +430,11 @@ namespace WordPuzzle.UI
             fillImg.color = StateBg(state); // near-black centre; state read from the border ring
 
             // Row 1 — id + state icon (shape-coded, legible in grayscale / colorblind).
-            CreateAnchored(fillGo.transform, "PuzzleId", $"#{puzzle.puzzleId:000}", 14,
+            CreateAnchored(fillGo.transform, "PuzzleId", $"#{puzzle.puzzleId:000}", 18,
                 TextAlignmentOptions.TopLeft,
                 state == PuzzleState.Locked ? C_LOCKED_TEXT : C_PUZZLE_ID,
                 FontStyles.Bold | FontStyles.Italic,
-                new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(10f, -8f), new Vector2(60f, 18f));
+                new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(10f, -8f), new Vector2(64f, 24f));
 
             string icon = state switch
             {
@@ -459,10 +459,10 @@ namespace WordPuzzle.UI
 
             // Row 3 — steps subtitle.
             CreateAnchored(fillGo.transform, "Subtitle",
-                state == PuzzleState.Locked ? "" : $"{puzzle.optimalSteps} steps", 14,
+                state == PuzzleState.Locked ? "" : $"{puzzle.optimalSteps} steps", 18,
                 TextAlignmentOptions.Center, C_SUBTITLE, FontStyles.Normal,
                 new Vector2(0f, 0f), new Vector2(1f, 0f), new Vector2(0f, 14f), Vector2.zero,
-                fillSize: true, fillHeight: 22f);
+                fillSize: true, fillHeight: 24f);
 
             // Modern feel — staggered cascade reveal (slide-up + fade), ReduceMotion-gated.
             // Wrapped by column so the 3-wide grid ripples diagonally rather than row-by-row.
@@ -481,7 +481,7 @@ namespace WordPuzzle.UI
             CreateAnchored(go.transform, "Title", title, 26, TextAlignmentOptions.Top,
                 C_GOLD, FontStyles.Bold, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
                 new Vector2(0f, -2f), new Vector2(420f, 34f));
-            CreateAnchored(go.transform, "Sub", subtitle, 16, TextAlignmentOptions.Bottom,
+            CreateAnchored(go.transform, "Sub", subtitle, 22, TextAlignmentOptions.Bottom,
                 C_SUBTITLE, FontStyles.Normal, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f),
                 new Vector2(0f, 6f), new Vector2(420f, 24f));
         }
@@ -799,7 +799,7 @@ namespace WordPuzzle.UI
                 UIThemeManager.ApplyRoundedButton(sFillImg);
                 sFillImg.color = C_SLOT_BG;
 
-                var txt = CreateText(sFill.transform, "Word", shown, 22,
+                var txt = CreateText(sFill.transform, "Word", shown, 26,
                     TextAlignmentOptions.Center, textColor != null ? textColor(i) : C_BEST_WORD,
                     FontStyles.Bold);
                 txt.enableWordWrapping = false;
@@ -907,7 +907,7 @@ namespace WordPuzzle.UI
             var btn = go.AddComponent<Button>(); btn.transition = Selectable.Transition.None;
             int captured = puzzleId;
             btn.onClick.AddListener(() => { ClosePathDetail(); OnPuzzleSelected?.Invoke(captured); });
-            CreateText(go.transform, "ReplayLabel", "REPLAY", 22,
+            CreateText(go.transform, "ReplayLabel", "REPLAY", 26,
                 TextAlignmentOptions.Center, C_UNPLAYED_TEXT, FontStyles.Bold);
         }
 

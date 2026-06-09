@@ -206,7 +206,7 @@ namespace WordPuzzle.UI
                 && modeNameText != null)
             {
                 modeNameText.richText = true;
-                modeNameText.text += $"\n<size=70%>Streak <color=#{Hx(Palette.Coins)}>{currentStreak}</color> · Best {longestStreak} · {footerLine}</size>";
+                modeNameText.text += $"\n<size=80%>Streak <color=#{Hx(Palette.Coins)}>{currentStreak}</color> · Best {longestStreak} · {footerLine}</size>";
             }
         }
 
@@ -255,7 +255,7 @@ namespace WordPuzzle.UI
             else if (modeNameText != null)
             {
                 modeNameText.richText = true;
-                modeNameText.text += $"\n<size=70%>{line}</size>";
+                modeNameText.text += $"\n<size=80%>{line}</size>";
             }
         }
 

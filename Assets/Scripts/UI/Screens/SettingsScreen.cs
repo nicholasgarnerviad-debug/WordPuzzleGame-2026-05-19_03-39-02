@@ -279,7 +279,7 @@ namespace WordPuzzle.UI
             _sfxSlider    = MakeSliderRow(audio, "SFX",    out _sfxVal,    OnSfxVolumeChanged);
             _muteToggle   = MakeToggleRow(audio, "Mute",   OnMuteToggleChanged);
             var note = MakeText(audio, "Music & SFX volumes are saved but silent until audio is added.",
-                                18f, Muted, FontStyles.Italic, TextAlignmentOptions.Left);
+                                22f, Muted, FontStyles.Italic, TextAlignmentOptions.Left);
             note.enableWordWrapping = true;
             note.gameObject.AddComponent<LayoutElement>().minHeight = 36f;
 
@@ -289,7 +289,7 @@ namespace WordPuzzle.UI
             _hapticsToggle      = MakeToggleRow(a11y, "Haptics",         OnHapticsToggleChanged);
             _colorBlindToggle   = MakeToggleRow(a11y, "Colorblind Mode", OnColorBlindModeChanged);
             var note2 = MakeText(a11y, "Colorblind Mode recolors the gameplay tiles.",
-                                 18f, Muted, FontStyles.Italic, TextAlignmentOptions.Left);
+                                 22f, Muted, FontStyles.Italic, TextAlignmentOptions.Left);
             note2.enableWordWrapping = true;
             note2.gameObject.AddComponent<LayoutElement>().minHeight = 32f;
 
@@ -297,7 +297,7 @@ namespace WordPuzzle.UI
             var data = MakeSection(crt, "DATA");
             _resetButton = MakeActionButton(data, "RESET PROGRESS", GameAccents.Danger, Knob, OnResetClicked);
             var warn = MakeText(data, "Erases all puzzle progress permanently.",
-                                18f, GameAccents.Danger, FontStyles.Italic, TextAlignmentOptions.Left);
+                                22f, GameAccents.Danger, FontStyles.Italic, TextAlignmentOptions.Left);
             warn.enableWordWrapping = true;
             warn.gameObject.AddComponent<LayoutElement>().minHeight = 34f;
             _replayButton = MakeActionButton(data, "REPLAY TUTORIAL", Muted, Knob, OnReplayTutorialClicked);

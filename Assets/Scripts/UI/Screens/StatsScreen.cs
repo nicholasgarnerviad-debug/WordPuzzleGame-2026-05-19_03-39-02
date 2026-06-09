@@ -105,7 +105,7 @@ namespace WordPuzzle.UI
         private const float HERO_FONT       = 76f;   // DAILY streak — the focal number
         private const float HERO_BAND_H     = 116f;  // hero + support band height (snug → no dead space)
         private const float HERO_BLOCK_W    = 300f;  // hero column width (support stats take the rest)
-        private const float CAPTION_FONT    = 19f;   // stat captions
+        private const float CAPTION_FONT    = 24f;   // stat captions (raised 19→24 for legibility)
         private const float SUPPORT_VALUE_FONT = 34f; // stat values (longest / mode numbers)
         private const float MODE_CELLS_H    = 74f;   // CLASSIC / TIME ATTACK value-cell row height
         private const float FOOTER_FONT     = 24f;   // overall footer line

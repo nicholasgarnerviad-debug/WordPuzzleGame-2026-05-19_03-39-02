@@ -215,7 +215,7 @@ namespace WordPuzzle.UI
         private void PowerUpRow(string name, int owned, int[] bundlePrices, AddKind kind, int coins)
         {
             var row = MakeRow(150f);
-            var label = MakeText(row, $"{name}\n<size=22><color=#{Hx(C_MUTED)}>owned {owned}</color></size>", 30f, C_CREAM, FontStyles.Bold, TextAlignmentOptions.Left);
+            var label = MakeText(row, $"{name}\n<size=24><color=#{Hx(C_MUTED)}>owned {owned}</color></size>", 30f, C_CREAM, FontStyles.Bold, TextAlignmentOptions.Left);
             var lle = label.gameObject.AddComponent<LayoutElement>(); lle.preferredWidth = 220f; lle.minWidth = 200f; lle.flexibleWidth = 1f;
             label.richText = true;
 
@@ -225,7 +225,7 @@ namespace WordPuzzle.UI
                 int size = sizes[i];
                 int price = (bundlePrices != null && i < bundlePrices.Length) ? bundlePrices[i] : size;
                 bool canAfford = coins >= price;
-                var btn = MakeButton(row, $"x{size}\n<size=20>{price}c</size>", 24f, canAfford ? MenuPalette.ClassicFill : C_SECTION, canAfford ? C_CREAM : C_MUTED);
+                var btn = MakeButton(row, $"x{size}\n<size=22>{price}c</size>", 24f, canAfford ? MenuPalette.ClassicFill : C_SECTION, canAfford ? C_CREAM : C_MUTED);
                 var ble = btn.gameObject.AddComponent<LayoutElement>(); ble.preferredWidth = 150f; ble.flexibleWidth = 0f;
                 btn.interactable = canAfford;
                 var label2 = btn.GetComponentInChildren<TMP_Text>(); if (label2 != null) label2.richText = true;
@@ -240,7 +240,7 @@ namespace WordPuzzle.UI
             bool canWatch = remaining > 0;
             var row = MakeRow(120f);
             string sub = canWatch ? $"{remaining} left today" : "back tomorrow";
-            var label = MakeText(row, $"Watch for Coins\n<size=22><color=#{Hx(C_MUTED)}>Free  ·  {sub}</color></size>",
+            var label = MakeText(row, $"Watch for Coins\n<size=24><color=#{Hx(C_MUTED)}>Free  ·  {sub}</color></size>",
                                   30f, C_CREAM, FontStyles.Bold, TextAlignmentOptions.Left);
             label.richText = true;
             var lle = label.gameObject.AddComponent<LayoutElement>(); lle.flexibleWidth = 1f;
@@ -263,8 +263,8 @@ namespace WordPuzzle.UI
             // Title = pack name (Pouch/Stack/Chest/Vault/Hoard) + optional merchandising badge;
             // subtitle = coin count; price lives on the Buy button (matches the Starter Pack row).
             string title = string.IsNullOrEmpty(p.displayName) ? $"{p.coins} Coins" : p.displayName;
-            string badge = string.IsNullOrEmpty(p.badge) ? "" : $"  <size=18><color=#{Hx(C_GOLD)}>[ {p.badge} ]</color></size>";
-            var label = MakeText(row, $"{title}{badge}\n<size=22><color=#{Hx(C_MUTED)}>{p.coins} coins</color></size>",
+            string badge = string.IsNullOrEmpty(p.badge) ? "" : $"  <size=22><color=#{Hx(C_GOLD)}>[ {p.badge} ]</color></size>";
+            var label = MakeText(row, $"{title}{badge}\n<size=24><color=#{Hx(C_MUTED)}>{p.coins} coins</color></size>",
                                   30f, C_GOLD, FontStyles.Bold, TextAlignmentOptions.Left);
             label.richText = true;
             var lle = label.gameObject.AddComponent<LayoutElement>(); lle.flexibleWidth = 1f;
@@ -284,8 +284,8 @@ namespace WordPuzzle.UI
             var row = MakeRow(120f);
             bool owned = ads != null && store != null && store.IsOwned(ads.id);
             string price = ads != null ? $"${ads.priceUsd:0.00}" : "";
-            var label = MakeText(row, owned ? $"Remove Ads\n<size=22><color=#{Hx(Palette.AccentAqua)}>Owned</color></size>"
-                                            : $"Remove Ads\n<size=22><color=#{Hx(C_MUTED)}>{price}</color></size>",
+            var label = MakeText(row, owned ? $"Remove Ads\n<size=24><color=#{Hx(Palette.AccentAqua)}>Owned</color></size>"
+                                            : $"Remove Ads\n<size=24><color=#{Hx(C_MUTED)}>{price}</color></size>",
                                   30f, C_CREAM, FontStyles.Bold, TextAlignmentOptions.Left);
             label.richText = true;
             var lle = label.gameObject.AddComponent<LayoutElement>(); lle.flexibleWidth = 1f;
@@ -301,7 +301,7 @@ namespace WordPuzzle.UI
             bool owned = store != null && store.IsOwned(p.id);
             var row = MakeRow(150f);
             string contents = $"{p.coins} coins  ·  {p.powerUpsEach} of each power-up  ·  {p.adFreeDays} days ad-free";
-            var label = MakeText(row, $"{p.displayName}\n<size=20><color=#{Hx(C_MUTED)}>{contents}</color></size>",
+            var label = MakeText(row, $"{p.displayName}\n<size=24><color=#{Hx(C_MUTED)}>{contents}</color></size>",
                                   30f, C_GOLD, FontStyles.Bold, TextAlignmentOptions.Left);
             label.richText = true;
             var lle = label.gameObject.AddComponent<LayoutElement>(); lle.flexibleWidth = 1f;

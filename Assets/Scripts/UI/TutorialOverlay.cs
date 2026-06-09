@@ -203,7 +203,7 @@ namespace WordPuzzle.UI
             _calloutLabel = MakeText(_calloutCard.transform, "", 30f, MenuPalette.SecondaryLabel, FontStyles.Bold, TextAlignmentOptions.Center);
             _calloutLabel.enableWordWrapping = true; // holds under Large Text
 
-            _tapHintLabel = MakeText(_calloutCard.transform, TapHint, 19f, MenuPalette.SecondaryBorder, FontStyles.Italic, TextAlignmentOptions.Center);
+            _tapHintLabel = MakeText(_calloutCard.transform, TapHint, 24f, MenuPalette.SecondaryBorder, FontStyles.Italic, TextAlignmentOptions.Center);
 
             _lessonSkip = MakeOutlineButton(_calloutCard.transform, SkipLabel, MenuPalette.SecondaryBorder, MenuPalette.SecondaryLabel, 200f, 56f);
             _lessonSkip.onClick.AddListener(() => OnSkipRequested?.Invoke());

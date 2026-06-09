@@ -241,7 +241,7 @@ namespace WordPuzzle.UI
                 stepsRemainingText.color = LBL_STEPS;
                 stepsRemainingText.alignment = TextAlignmentOptions.Center;
                 stepsRemainingText.fontStyle = FontStyles.Italic;
-                stepsRemainingText.fontSize = 20f;
+                stepsRemainingText.fontSize = 30f; // legibility: Par · Mistakes-left is functional info (was 20f, squint-small)
                 if (string.IsNullOrEmpty(stepsRemainingText.text))
                     stepsRemainingText.text = string.Empty;
             }
@@ -261,7 +261,7 @@ namespace WordPuzzle.UI
             {
                 tierIndicatorText.fontStyle = FontStyles.Normal;
                 tierIndicatorText.color = Palette.TextMuted;
-                tierIndicatorText.fontSize = 20;
+                tierIndicatorText.fontSize = 26; // legibility: was 20 (squint-small); stays secondary, below the score
                 tierIndicatorText.alignment = TextAlignmentOptions.Center;
                 tierIndicatorText.gameObject.SetActive(true);
             }
@@ -279,6 +279,11 @@ namespace WordPuzzle.UI
             // below the score, keeping the top-right corner clear for the global Settings gear.
             PlaceHeaderText(tierIndicatorText, topY: -202f, width: 620f, height: 34f);
             PlaceHeaderText(timerText,         topY: -202f, width: 620f, height: 34f);
+
+            // Legibility floor (size only) — raise scene-authored sizes; never shrink. Score is the
+            // primary HUD stat; the timer is the Time-Attack countdown. Tier size is set in OnEnable.
+            if (scoreText != null) scoreText.fontSize = Mathf.Max(scoreText.fontSize, 40f);
+            if (timerText != null) timerText.fontSize = Mathf.Max(timerText.fontSize, 30f);
         }
 
         private static void PlaceHeaderText(TMP_Text t, float topY, float width, float height)
@@ -446,7 +451,8 @@ namespace WordPuzzle.UI
         {
             if (btn == null) return;
             var label = FindPowerUpLabel(btn, badge);
-            if (label != null) label.fontStyle = FontStyles.Bold;
+            // Legibility floor (size only) — comfortable Hint/Undo/Reveal label; never shrink the scene value.
+            if (label != null) { label.fontStyle = FontStyles.Bold; label.fontSize = Mathf.Max(label.fontSize, 28f); }
             UIThemeManager.ApplyOutlineButton(btn.GetComponent<Image>(), C_PU_BORDER); // Task 25 — ghost button
             ApplyPowerUpVisual(btn, badge, btn.interactable);
         }
