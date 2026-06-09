@@ -219,6 +219,15 @@ namespace WordPuzzle.UI
                 SetActiveTmp(timeText, false);
                 if (scoreLabel != null) scoreLabel.gameObject.SetActive(false);
 
+                // Frame the result (stars + grade + streak) in a subtle ghost card.
+                EnsureDailyCard();
+                if (_dailyCard != null)
+                {
+                    _dailyCard.sizeDelta = new Vector2(780f, 480f);
+                    _dailyCard.anchoredPosition = new Vector2(0f, -880f);
+                    _dailyCard.gameObject.SetActive(true);
+                }
+
                 if (wordsFoundText != null) // holds the grade/par/stars line (set by ShowDailyResult)
                 {
                     wordsFoundText.gameObject.SetActive(true);
@@ -228,16 +237,16 @@ namespace WordPuzzle.UI
                     wordsFoundText.enableAutoSizing = false;
                     wordsFoundText.enableWordWrapping = true;
                     wordsFoundText.alignment = TextAlignmentOptions.Center;
-                    PlaceTopCenter(wordsFoundText.rectTransform, -770f, 120f);
+                    PlaceTopCenter(wordsFoundText.rectTransform, -840f, 120f);
                 }
 
                 if (_dailyStarRow != null)
                 {
-                    _dailyStarRow.anchoredPosition = new Vector2(0f, -650f); // the gold rating, just above the grade word
+                    _dailyStarRow.anchoredPosition = new Vector2(0f, -720f); // the gold rating, just above the grade word
                     _dailyStarRow.gameObject.SetActive(true);
                 }
                 if (_dailyStreakLine != null)
-                    PlaceTopCenter(_dailyStreakLine.rectTransform, -960f, 130f);
+                    PlaceTopCenter(_dailyStreakLine.rectTransform, -1000f, 130f);
                 return;
             }
 
@@ -249,6 +258,7 @@ namespace WordPuzzle.UI
             if (scoreLabel != null) scoreLabel.gameObject.SetActive(true);
             if (_dailyStreakLine != null) _dailyStreakLine.gameObject.SetActive(false);
             if (_dailyStarRow != null) _dailyStarRow.gameObject.SetActive(false);
+            if (_dailyCard != null) _dailyCard.gameObject.SetActive(false);
 
             // "FINAL SCORE" caption (scene-only label) — quiet, muted.
             StyleResultText(scoreLabel, 28f, Palette.TextMuted, FontStyles.Bold, -560f, 44f);
@@ -430,7 +440,8 @@ namespace WordPuzzle.UI
         {
             int s = Mathf.Clamp(stars, 0, 3);
             string headline = failed ? "Failed today" : DailyGradeName(s);
-            string line = $"{headline}  ·  Par {par}  ·  You got {playerSteps}";
+            // Tint just the grade name — gold to tie it to the gold stars; muted for a failed day.
+            string line = $"<color=#{Hx(failed ? Palette.TextMuted : Palette.Coins)}>{headline}</color>  ·  Par {par}  ·  You got {playerSteps}";
 
             if (wordsFoundText != null)
             {
@@ -455,6 +466,7 @@ namespace WordPuzzle.UI
         // rating as actual star meshes instead of text. Created once (cached row), recoloured per result.
         private RectTransform _dailyStarRow;
         private StarGraphic[] _dailyStars;
+        private RectTransform _dailyCard;
         private const float STAR_SIZE = 60f, STAR_GAP = 22f;
 
         private void EnsureDailyStarRow()
@@ -492,6 +504,23 @@ namespace WordPuzzle.UI
             for (int i = 0; i < _dailyStars.Length; i++)
                 if (_dailyStars[i] != null) _dailyStars[i].color = i < filled ? earned : empty;
             if (_dailyStarRow != null) _dailyStarRow.gameObject.SetActive(true);
+        }
+
+        // A subtle rounded ghost ring behind the Daily result cluster — matches the app's outline-button
+        // language (transparent centre + a soft glow), created once and reused. Gives the page structure
+        // instead of a sparse void.
+        private void EnsureDailyCard()
+        {
+            if (_dailyCard != null) return;
+            var go = new GameObject("DailyResultCard", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            go.transform.SetParent(transform, false);
+            _dailyCard = (RectTransform)go.transform;
+            _dailyCard.anchorMin = _dailyCard.anchorMax = new Vector2(0.5f, 1f);
+            _dailyCard.pivot = new Vector2(0.5f, 0.5f);
+            var img = go.GetComponent<Image>();
+            img.raycastTarget = false;
+            UIThemeManager.ApplyOutlineButton(img, Palette.CardOutline); // subtle amethyst ring + soft glow
+            go.transform.SetAsFirstSibling(); // render behind the stars / grade / streak
         }
 
         /// <summary>
@@ -587,6 +616,7 @@ namespace WordPuzzle.UI
             if (comeBackTomorrowText != null) comeBackTomorrowText.gameObject.SetActive(false);
             if (_dailyStreakLine != null)     _dailyStreakLine.gameObject.SetActive(false);
             if (_dailyStarRow != null)        _dailyStarRow.gameObject.SetActive(false);
+            if (_dailyCard != null)           _dailyCard.gameObject.SetActive(false);
         }
 
         private static void SetButtonVisible(Button b, bool visible)
