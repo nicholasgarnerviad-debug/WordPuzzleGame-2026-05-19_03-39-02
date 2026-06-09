@@ -42,6 +42,12 @@ namespace WordPuzzle.UI
         private Button nextTierButton; // Task 16 — created on demand for Puzzle Show.
         private Button doublerButton;  // Task 36 36K — created on demand for the daily reward doubler.
 
+        // Daily results state. _isDaily routes the layout to Daily's OWN block (not Puzzle Show's).
+        // _dailyStreakLine is a dedicated, created-once streak label that is SET (never appended) each view
+        // — the root-cause fix for the status line stacking on repeat Daily opens.
+        private bool _isDaily;
+        private TextMeshProUGUI _dailyStreakLine;
+
         // Style tokens.
         // Task 8A: gold is kept for the primary streak number (focal element in streakText richtext)
         // and for the toast confirmation. longestStreakText (Best: N) is secondary — demoted to muted.
@@ -81,6 +87,9 @@ namespace WordPuzzle.UI
             UIThemeManager.ApplyOutlineButton(playAgainButton, Palette.AccentAqua, Palette.TextPrimary);
             UIThemeManager.ApplyOutlineButton(mainMenuButton,  Palette.AccentPeriwinkle, Palette.TextPrimary);
             UIThemeManager.ApplyOutlineButton(shareButton,     Palette.AccentPeriwinkle, Palette.TextPrimary);
+
+            // Consolidate + modernize the stat block (display-only; see StyleResultsLayout).
+            StyleResultsLayout();
         }
 
         // §2.1/§2.3 Home-button visual swap.
@@ -149,7 +158,7 @@ namespace WordPuzzle.UI
         public void DisplayStats(GameModeStats stats)
         {
             if (modeNameText != null)
-                modeNameText.text = $"{stats.modeName} Mode Results";
+                modeNameText.text = $"{stats.modeName} Results"; // drop redundant "Mode" — reads cleaner
 
             if (wordsFoundText != null)
                 wordsFoundText.text = $"Words Found: {stats.wordsFound}";
@@ -162,6 +171,140 @@ namespace WordPuzzle.UI
 
             if (scoreText != null)
                 scoreText.text = $"Score: {stats.score}";
+        }
+
+        // ================================================================
+        //  Results layout consolidation + polish (display-only)
+        // ================================================================
+        /// <summary>
+        /// One clean, evenly-spaced stat block on the palette. An older design left an unwired
+        /// "StatsContainer" list (WORDS FOUND / TIME / ACCURACY / BEST WORD) that overlapped the real,
+        /// code-bound values with empty dashes — it's dead scene UI (nothing references it, and
+        /// GameModeStats has no best-word field), so it is hidden, not populated. The real values stay in
+        /// the existing SerializeField texts; here we only restyle/position them (colour, size, anchor) and
+        /// fix the oversized clipping title. Runtime-driven (no scene edit). NOTE: ResultsScreen is one
+        /// shared instance, so this consolidation applies to every mode's results equally — no per-mode
+        /// stats/scoring/logic is touched.
+        /// </summary>
+        private void StyleResultsLayout()
+        {
+            // Common — kill the orphaned duplicate list (resolves the overlap + the empty dashes).
+            var orphan = transform.Find("StatsContainer");
+            if (orphan != null) orphan.gameObject.SetActive(false);
+
+            var scoreLabel = transform.Find("ScoreLabel");
+
+            // Title — one line under the notch, on the shared title token (was 90pt, wrapped + clipped).
+            if (modeNameText != null)
+            {
+                if (_isDaily) modeNameText.text = "Daily Results"; // never inherit a stale "Puzzle Show Results"
+                modeNameText.color = MenuPalette.TitleColor;
+                modeNameText.fontStyle = FontStyles.Bold;
+                modeNameText.fontSize = 54f;
+                modeNameText.enableAutoSizing = false;
+                modeNameText.enableWordWrapping = true;
+                modeNameText.alignment = TextAlignmentOptions.Center;
+                PlaceTopCenter(modeNameText.rectTransform, -285f, 110f);
+            }
+
+            if (_isDaily)
+            {
+                // ── Daily's OWN block: a grade/par hero + the streak line. Hide the score/accuracy/time
+                // metrics — Daily's result is the grade + streak (not a numeric score), and the re-show path
+                // never repopulates those fields, so hiding them also prevents stale leftovers from a prior
+                // Puzzle Show view. This is what makes the Daily screen distinct, not a renamed Puzzle Show.
+                SetActiveTmp(scoreText, false);
+                SetActiveTmp(accuracyText, false);
+                SetActiveTmp(timeText, false);
+                if (scoreLabel != null) scoreLabel.gameObject.SetActive(false);
+
+                if (wordsFoundText != null) // holds the grade/par/stars line (set by ShowDailyResult)
+                {
+                    wordsFoundText.gameObject.SetActive(true);
+                    wordsFoundText.color = Palette.TextPrimary;
+                    wordsFoundText.fontStyle = FontStyles.Bold;
+                    wordsFoundText.fontSize = 40f;
+                    wordsFoundText.enableAutoSizing = false;
+                    wordsFoundText.enableWordWrapping = true;
+                    wordsFoundText.alignment = TextAlignmentOptions.Center;
+                    PlaceTopCenter(wordsFoundText.rectTransform, -700f, 120f);
+                }
+
+                if (_dailyStreakLine != null)
+                    PlaceTopCenter(_dailyStreakLine.rectTransform, -920f, 130f);
+                return;
+            }
+
+            // ── Non-daily (Puzzle Show / Time Attack) — the standard score/accuracy/time block. ──
+            // Re-show anything a prior Daily hid, and hide the Daily-only streak line.
+            SetActiveTmp(scoreText, true);
+            SetActiveTmp(accuracyText, true);
+            SetActiveTmp(timeText, true);
+            if (scoreLabel != null) scoreLabel.gameObject.SetActive(true);
+            if (_dailyStreakLine != null) _dailyStreakLine.gameObject.SetActive(false);
+
+            // "FINAL SCORE" caption (scene-only label) — quiet, muted.
+            StyleResultText(scoreLabel, 28f, Palette.TextMuted, FontStyles.Bold, -560f, 44f);
+
+            // Score — the hero number. Gold is the app's reward/achievement accent (same token as the
+            // streak), routed through GameAccents.Gold so it's a token, not a scene straggler.
+            if (scoreText != null)
+            {
+                scoreText.color = GameAccents.Gold;
+                scoreText.fontStyle = FontStyles.Bold;
+                scoreText.fontSize = 64f;
+                scoreText.enableAutoSizing = false;
+                scoreText.alignment = TextAlignmentOptions.Center;
+                PlaceTopCenter(scoreText.rectTransform, -680f, 88f);
+            }
+
+            // The three stat lines — bright primary text, readable, evenly spaced.
+            PlaceStatLine(wordsFoundText, -920f);
+            PlaceStatLine(accuracyText,   -1040f);
+            PlaceStatLine(timeText,       -1160f);
+        }
+
+        private static void SetActiveTmp(TMP_Text t, bool on)
+        {
+            if (t != null) t.gameObject.SetActive(on);
+        }
+
+        private static void PlaceStatLine(TMP_Text t, float topOffsetY)
+        {
+            if (t == null) return;
+            t.color = Palette.TextPrimary;
+            t.fontStyle = FontStyles.Normal;
+            t.fontSize = 34f;
+            t.enableAutoSizing = false;
+            t.alignment = TextAlignmentOptions.Center;
+            PlaceTopCenter(t.rectTransform, topOffsetY, 60f);
+        }
+
+        private static void StyleResultText(Transform tf, float size, Color color, FontStyles style,
+            float topOffsetY, float height)
+        {
+            if (tf == null) return;
+            var t = tf.GetComponent<TMP_Text>();
+            if (t == null) return;
+            t.color = color;
+            t.fontStyle = style;
+            t.fontSize = size;
+            t.enableAutoSizing = false;
+            t.alignment = TextAlignmentOptions.Center;
+            PlaceTopCenter(t.rectTransform, topOffsetY, height);
+        }
+
+        // Anchor to top-centre and place at a deterministic offset below the top edge, so the whole block
+        // reads as one even rhythm regardless of the scene's mixed authored anchors (and stays clear of the
+        // notch at the top and the buttons below).
+        private static void PlaceTopCenter(RectTransform rt, float y, float height)
+        {
+            if (rt == null) return;
+            rt.anchorMin = new Vector2(0.5f, 1f);
+            rt.anchorMax = new Vector2(0.5f, 1f);
+            rt.pivot = new Vector2(0.5f, 0.5f);
+            rt.anchoredPosition = new Vector2(0f, y);
+            rt.sizeDelta = new Vector2(900f, height);
         }
 
         /// <summary>
@@ -178,6 +321,8 @@ namespace WordPuzzle.UI
                 ? "Already counted today"
                 : "Come back tomorrow";
 
+            // If the scene ever wires the dedicated streak fields, drive them (SET — never additive).
+            bool wired = streakText != null || longestStreakText != null || comeBackTomorrowText != null;
             if (streakText != null)
             {
                 streakText.richText = true;
@@ -200,14 +345,43 @@ namespace WordPuzzle.UI
                 comeBackTomorrowText.gameObject.SetActive(true);
             }
 
-            // Fallback when scene wiring is incomplete: append a short summary to
-            // the mode-name line so the streak is still visible in v1 builds.
-            if (streakText == null && longestStreakText == null && comeBackTomorrowText == null
-                && modeNameText != null)
+            // BUG 2 — the stacking root-cause fix. The streak previously APPENDED to the title
+            // (modeNameText.text += …) whenever those scene fields were unwired (which they are), so it grew
+            // by one line on EVERY Daily open because nothing reset it. Render into a dedicated label that is
+            // created ONCE (cached → no per-open instantiation) and whose text is SET/overwritten each call
+            // → exactly one streak line per view, no matter how many times Daily is opened.
+            EnsureDailyStreakLine();
+            if (_dailyStreakLine != null)
             {
-                modeNameText.richText = true;
-                modeNameText.text += $"\n<size=80%>Streak <color=#{Hx(Palette.Coins)}>{currentStreak}</color> · Best {longestStreak} · {footerLine}</size>";
+                if (wired)
+                {
+                    _dailyStreakLine.gameObject.SetActive(false); // the scene fields own it; don't double up
+                }
+                else
+                {
+                    _dailyStreakLine.richText = true;
+                    _dailyStreakLine.text =
+                        $"Streak <color=#{Hx(Palette.Coins)}>{currentStreak}</color> · Best {longestStreak}\n" +
+                        $"<size=80%><color=#{Hx(Palette.TextMuted)}>{footerLine}</color></size>";
+                    _dailyStreakLine.gameObject.SetActive(true);
+                }
             }
+        }
+
+        // Create the dedicated Daily streak label once (cached). Positioned by StyleResultsLayout's Daily
+        // branch on show; a sensible default here covers the case it is set before the first layout pass.
+        private void EnsureDailyStreakLine()
+        {
+            if (_dailyStreakLine != null) return;
+            var go = new GameObject("DailyStreakLine", typeof(RectTransform));
+            go.transform.SetParent(transform, false);
+            _dailyStreakLine = go.AddComponent<TextMeshProUGUI>();
+            _dailyStreakLine.fontSize = 30f;
+            _dailyStreakLine.color = Palette.TextPrimary;
+            _dailyStreakLine.alignment = TextAlignmentOptions.Center;
+            _dailyStreakLine.raycastTarget = false;
+            _dailyStreakLine.enableWordWrapping = true;
+            PlaceTopCenter(_dailyStreakLine.rectTransform, -920f, 130f);
         }
 
         // ================================================================
@@ -218,6 +392,7 @@ namespace WordPuzzle.UI
         /// <param name="laddersCompleted">If >= 0, headline the run's solved-ladder count.</param>
         public void ConfigureForEndless(int laddersCompleted = -1)
         {
+            _isDaily = false;
             SetButtonVisible(playAgainButton, true);
             SetButtonLabel(playAgainButton, "PLAY AGAIN");
             SetButtonVisible(nextTierButton, false);
@@ -230,8 +405,14 @@ namespace WordPuzzle.UI
         /// <summary>Daily: no "Play Again" (don't re-run the daily). Just Home (+ streak + share).</summary>
         public void ConfigureForDaily()
         {
+            _isDaily = true;
             SetButtonVisible(playAgainButton, false);
             SetButtonVisible(nextTierButton, false);
+            // BUG 1 — Daily shows its OWN screen, not Puzzle Show's. Set the Daily title here so it's correct
+            // on BOTH paths: the fresh run (DisplayStats had set "{mode} Results") AND the re-show path
+            // (ShowStoredDailyResult never calls DisplayStats, so the title was stale from the last view —
+            // that's why a prior "Puzzle Show Results" leaked onto the Daily screen).
+            if (modeNameText != null) modeNameText.text = "Daily Results";
         }
 
         /// <summary>
@@ -268,6 +449,7 @@ namespace WordPuzzle.UI
         /// </summary>
         public void ConfigureForPuzzleShow(bool hasNextTier, int nextTierNumber)
         {
+            _isDaily = false;
             SetButtonVisible(playAgainButton, true);
             SetButtonLabel(playAgainButton, "NEXT PUZZLE");
             HideDailyOnlyWidgets(); // Task 38 — a non-daily result shows NONE of the daily-only widgets
@@ -352,6 +534,7 @@ namespace WordPuzzle.UI
             if (streakText != null)           streakText.gameObject.SetActive(false);
             if (longestStreakText != null)    longestStreakText.gameObject.SetActive(false);
             if (comeBackTomorrowText != null) comeBackTomorrowText.gameObject.SetActive(false);
+            if (_dailyStreakLine != null)     _dailyStreakLine.gameObject.SetActive(false);
         }
 
         private static void SetButtonVisible(Button b, bool visible)
