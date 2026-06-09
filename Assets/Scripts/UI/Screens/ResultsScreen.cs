@@ -4,6 +4,7 @@ using UnityEngine.UI;
 using UnityEngine.Events;
 using TMPro;
 using WordPuzzle.Modes;
+using WordPuzzle.UI.Components;
 
 namespace WordPuzzle.UI
 {
@@ -230,6 +231,11 @@ namespace WordPuzzle.UI
                     PlaceTopCenter(wordsFoundText.rectTransform, -770f, 120f);
                 }
 
+                if (_dailyStarRow != null)
+                {
+                    _dailyStarRow.anchoredPosition = new Vector2(0f, -650f); // the gold rating, just above the grade word
+                    _dailyStarRow.gameObject.SetActive(true);
+                }
                 if (_dailyStreakLine != null)
                     PlaceTopCenter(_dailyStreakLine.rectTransform, -960f, 130f);
                 return;
@@ -242,6 +248,7 @@ namespace WordPuzzle.UI
             SetActiveTmp(timeText, true);
             if (scoreLabel != null) scoreLabel.gameObject.SetActive(true);
             if (_dailyStreakLine != null) _dailyStreakLine.gameObject.SetActive(false);
+            if (_dailyStarRow != null) _dailyStarRow.gameObject.SetActive(false);
 
             // "FINAL SCORE" caption (scene-only label) — quiet, muted.
             StyleResultText(scoreLabel, 28f, Palette.TextMuted, FontStyles.Bold, -560f, 44f);
@@ -421,12 +428,8 @@ namespace WordPuzzle.UI
         /// </summary>
         public void ShowDailyResult(int stars, int par, int playerSteps, bool failed, int dailyNumber, int streak)
         {
-            EnsureStarFallback(); // ★/☆ aren't in the bundled font — add an Arial fallback so they render (not □)
             int s = Mathf.Clamp(stars, 0, 3);
-            string starGlyphs = new string('★', s) + new string('☆', 3 - s);
-            string headline = failed
-                ? "Failed today"
-                : $"{DailyGradeName(s)}  <color=#{Hx(Palette.Coins)}>{starGlyphs}</color>";
+            string headline = failed ? "Failed today" : DailyGradeName(s);
             string line = $"{headline}  ·  Par {par}  ·  You got {playerSteps}";
 
             if (wordsFoundText != null)
@@ -439,36 +442,56 @@ namespace WordPuzzle.UI
                 modeNameText.richText = true;
                 modeNameText.text += $"\n<size=80%>{line}</size>";
             }
+
+            // The grade stars render as real geometry (the bundled font has no ★ glyph — it tofu'd to □).
+            SetDailyStars(s);
         }
 
         private static string DailyGradeName(int stars) =>
             stars >= 3 ? "Perfect" : stars == 2 ? "Good" : stars == 1 ? "Solved" : "Failed";
 
-        // The bundled LiberationSans font (and its dynamic fallback) has NO star glyph, so ★/☆ (U+2605/2606)
-        // rendered as □ tofu boxes — and the Dingbats stars aren't there either. Unity's built-in Arial DOES
-        // include ★/☆, so we add it as a runtime font fallback: TMP then resolves the stars from Arial and
-        // renders real gold stars. Idempotent (guarded), app-wide, no asset/scene edit. If the built-in font
-        // can't be found the stars stay boxes, but the grade WORD (Perfect/Good/Solved) still carries the result.
-        private static bool _starFallbackReady;
-        private void EnsureStarFallback()
+        // ── Daily grade stars as real geometry (StarGraphic) — font-independent. The bundled TMP font has no
+        // ★ glyph (it tofu'd to □) and the built-in font can't be loaded for a runtime fallback, so we draw the
+        // rating as actual star meshes instead of text. Created once (cached row), recoloured per result.
+        private RectTransform _dailyStarRow;
+        private StarGraphic[] _dailyStars;
+        private const float STAR_SIZE = 60f, STAR_GAP = 22f;
+
+        private void EnsureDailyStarRow()
         {
-            if (_starFallbackReady) return;
-            var tmp = wordsFoundText != null ? wordsFoundText : modeNameText;
-            if (tmp == null || tmp.font == null) return;
-            var arial = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf")
-                     ?? Resources.GetBuiltinResource<Font>("Arial.ttf");
-            if (arial == null) return;
-            var symbolFont = TMP_FontAsset.CreateFontAsset(arial); // dynamic — rasterizes ★/☆ on demand
-            if (symbolFont == null) return;
-            symbolFont.name = "RuntimeSymbolFallback (Arial)";
-            var table = tmp.font.fallbackFontAssetTable;
-            if (table == null)
+            if (_dailyStarRow != null) return;
+            var go = new GameObject("DailyStarRow", typeof(RectTransform));
+            go.transform.SetParent(transform, false);
+            _dailyStarRow = (RectTransform)go.transform;
+            _dailyStarRow.anchorMin = _dailyStarRow.anchorMax = new Vector2(0.5f, 1f);
+            _dailyStarRow.pivot = new Vector2(0.5f, 0.5f);
+
+            float totalW = 3f * STAR_SIZE + 2f * STAR_GAP;
+            _dailyStarRow.sizeDelta = new Vector2(totalW, STAR_SIZE);
+            _dailyStars = new StarGraphic[3];
+            for (int i = 0; i < 3; i++)
             {
-                table = new System.Collections.Generic.List<TMP_FontAsset>();
-                tmp.font.fallbackFontAssetTable = table;
+                var sgo = new GameObject($"Star{i}", typeof(RectTransform));
+                sgo.transform.SetParent(_dailyStarRow, false);
+                var srt = (RectTransform)sgo.transform;
+                srt.anchorMin = srt.anchorMax = srt.pivot = new Vector2(0.5f, 0.5f);
+                srt.sizeDelta = new Vector2(STAR_SIZE, STAR_SIZE);
+                srt.anchoredPosition = new Vector2(-totalW * 0.5f + STAR_SIZE * 0.5f + i * (STAR_SIZE + STAR_GAP), 0f);
+                var star = sgo.AddComponent<StarGraphic>();
+                star.raycastTarget = false;
+                _dailyStars[i] = star;
             }
-            table.Add(symbolFont);
-            _starFallbackReady = true;
+        }
+
+        private void SetDailyStars(int filled)
+        {
+            EnsureDailyStarRow();
+            if (_dailyStars == null) return;
+            Color earned = GameAccents.Gold;                                                  // warm gold — earned
+            Color empty  = new Color(Palette.TextMuted.r, Palette.TextMuted.g, Palette.TextMuted.b, 0.35f); // dim — unearned
+            for (int i = 0; i < _dailyStars.Length; i++)
+                if (_dailyStars[i] != null) _dailyStars[i].color = i < filled ? earned : empty;
+            if (_dailyStarRow != null) _dailyStarRow.gameObject.SetActive(true);
         }
 
         /// <summary>
@@ -563,6 +586,7 @@ namespace WordPuzzle.UI
             if (longestStreakText != null)    longestStreakText.gameObject.SetActive(false);
             if (comeBackTomorrowText != null) comeBackTomorrowText.gameObject.SetActive(false);
             if (_dailyStreakLine != null)     _dailyStreakLine.gameObject.SetActive(false);
+            if (_dailyStarRow != null)        _dailyStarRow.gameObject.SetActive(false);
         }
 
         private static void SetButtonVisible(Button b, bool visible)
