@@ -223,15 +223,15 @@ namespace WordPuzzle.UI
                     wordsFoundText.gameObject.SetActive(true);
                     wordsFoundText.color = Palette.TextPrimary;
                     wordsFoundText.fontStyle = FontStyles.Bold;
-                    wordsFoundText.fontSize = 40f;
+                    wordsFoundText.fontSize = 44f;
                     wordsFoundText.enableAutoSizing = false;
                     wordsFoundText.enableWordWrapping = true;
                     wordsFoundText.alignment = TextAlignmentOptions.Center;
-                    PlaceTopCenter(wordsFoundText.rectTransform, -700f, 120f);
+                    PlaceTopCenter(wordsFoundText.rectTransform, -770f, 120f);
                 }
 
                 if (_dailyStreakLine != null)
-                    PlaceTopCenter(_dailyStreakLine.rectTransform, -920f, 130f);
+                    PlaceTopCenter(_dailyStreakLine.rectTransform, -960f, 130f);
                 return;
             }
 
@@ -381,7 +381,7 @@ namespace WordPuzzle.UI
             _dailyStreakLine.alignment = TextAlignmentOptions.Center;
             _dailyStreakLine.raycastTarget = false;
             _dailyStreakLine.enableWordWrapping = true;
-            PlaceTopCenter(_dailyStreakLine.rectTransform, -920f, 130f);
+            PlaceTopCenter(_dailyStreakLine.rectTransform, -960f, 130f);
         }
 
         // ================================================================
@@ -422,7 +422,10 @@ namespace WordPuzzle.UI
         public void ShowDailyResult(int stars, int par, int playerSteps, bool failed, int dailyNumber, int streak)
         {
             int s = Mathf.Clamp(stars, 0, 3);
-            string starGlyphs = new string('★', s) + new string('☆', 3 - s);
+            // Use Dingbats stars (U+272D/U+2729): the plain ★ (U+2605, Misc-Symbols block) isn't in the
+            // dynamic fallback font's source → it rendered as a □ tofu box. The font demonstrably covers the
+            // Dingbats block (the ✓ state-icon renders), so these five-pointed stars render where ★ didn't.
+            string starGlyphs = new string('✭', s) + new string('✩', 3 - s);
             string headline = failed
                 ? "Failed today"
                 : $"{DailyGradeName(s)}  <color=#{Hx(Palette.Coins)}>{starGlyphs}</color>";
