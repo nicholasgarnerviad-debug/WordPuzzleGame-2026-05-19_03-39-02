@@ -30,12 +30,12 @@ public class AccessiblePaletteTests
     }
 
     [Test]
-    public void Apply_OffMode_UsesDefaultGreenRedPalette()
+    public void Apply_OffMode_ForwardsToDirectionBPalette()
     {
         AccessiblePalette.Apply(new SettingsData { colorBlindMode = ColorBlindMode.Off, highContrast = false });
 
-        AssertColor(Hex("#6AAA64"), AccessiblePalette.Correct, "Correct");
-        AssertColor(Hex("#D9534F"), AccessiblePalette.Error, "Error");
+        AssertColor(Palette.AccentAqua, AccessiblePalette.Correct, "Correct");
+        AssertColor(Palette.Alert, AccessiblePalette.Error, "Error");
     }
 
     [Test]
@@ -59,8 +59,9 @@ public class AccessiblePaletteTests
     [Test]
     public void Hint_IsGold_RegardlessOfMode()
     {
+        // Off mode forwards to the Direction B warm gold; colorblind modes pin #C9B458.
         AccessiblePalette.Apply(new SettingsData { colorBlindMode = ColorBlindMode.Off });
-        AssertColor(Hex("#C9B458"), AccessiblePalette.Hint, "Hint(Off)");
+        AssertColor(Palette.Coins, AccessiblePalette.Hint, "Hint(Off)");
 
         AccessiblePalette.Apply(new SettingsData { colorBlindMode = ColorBlindMode.Deuteranopia });
         AssertColor(Hex("#C9B458"), AccessiblePalette.Hint, "Hint(Deuteranopia)");

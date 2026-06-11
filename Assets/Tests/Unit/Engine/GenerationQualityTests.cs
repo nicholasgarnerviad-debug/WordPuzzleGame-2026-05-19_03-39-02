@@ -212,7 +212,7 @@ public class GenerationQualityTests
         Check("daily", daily.puzzles);
 
         Assert.AreEqual(700, tierPuzzles, "Expected 700 curated tier puzzles (7 tiers x 100).");
-        Assert.AreEqual(450, daily.puzzles.Length, "Expected 450 curated daily puzzles.");
+        Assert.AreEqual(600, daily.puzzles.Length, "Expected 600 curated daily puzzles.");
         Assert.IsEmpty(failures,
             $"{failures.Count} curated solution word(s) broken by a dictionary edit:\n" +
             string.Join("\n", failures.GetRange(0, System.Math.Min(failures.Count, 25))));
