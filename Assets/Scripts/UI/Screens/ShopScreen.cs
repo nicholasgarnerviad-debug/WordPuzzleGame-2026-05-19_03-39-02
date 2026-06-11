@@ -42,6 +42,12 @@ namespace WordPuzzle.UI
         // Rich-text colour tags below derive their hex from the tokens above, so no raw theme hex is scattered.
         private static string Hx(Color c) => ColorUtility.ToHtmlStringRGB(c);
 
+        // Task 41B — analytics seams. The UI assembly can't see IAnalytics (no Puzzle reference),
+        // so the shop raises plain events and GameBootstrap forwards them to the reporter.
+        public event Action<string> OnPurchaseAttempt;          // real-money product id
+        public event Action<string, string> OnPurchaseResult;   // product id, outcome (snake-ish lowercase)
+        public event Action<string, int> OnBundleBought;        // power-up kind, bundle size (coin spend)
+
         public void Configure(IEconomyManager economy, IStoreService store, Action onClosed,
                               int[] bundleSizes, int[] hintPrices, int[] undoPrices, int[] revealPrices, int[] timePrices,
                               Func<int> watchCoinsRemaining = null, Action<Action<int>> watchForCoins = null)
@@ -327,13 +333,16 @@ namespace WordPuzzle.UI
                 case AddKind.Time:   await economy.AddTimePowerUpsAsync(size, "shop"); break;
             }
             Feedback($"+{size} {kind} added!");
+            OnBundleBought?.Invoke(kind.ToString().ToLowerInvariant(), size);   // Task 41B
             Rebuild();
         }
 
         private async void BuyRealMoney(string productId, string successMsg)
         {
             if (store == null) return;
+            OnPurchaseAttempt?.Invoke(productId);   // Task 41B
             var outcome = await store.PurchaseAsync(productId);
+            OnPurchaseResult?.Invoke(productId, outcome.ToString().ToLowerInvariant());   // Task 41B
             switch (outcome)
             {
                 case PurchaseOutcome.Success:      Feedback(successMsg); break;

@@ -114,18 +114,38 @@ namespace WordPuzzle
 
         // ── Unity lifecycle ──────────────────────────────────────────────────
 
+        // 41A — consent gate ahead of ad init. NullConsentService (Editor/test default,
+        // completes immediately) until the UMP impl is wired; resolved in Awake.
+        private IConsentService consent;
+
+        /// <summary>The active consent impl (Settings reads PrivacyOptionsRequired off it).</summary>
+        public IConsentService Consent => consent;
+
         private void Awake()
         {
             // 39A — the SDK raises ad events on background threads by default; our
             // callbacks touch Unity objects and the economy, so force main-thread.
             MobileAds.RaiseAdEventsOnUnityMainThread = true;
 
-            MobileAds.Initialize(status =>
+            // 41A — MobileAds.Initialize is UNREACHABLE until the consent flow completes
+            // and reports ads may be requested (AdMob policy for EEA/UK traffic).
+            // Phase 2 swaps the device path to UmpConsentService; Null never blocks boot.
+            consent = new NullConsentService();
+            consent.Gather(() =>
             {
-                sdkInitialized = true;
-                Debug.Log("[AdService] MobileAds initialized.");
-                LoadRewarded();
-                LoadInterstitial();
+                if (!ConsentGate.ShouldInitAds(gathered: true, canRequestAds: consent.CanRequestAds))
+                {
+                    Debug.LogWarning("[AdService] Consent gathered but ads not requestable; skipping init.");
+                    return;
+                }
+
+                MobileAds.Initialize(status =>
+                {
+                    sdkInitialized = true;
+                    Debug.Log("[AdService] MobileAds initialized.");
+                    LoadRewarded();
+                    LoadInterstitial();
+                });
             });
         }
 

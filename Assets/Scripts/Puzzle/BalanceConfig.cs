@@ -267,4 +267,9 @@ public static class BalanceConfig
 
     /// <summary>Ceiling (seconds) for the ad load-retry doubling curve.</summary>
     public const int AdRetryMaxDelaySeconds = 64;
+
+    // ─── Daily reminder notification (Task 41C) ──────────────────────────────
+
+    /// <summary>Local hour (0–23) the daily streak-reminder notification fires (user-confirmed 19:00).</summary>
+    public const int ReminderHourLocal = 19;
 }

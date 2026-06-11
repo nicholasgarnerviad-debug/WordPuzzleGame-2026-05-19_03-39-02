@@ -37,6 +37,10 @@ namespace WordPuzzle.UI
         public event Action OnSkipRequested;
         public event Action OnSuccessBeatFinished;
 
+        // Task 41B — lesson beat shown (1=Rule … 5=Finish). The UI assembly can't see
+        // IAnalytics; GameBootstrap subscribes and forwards to the analytics reporter.
+        public event Action<int> OnStepShown;
+
         // --- Centralized copy (no scattered magic strings) ---
         private const string WelcomeTitle = "Welcome to Star Ladder";
         private const string WelcomeBody  = "New here? Take a quick, hands-on tour of the basics.";
@@ -91,6 +95,7 @@ namespace WordPuzzle.UI
             EnsureBuilt();
             if (_welcomePanel != null) _welcomePanel.SetActive(false);
             _step = Step.Rule;
+            OnStepShown?.Invoke(1);   // Task 41B
             ShowCallout(Beat1Rule, infoBeat: false);
             SetHighlight(startRowAnchor);
         }
@@ -114,6 +119,7 @@ namespace WordPuzzle.UI
             if (accepted && _step == Step.Rule)
             {
                 _step = Step.Moved;
+                OnStepShown?.Invoke(2);   // Task 41B
                 ShowCallout(Beat2Moved, infoBeat: true);
                 SetHighlight(null);
             }
@@ -135,14 +141,17 @@ namespace WordPuzzle.UI
             {
                 case Step.Moved:
                     _step = Step.Routes;
+                    OnStepShown?.Invoke(3);   // Task 41B
                     ShowCallout(Beat3Routes, infoBeat: true);
                     break;
                 case Step.Routes:
                     _step = Step.ParMistakes;
+                    OnStepShown?.Invoke(4);   // Task 41B
                     ShowCallout(string.Format(Beat4ParFmt, _par), infoBeat: true);
                     break;
                 case Step.ParMistakes:
                     _step = Step.Finish;
+                    OnStepShown?.Invoke(5);   // Task 41B
                     ShowCallout(Beat5Finish, infoBeat: false); // board freed — let them finish
                     SetHighlight(endRowAnchor);
                     break;

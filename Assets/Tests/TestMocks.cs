@@ -8,6 +8,25 @@ using WordPuzzle.Persistence;
 using WordPuzzle.UI;
 using WordPuzzle.Modes;
 
+// Task 41B — recording analytics mock: captures every (name, params) emission in order.
+public class MockAnalytics : IAnalytics
+{
+    public readonly List<(string name, (string key, object value)[] p)> Events
+        = new List<(string, (string, object)[])>();
+
+    public void Log(string eventName) => Events.Add((eventName, new (string, object)[0]));
+
+    public void Log(string eventName, params (string key, object value)[] p)
+        => Events.Add((eventName, p ?? new (string, object)[0]));
+
+    public int CountOf(string eventName)
+    {
+        int n = 0;
+        foreach (var e in Events) if (e.name == eventName) n++;
+        return n;
+    }
+}
+
 // Shared mock implementations for testing
 public class MockWordValidator : IWordValidator
 {

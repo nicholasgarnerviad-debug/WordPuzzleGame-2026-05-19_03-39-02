@@ -71,6 +71,10 @@ namespace WordPuzzle
         private AdPolicyService adPolicy;
         private IStoreService storeService;                      // Task 33 — real-money store (mock in editor)
         private WordPuzzle.UI.ShopScreen shopScreen;     // Task 33 — runtime Shop overlay
+
+        // Task 41B — analytics spine. LogAnalytics is the LIVE default until the user's
+        // Firebase config lands (the swap point is documented on LogAnalytics itself).
+        private readonly AnalyticsReporter report = new AnalyticsReporter(new LogAnalytics());
         private int lastDailyRewardCoins = 0;            // Task 36 36K — amount the daily doubler re-grants
         private bool dailyDoublerConsumed = false;       // Task 36 36K — one doubler per daily result
         private WordPuzzle.UI.DailyRewardPopup dailyRewardPopup;  // Task 36 36K — login claim + streak repair overlay
@@ -104,6 +108,7 @@ namespace WordPuzzle
 
             InitializeGameSystems();
             WireEventHandlers();
+            report.SessionStart();   // Task 41B — after init, before any surface shows
             ShowMainMenu();
             MaybeOfferTutorial(); // first launch: OFFER the tutorial over the menu (no longer forced)
         }
@@ -523,6 +528,11 @@ namespace WordPuzzle
             var go = new GameObject("ShopScreen", typeof(RectTransform));
             go.transform.SetParent(canvas, false);
             shopScreen = go.AddComponent<WordPuzzle.UI.ShopScreen>();
+            // Task 41B — purchase analytics: the shop (UI asm, no Puzzle ref) raises events;
+            // the reporter logs them here.
+            shopScreen.OnPurchaseAttempt += id => report.PurchaseAttempt(id);
+            shopScreen.OnPurchaseResult += (id, status) => report.PurchaseResult(id, status);
+            shopScreen.OnBundleBought += (kind, size) => report.PowerUpBundleBought(kind, size);
             shopScreen.Configure(economyManager, storeService, RefreshCoinPill,
                 BalanceConfig.PowerUpBundleSizes, BalanceConfig.HintBundlePrices, BalanceConfig.UndoBundlePrices,
                 BalanceConfig.RevealBundlePrices, BalanceConfig.TimeBundlePrices,
@@ -537,6 +547,7 @@ namespace WordPuzzle
         private void OpenShop()
         {
             if (shopScreen == null) return;
+            report.ShopOpen();   // Task 41B
             RefreshCoinPill();
             shopScreen.Open();
         }
@@ -653,7 +664,7 @@ namespace WordPuzzle
             {
                 if (adService == null || !adService.IsRewardedReady) { cb?.Invoke(false); return; }
                 adService.ShowRewarded(
-                    onRewarded: () => { DoRepairApply(today, cooldown); cb?.Invoke(true); },
+                    onRewarded: () => { report.AdRewarded("repair"); DoRepairApply(today, cooldown); cb?.Invoke(true); },   // Task 41B
                     onClosed: () => { });
             }
             else
@@ -775,6 +786,7 @@ namespace WordPuzzle
         private void StartClassicMode()
         {
             // Onboarding is OFFERED at boot (MaybeOfferTutorial) — no longer forced here, so Classic just plays.
+            report.ModeStart("classic");   // Task 41B
             StartNormalClassic();
         }
 
@@ -839,6 +851,7 @@ namespace WordPuzzle
                 return;
             }
             isDailyRun = true;
+            report.ModeStart("daily");   // Task 41B — after the one-and-done guard: a re-tap never emits
             activeMode = new ClassicMode();
             modeController.SetMode(activeMode);
             StartNewGame();
@@ -853,6 +866,7 @@ namespace WordPuzzle
                 Debug.Log("[Daily] Already played today; no stored result to re-show.");
                 return;
             }
+            report.DailyReShow();                   // Task 41B — BY CONTRACT emits nothing (canary seam)
             var results = uiManager.GetResults();
             results.ConfigureForDaily();            // Home only, no Play Again
             results.ConfigureDailyDoubler(false);   // already finalized — never offer the doubler on a re-show
@@ -1057,6 +1071,7 @@ namespace WordPuzzle
             isTutorialRun = false;
             pendingTutorialPuzzle = null;
             cachedOnboarding = OnboardingRules.MarkCompleted(cachedOnboarding, skipped);
+            report.TutorialDone(skipped);   // Task 41B — the MarkCompleted seam
             if (dataManagerRef != null)
             {
                 try { await dataManagerRef.SaveOnboardingAsync(cachedOnboarding); }
@@ -1087,6 +1102,7 @@ namespace WordPuzzle
             if (tutorialOverlaySubscribed || tutorialOverlay == null) return;
             tutorialOverlay.OnSkipRequested      += HandleTutorialSkip;
             tutorialOverlay.OnSuccessBeatFinished += HandleTutorialSuccess;
+            tutorialOverlay.OnStepShown          += step => report.TutorialStep(step);   // Task 41B
             tutorialOverlaySubscribed = true;
         }
 
@@ -1193,6 +1209,7 @@ namespace WordPuzzle
         {
             var cfg = config ?? TimeAttackConfig.Default60();
             lastTimeAttackConfig = cfg;            // Task 16 — remember for results "Play Again"
+            report.ModeStart("time_attack");       // Task 41B
             timeAttackLaddersCompleted = 0;        // fresh run
             isDailyRun = false;
             var tam = new TimeAttackMode(cfg);
@@ -1213,6 +1230,7 @@ namespace WordPuzzle
                 return;
             }
 
+            report.ModeStart("puzzle_show");   // Task 41B
             var psm = new PuzzleShowMode();
             if (tierPuzzleIdLookup != null) psm.SetTierPuzzleLookup(tierPuzzleIdLookup);
             if (cachedPuzzleProgress != null) psm.LoadProgress(cachedPuzzleProgress);
@@ -1657,6 +1675,7 @@ namespace WordPuzzle
 
             // Completion bookkeeping (mirrors EndGame, minus results/ads): stats, coins, clear resume.
             IncrementModeStats(true, activeMode);
+            report.PuzzleComplete("classic", steps, win: true);   // Task 41B — the ONLY Classic emission (EndGame is unreachable for Classic)
             cachedResumeSnapshot = null; cachedResumePuzzle = null; cachedResumeMode = null;
             GrantPuzzleReward(false);
             adPolicy?.RecordPuzzleCompleted();
@@ -1673,7 +1692,8 @@ namespace WordPuzzle
             // puzzles right here (never mid-puzzle). Cooldown + puzzle cap + AdsRemoved
             // all gate inside TryShowInterstitial; RecordPuzzleCompleted already ticked
             // in ShowClassicWinPanel, so no double-count.
-            adPolicy?.TryShowInterstitial();
+            if (adPolicy != null && adPolicy.TryShowInterstitial())
+                report.AdInterstitial();   // Task 41B
             StartNewGame();   // activeMode is still the live ClassicMode
         }
 
@@ -1731,6 +1751,18 @@ namespace WordPuzzle
             catch { /* state may be unavailable; treat as loss */ }
             IncrementModeStats(isWin, snapshotMode);
 
+            // Task 41B — run-end puzzle_complete (Daily / Puzzle Show / Time Attack; Classic
+            // uses the win panel and never reaches here — one emission point per surface).
+            {
+                string modeName = wasDailyRun ? "daily"
+                    : snapshotMode is PuzzleShowMode ? "puzzle_show"
+                    : snapshotMode is TimeAttackMode ? "time_attack" : "classic";
+                int runSteps = 0;
+                var sState = stateManager?.GetCurrentState();
+                if (sState?.wordChain != null) runSteps = Mathf.Max(0, sState.wordChain.Count - 1);
+                report.PuzzleComplete(modeName, runSteps, isWin);
+            }
+
             // Task 9G — clear resume cache so MainMenu won't offer stale "Resume".
             cachedResumeSnapshot = null;
             cachedResumePuzzle   = null;
@@ -1747,7 +1779,8 @@ namespace WordPuzzle
             // Task 6B — Tick ad policy; may show an interstitial between sessions.
             // Always between-session (activeMode is already null), never mid-puzzle.
             adPolicy?.RecordPuzzleCompleted();
-            adPolicy?.TryShowInterstitial();
+            if (adPolicy != null && adPolicy.TryShowInterstitial())
+                report.AdInterstitial();   // Task 41B — impression actually shown
 
             // Task 16 — configure which post-win actions the full results page offers.
             ConfigureResultsSurface(snapshotMode, wasDailyRun);
@@ -1807,6 +1840,7 @@ namespace WordPuzzle
             adService.ShowRewarded(
                 onRewarded: async () =>
                 {
+                    report.AdRewarded("hint");   // Task 41B
                     if (economyManager == null) return;
                     try { await economyManager.AddHintsAsync(BalanceConfig.RewardedAdHintGrant, "rewarded_ad"); }
                     catch (System.Exception ex) { Debug.LogWarning($"[Economy] rewarded hint grant failed: {ex.Message}"); }
@@ -1914,6 +1948,11 @@ namespace WordPuzzle
                 Debug.LogWarning("[Share] No share input available; nothing to copy.");
                 return;
             }
+            // Task 41B — share_tapped with the snake_case mode name.
+            report.ShareTapped(
+                lastShareInput.mode == ShareCardBuilder.ModeKind.Daily ? "daily"
+                : lastShareInput.mode == ShareCardBuilder.ModeKind.PuzzleShow ? "puzzle_show"
+                : lastShareInput.mode == ShareCardBuilder.ModeKind.TimeAttack ? "time_attack" : "classic");
             // For daily runs, RecordDailyCompletionAndSurface runs after CaptureShareInput
             // and updates the streak in-place. Pull the latest values just before sharing.
             if (lastShareInput.mode == ShareCardBuilder.ModeKind.Daily && cachedDailyProgress != null)
@@ -1962,6 +2001,9 @@ namespace WordPuzzle
             if (pathScore.HasValue)
             {
                 var ps = pathScore.Value;
+                // Task 41B — daily_result: exactly once per completed run (the re-tap path
+                // routes through ShowStoredDailyResult → report.DailyReShow, which is silent).
+                report.DailyResult(ps, cachedDailyProgress.currentStreak);
                 uiManager.GetResults().ShowDailyResult(ps.stars, ps.par, ps.playerSteps, ps.failed,
                     puzzleIndex, cachedDailyProgress.currentStreak, ps.usedPowerUp);
 
@@ -2006,6 +2048,7 @@ namespace WordPuzzle
             adService.ShowRewarded(
                 onRewarded: async () =>
                 {
+                    report.AdRewarded("doubler");   // Task 41B
                     dailyDoublerConsumed = true;
                     int bonus = lastDailyRewardCoins;
                     try { await economyManager.AddCoinsAsync(bonus, "daily_doubler"); }
@@ -2026,6 +2069,7 @@ namespace WordPuzzle
             adService.ShowRewarded(
                 onRewarded: async () =>
                 {
+                    report.AdRewarded("watch_coins");   // Task 41B
                     int coins = 0;
                     try { coins = await economyManager.GrantWatchCoinsAsync(dailyClock.TodayIso); }
                     catch (System.Exception ex) { Debug.LogWarning($"[Economy] watch-coins grant failed: {ex.Message}"); }

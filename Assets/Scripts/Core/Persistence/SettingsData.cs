@@ -44,6 +44,10 @@ namespace WordPuzzle.Persistence
         // Task 9E — text scale multiplier, clamped [1.0, 1.5] at apply time.
         public float textScale = 1.0f;
 
+        // Task 41C — daily streak-reminder local notification (defaults ON for new installs;
+        // JsonUtility auto-defaults old saves to true).
+        public bool notificationsEnabled = true;
+
         // Schema version; bump on breaking shape changes.
         public int version = 1;
 
@@ -62,6 +66,7 @@ namespace WordPuzzle.Persistence
                 colorBlindMode = this.colorBlindMode,
                 highContrast = this.highContrast,
                 textScale = this.textScale,
+                notificationsEnabled = this.notificationsEnabled,
                 version = this.version
             };
         }
