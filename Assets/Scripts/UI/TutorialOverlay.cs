@@ -227,7 +227,7 @@ namespace WordPuzzle.UI
             _welcomePanel.transform.SetParent(transform, false);
             Stretch((RectTransform)_welcomePanel.transform);
             var dim = _welcomePanel.GetComponent<Image>();
-            dim.color = new Color(0f, 0f, 0f, 0.62f); // functional dim (not a brand colour); blocks the menu
+            dim.color = new Color(Palette.SurfaceVoid.r, Palette.SurfaceVoid.g, Palette.SurfaceVoid.b, 0.62f); // Task 46 — SurfaceVoid dim (token at reduced alpha); blocks the menu
             dim.raycastTarget = true;
 
             var card = new GameObject("Card", typeof(RectTransform), typeof(Image),
@@ -251,9 +251,10 @@ namespace WordPuzzle.UI
             body.enableWordWrapping = true;
             body.gameObject.AddComponent<LayoutElement>().minHeight = 70f;
 
-            _playButton = MakeOutlineButton(card.transform, PlayLabel, MenuPalette.TitleColor, MenuPalette.SecondaryLabel, 0f, 78f);
+            // Task 46 — both welcome actions meet the ≥88px hit target (96 = the ghost-tier minimum).
+            _playButton = MakeOutlineButton(card.transform, PlayLabel, MenuPalette.TitleColor, MenuPalette.SecondaryLabel, 0f, 96f);
             _playButton.onClick.AddListener(() => { _welcomePanel.SetActive(false); _onPlay?.Invoke(); });
-            _welcomeSkipButton = MakeOutlineButton(card.transform, SkipLabel, MenuPalette.SecondaryBorder, MenuPalette.SecondaryLabel, 0f, 70f);
+            _welcomeSkipButton = MakeOutlineButton(card.transform, SkipLabel, MenuPalette.SecondaryBorder, MenuPalette.SecondaryLabel, 0f, 96f);
             _welcomeSkipButton.onClick.AddListener(() => { _welcomePanel.SetActive(false); _onSkip?.Invoke(); });
 
             _welcomePanel.SetActive(false);

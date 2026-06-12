@@ -32,7 +32,7 @@ namespace WordPuzzle.UI
         private static readonly Color C_CREAM    = Palette.TextPrimary;
         private static readonly Color C_MUTED    = Palette.TextMuted;
         private static readonly Color C_SECTION  = Palette.Panel;
-        private static readonly Color C_SCRIM    = new Color(0f, 0f, 0f, 0.86f);
+        private static readonly Color C_SCRIM    = new Color(Palette.SurfaceVoid.r, Palette.SurfaceVoid.g, Palette.SurfaceVoid.b, 0.86f); // Task 46 — token dim
 
         // Rich-text colour tags derive their hex from the tokens above — no raw theme hex scattered.
         private static string Hx(Color c) => ColorUtility.ToHtmlStringRGB(c);
@@ -195,7 +195,7 @@ namespace WordPuzzle.UI
             var img = go.GetComponent<Image>();
             img.raycastTarget = true;
             UIThemeManager.ApplyOutlineButton(img, outline);
-            var le = go.GetComponent<LayoutElement>(); le.minHeight = 86f; le.preferredHeight = 86f;
+            var le = go.GetComponent<LayoutElement>(); le.minHeight = 96f; le.preferredHeight = 96f; // Task 46 — ≥88px hit target
             var btn = go.GetComponent<Button>();
             btn.targetGraphic = img; btn.interactable = interactable;
             if (onClick != null) btn.onClick.AddListener(() => onClick());

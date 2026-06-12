@@ -79,7 +79,7 @@ namespace WordPuzzle.UI
         private GameObject detailOverlay;
 
         // Path View palette (on-brand: black + outline, no gold accents on the path itself).
-        private static readonly Color C_DETAIL_SCRIM   = new Color(0f, 0f, 0f, 0.82f);
+        private static readonly Color C_DETAIL_SCRIM   = new Color(Palette.SurfaceVoid.r, Palette.SurfaceVoid.g, Palette.SurfaceVoid.b, 0.82f); // Task 46 — token dim
         private static readonly Color C_PANEL_BG       = Palette.SurfaceVoid;
         private static readonly Color C_PANEL_BORDER   = Palette.AccentPeriwinkle;
         private static readonly Color C_SLOT_BG        = Palette.Surface;

@@ -20,7 +20,7 @@ namespace WordPuzzle.UI.Components
         private static readonly string[] Rows = { "QWERTYUIOP", "ASDFGHJKL", "ZXCVBNM" };
         // Key sizing for 1080px-wide canvas: 10 keys + 9 gaps = 10*88+9*6 = 934px (fits 1080)
         private const float KeyWidth = 88f;
-        private const float KeyHeight = 82f;
+        private const float KeyHeight = 88f; // Task 46 — ≥88px hit target (Apple HIG 44pt @2×); 3×(88+10) still fits the 320px rect
         private const float KeySpacing = 8f;   // slightly more gap so keys read as dark panel
         private const float RowSpacing = 10f;
         // Task 29B — round the keys with the app's shared bubbly 9-slice. A higher ppu multiplier shrinks

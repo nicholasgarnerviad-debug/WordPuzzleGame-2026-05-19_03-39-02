@@ -1200,9 +1200,9 @@ namespace WordPuzzle.UI
             prt.offsetMin = Vector2.zero; prt.offsetMax = Vector2.zero;
             winPanel.AddComponent<CanvasGroup>();
 
-            // Dim backdrop (also blocks taps to the board behind).
+            // Dim backdrop (also blocks taps to the board behind). Task 46 — SurfaceVoid token dim.
             var dim = winPanel.AddComponent<Image>();
-            dim.color = new Color(0f, 0f, 0f, 0.62f);
+            dim.color = new Color(Palette.SurfaceVoid.r, Palette.SurfaceVoid.g, Palette.SurfaceVoid.b, 0.62f);
             dim.raycastTarget = true;
 
             // Centered card.

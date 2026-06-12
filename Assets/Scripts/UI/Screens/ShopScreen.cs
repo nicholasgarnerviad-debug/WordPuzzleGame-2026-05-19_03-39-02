@@ -95,34 +95,44 @@ namespace WordPuzzle.UI
             // drift back onto a stale still image.
             UIThemeManager.ApplyOverlayBackground(gameObject);
 
+            // Task 46 — the overlay SafeArea fix deferred from Task 44: the opaque backdrop must
+            // stay full-bleed on the ROOT (insetting the root would expose the screen behind at
+            // the notch), so the CONTENT gets its own safe-area'd wrapper instead. Anchors below
+            // are unchanged — they were authored against a full-stretch rect, which this is.
+            var safeGo = new GameObject("__SafeContent", typeof(RectTransform));
+            safeGo.transform.SetParent(transform, false);
+            Stretch((RectTransform)safeGo.transform);
+            safeGo.AddComponent<WordPuzzle.UI.Components.SafeAreaPanel>();
+            Transform content = safeGo.transform;
+
             // Title — cyan, matches the menu header.
-            var title = MakeText(transform, "SHOP", TypeRole.Headline, MenuPalette.TitleColor, TextAlignmentOptions.Center);
+            var title = MakeText(content, "SHOP", TypeRole.Headline, MenuPalette.TitleColor, TextAlignmentOptions.Center);
             Anchor(title.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -120f), new Vector2(600f, 70f));
 
             // Coin balance — gold, top centre under the title.
-            balanceText = MakeText(transform, "0 coins", TypeRole.Body, C_GOLD, TextAlignmentOptions.Center);
+            balanceText = MakeText(content, "0 coins", TypeRole.Body, C_GOLD, TextAlignmentOptions.Center);
             Anchor(balanceText.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -196f), new Vector2(600f, 48f));
 
-            // Back button — outline, top-left.
-            var back = MakeButton(transform, "Back", MenuPalette.SecondaryBorder, C_CREAM);
-            Anchor(((RectTransform)back.transform), new Vector2(0f, 1f), new Vector2(40f, -110f), new Vector2(190f, 80f));
+            // Back button — outline, top-left. Task 46 — 96px hit height (≥88 enforced).
+            var back = MakeButton(content, "Back", MenuPalette.SecondaryBorder, C_CREAM);
+            Anchor(((RectTransform)back.transform), new Vector2(0f, 1f), new Vector2(40f, -110f), new Vector2(190f, 96f));
             back.onClick.AddListener(Close);
 
             // Restore Purchases — Task 43 ghost tier, top-right (mirrors Back). Rare store-policy
             // utility, so it recedes to tinted text. Re-establishes owned non-consumables
             // (remove-ads / starter-pack) after a reinstall; store policy requires this when selling them.
-            var restore = MakeButton(transform, "Restore", MenuPalette.SecondaryBorder, C_CREAM);
+            var restore = MakeButton(content, "Restore", MenuPalette.SecondaryBorder, C_CREAM);
             Anchor(((RectTransform)restore.transform), new Vector2(1f, 1f), new Vector2(-40f, -110f), new Vector2(230f, 80f));
             UIThemeManager.ApplyGhostButton(restore, MenuPalette.SecondaryBorder);
             restore.onClick.AddListener(RestorePurchases);
 
             // Feedback line near the bottom.
-            feedbackText = MakeText(transform, "", TypeRole.Caption, C_CREAM, TextAlignmentOptions.Center);
+            feedbackText = MakeText(content, "", TypeRole.Caption, C_CREAM, TextAlignmentOptions.Center);
             Anchor(feedbackText.rectTransform, new Vector2(0.5f, 0f), new Vector2(0f, 60f), new Vector2(900f, 40f));
 
             // Scroll view for the (tall) content.
             var scrollGO = new GameObject("ShopScroll", typeof(RectTransform), typeof(Image), typeof(ScrollRect), typeof(RectMask2D));
-            scrollGO.transform.SetParent(transform, false);
+            scrollGO.transform.SetParent(content, false);
             var srt = (RectTransform)scrollGO.transform;
             // Task 34B — fill the area BETWEEN the header (title+balance) and the feedback line, with 60px
             // side margins. Stretch anchors + offsets give a correct viewport width (no horizontal overflow)

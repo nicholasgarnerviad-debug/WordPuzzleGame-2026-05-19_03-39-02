@@ -67,6 +67,47 @@ namespace WordPuzzle.UI
         public static Color ModeLabel    => TextPrimary;       // button labels — always bright (depth-floor rule)
 
         private static Color Hex(string h) => ColorUtility.TryParseHtmlString(h, out var c) ? c : Color.magenta;
+
+        // ── Task 46 — the token REGISTRY + enforcement helper ─────────────────────
+        // Built once via reflection over the public Color fields above, so declaring a
+        // new token IS registering it (no second list to drift). DesignSystemTests scans
+        // every active Graphic on every runtime-built screen against this.
+        private static System.Collections.Generic.Dictionary<string, Color> _all;
+
+        /// <summary>Every named token (name → color). Single source: the fields above.</summary>
+        public static System.Collections.Generic.IReadOnlyDictionary<string, Color> All
+        {
+            get
+            {
+                if (_all == null)
+                {
+                    _all = new System.Collections.Generic.Dictionary<string, Color>();
+                    foreach (var f in typeof(Palette).GetFields(
+                                 System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static))
+                        if (f.FieldType == typeof(Color))
+                            _all[f.Name] = (Color)f.GetValue(null);
+                }
+                return _all;
+            }
+        }
+
+        /// <summary>
+        /// Task 46 — true when <paramref name="c"/> matches ANY token's RGB within
+        /// <paramref name="tolerance"/> per component. Alpha is deliberately ignored: the
+        /// ghost/see-through identity and the Task-44 scrims legitimately alpha-modulate
+        /// tokens — hue/value must still match. The colorblind-mode tile hues count too.
+        /// </summary>
+        public static bool IsToken(Color c, float tolerance = 1f / 255f)
+        {
+            foreach (var kv in All)
+                if (Matches(c, kv.Value, tolerance)) return true;
+            foreach (var cb in AccessiblePalette.ColorblindTokens)
+                if (Matches(c, cb, tolerance)) return true;
+            return false;
+        }
+
+        private static bool Matches(Color a, Color b, float tol)
+            => Mathf.Abs(a.r - b.r) <= tol && Mathf.Abs(a.g - b.g) <= tol && Mathf.Abs(a.b - b.b) <= tol;
     }
 
     public static class AccessiblePalette
@@ -80,6 +121,10 @@ namespace WordPuzzle.UI
         private static readonly Color CbCorrect = HexToColor("#3A7CA5");
         private static readonly Color CbError   = HexToColor("#E08214");
         private static readonly Color CbHint    = HexToColor("#C9B458"); // gold stays
+
+        // Task 46 — the colorblind-safe hues are design tokens too: the enforcement scan
+        // (Palette.IsToken) accepts them so the suite passes in either accessibility mode.
+        public static readonly Color[] ColorblindTokens = { CbCorrect, CbError, CbHint };
 
         private static ColorBlindMode _mode = ColorBlindMode.Off;
         private static bool _highContrast   = false;
@@ -368,7 +413,14 @@ public static partial class UIThemeManager
                 img = root.AddComponent<UnityEngine.UI.Image>();
                 img.raycastTarget = false; // visual only — do not change tap behaviour
             }
-            if (img != null) img.color = new UnityEngine.Color(0f, 0f, 0f, UnityEngine.Mathf.Clamp01(scrimAlpha));
+            // Task 46 — the veil is the SurfaceVoid token at reduced alpha (was flat black; the
+            // token reads identical at these alphas and keeps the colour scan exception-free).
+            if (img != null)
+            {
+                var veil = WordPuzzle.UI.Palette.SurfaceVoid;
+                veil.a = UnityEngine.Mathf.Clamp01(scrimAlpha);
+                img.color = veil;
+            }
             EnsureBackgroundLayer(root.transform);
             SetGameplayScrim(root.transform, gameplayScrim); // Task 44 — gradient scrim, gameplay-only
 

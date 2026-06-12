@@ -170,6 +170,23 @@ namespace WordPuzzle.UI
         public static Color DefaultColor(TypeRole role)
             => role == TypeRole.Caption ? Palette.TextMuted : Palette.TextPrimary;
 
+        // Task 46 — the role registry (role → font asset + size), built once so the
+        // design-system enforcement suite can scan against the same single source.
+        private static Dictionary<TypeRole, (TMP_FontAsset font, float size)> _all;
+        public static IReadOnlyDictionary<TypeRole, (TMP_FontAsset font, float size)> All
+        {
+            get
+            {
+                if (_all == null)
+                {
+                    _all = new Dictionary<TypeRole, (TMP_FontAsset, float)>();
+                    foreach (TypeRole r in System.Enum.GetValues(typeof(TypeRole)))
+                        _all[r] = (FontFor(r), Size(r));
+                }
+                return _all;
+            }
+        }
+
         /// <summary>
         /// Apply a type role: font asset (weight), size, style and default colour. Weight comes
         /// from the asset, so the TMP Bold flag is cleared — emphasis is a ROLE choice, not a flag.
