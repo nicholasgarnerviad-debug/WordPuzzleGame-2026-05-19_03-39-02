@@ -216,6 +216,14 @@ namespace WordPuzzle.UI
             // Display-only text must never swallow taps meant for buttons (e.g. HOME).
             DisableDecorativeRaycasts();
 
+            // Task 42 — the scene-authored feedback line joins the type system (colour stays per-message).
+            if (feedbackText != null)
+            {
+                var keepFeedback = feedbackText.color;
+                TypeScale.Apply(feedbackText, TypeRole.Body);
+                feedbackText.color = keepFeedback;
+            }
+
             ReparentBadge(hintCountText, hintButton, new Vector2(38f, 32f));
             ReparentBadge(revealCountText, revealButton, new Vector2(38f, 32f));
             ReparentBadge(addTimeCountText, addTimeButton, new Vector2(38f, 32f));
@@ -238,10 +246,9 @@ namespace WordPuzzle.UI
 
             if (stepsRemainingText != null)
             {
+                TypeScale.Apply(stepsRemainingText, TypeRole.Caption); // Task 42 — "Par N · Mistakes left M" is the canonical Caption
                 stepsRemainingText.color = LBL_STEPS;
                 stepsRemainingText.alignment = TextAlignmentOptions.Center;
-                stepsRemainingText.fontStyle = FontStyles.Italic;
-                stepsRemainingText.fontSize = 30f; // legibility: Par · Mistakes-left is functional info (was 20f, squint-small)
                 if (string.IsNullOrEmpty(stepsRemainingText.text))
                     stepsRemainingText.text = string.Empty;
             }
@@ -259,9 +266,7 @@ namespace WordPuzzle.UI
             // Changed from Bold+gold+28pt to Normal+text-muted+20pt, still centered.
             if (tierIndicatorText != null)
             {
-                tierIndicatorText.fontStyle = FontStyles.Normal;
-                tierIndicatorText.color = Palette.TextMuted;
-                tierIndicatorText.fontSize = 26; // legibility: was 20 (squint-small); stays secondary, below the score
+                TypeScale.Apply(tierIndicatorText, TypeRole.Caption); // Task 42 — Caption 26, TextMuted default
                 tierIndicatorText.alignment = TextAlignmentOptions.Center;
                 tierIndicatorText.gameObject.SetActive(true);
             }
@@ -280,10 +285,20 @@ namespace WordPuzzle.UI
             PlaceHeaderText(tierIndicatorText, topY: -202f, width: 620f, height: 34f);
             PlaceHeaderText(timerText,         topY: -202f, width: 620f, height: 34f);
 
-            // Legibility floor (size only) — raise scene-authored sizes; never shrink. Score is the
-            // primary HUD stat; the timer is the Time-Attack countdown. Tier size is set in OnEnable.
-            if (scoreText != null) scoreText.fontSize = Mathf.Max(scoreText.fontSize, 40f);
-            if (timerText != null) timerText.fontSize = Mathf.Max(timerText.fontSize, 30f);
+            // Task 42 — scene-authored HUD sizes are replaced by roles (the old Mathf.Max legibility
+            // floors are gone): the score is the primary HUD stat (Title), the timer secondary (Body).
+            if (scoreText != null)
+            {
+                var keep = scoreText.color; // colour stays whatever the scene/mode set — role sets font/size only here
+                TypeScale.Apply(scoreText, TypeRole.Title);
+                scoreText.color = keep;
+            }
+            if (timerText != null)
+            {
+                var keep = timerText.color;
+                TypeScale.Apply(timerText, TypeRole.Body);
+                timerText.color = keep;
+            }
         }
 
         private static void PlaceHeaderText(TMP_Text t, float topY, float width, float height)
@@ -348,8 +363,7 @@ namespace WordPuzzle.UI
                 else
                 {
                     lbl.text = "HOME";            // fallback when the icon asset is unavailable
-                    lbl.fontStyle = FontStyles.Bold;
-                    lbl.fontSize = 26f;
+                    TypeScale.Apply(lbl, TypeRole.Label); // Task 42
                     lbl.color = C_HOME_TINT;
                     lbl.alignment = TextAlignmentOptions.Center;
                 }
@@ -416,13 +430,13 @@ namespace WordPuzzle.UI
             rt.anchorMin = rt.anchorMax = new Vector2(1f, 1f);
             rt.pivot = new Vector2(0.5f, 0.5f);
             // Task 10B — inset fully INSIDE the top-right corner (~5px margin) so the badge
-            // never clips over the button's top edge.
-            rt.anchoredPosition = new Vector2(-20f, -20f);
-            rt.sizeDelta = new Vector2(30f, 30f);
+            // never clips over the button's top edge. Task 42 — the count digit is Caption (26),
+            // so the pill grows from 30 to 40px to keep the digit comfortably inside it.
+            rt.anchoredPosition = new Vector2(-22f, -22f);
+            rt.sizeDelta = new Vector2(40f, 40f);
             badge.alignment = TextAlignmentOptions.Center;
-            badge.fontSize = 17f;
-            badge.fontStyle = FontStyles.Bold;
-            badge.color = Color.white;
+            TypeScale.Apply(badge, TypeRole.Caption);
+            badge.color = Palette.TextPrimary; // bright digit on the alert-red pill
             badge.raycastTarget = false;
 
             // Add a dark circular bg pill behind the count digit
@@ -451,8 +465,13 @@ namespace WordPuzzle.UI
         {
             if (btn == null) return;
             var label = FindPowerUpLabel(btn, badge);
-            // Legibility floor (size only) — comfortable Hint/Undo/Reveal label; never shrink the scene value.
-            if (label != null) { label.fontStyle = FontStyles.Bold; label.fontSize = Mathf.Max(label.fontSize, 28f); }
+            // Task 42 — power-up buttons are buttons: Label role (replaces the old size-only floor).
+            if (label != null)
+            {
+                var keep = label.color; // enabled/disabled tint owned by ApplyPowerUpVisual
+                TypeScale.Apply(label, TypeRole.Label);
+                label.color = keep;
+            }
             UIThemeManager.ApplyOutlineButton(btn.GetComponent<Image>(), C_PU_BORDER); // Task 25 — ghost button
             ApplyPowerUpVisual(btn, badge, btn.interactable);
         }
@@ -611,11 +630,10 @@ namespace WordPuzzle.UI
         {
             if (label == null) return;
             if (string.IsNullOrEmpty(label.text)) label.text = fallback;
+            TypeScale.Apply(label, TypeRole.Caption); // Task 42 — FROM/TO row tags (hidden by default)
             label.color = color;
             label.alignment = TextAlignmentOptions.Center;
-            label.fontStyle = FontStyles.Bold;
             label.characterSpacing = 8f;
-            label.fontSize = 22f;
         }
 
         private void OnDisable()
@@ -1196,10 +1214,10 @@ namespace WordPuzzle.UI
             UIThemeManager.ApplyRoundedButton(cardImg); // Task 22B — match the shared bubbly corner language
             cardImg.color = Palette.Panel; // surface
 
-            MakeWinText(card.transform, "Title", "SOLVED", 54, new Vector2(0f, 1f), new Vector2(1f, 1f),
-                new Vector2(0f, -54f), Palette.AccentAqua, FontStyles.Bold); // success (aqua, retired green)
-            winStepsText = MakeWinText(card.transform, "Steps", "", 30, new Vector2(0f, 1f), new Vector2(1f, 1f),
-                new Vector2(0f, -120f), Palette.TextMuted, FontStyles.Normal); // muted
+            MakeWinText(card.transform, "Title", "SOLVED", TypeRole.Title, new Vector2(0f, 1f), new Vector2(1f, 1f),
+                new Vector2(0f, -54f), Palette.AccentAqua); // success (aqua, retired green)
+            winStepsText = MakeWinText(card.transform, "Steps", "", TypeRole.Caption, new Vector2(0f, 1f), new Vector2(1f, 1f),
+                new Vector2(0f, -120f), Palette.TextMuted); // muted
 
             // Task 25 — ghost buttons: colour is now the BORDER, labels are LIGHT (the old NEXT label
             // was near-black surface and would vanish on the transparent-over-black button).
@@ -1213,8 +1231,8 @@ namespace WordPuzzle.UI
                 () => OnWinHome?.Invoke());       // periwinkle border, light label
         }
 
-        private static TextMeshProUGUI MakeWinText(Transform parent, string name, string text, float size,
-            Vector2 aMin, Vector2 aMax, Vector2 pos, Color color, FontStyles style)
+        private static TextMeshProUGUI MakeWinText(Transform parent, string name, string text, TypeRole role,
+            Vector2 aMin, Vector2 aMax, Vector2 pos, Color color)
         {
             var go = new GameObject(name, typeof(RectTransform));
             go.transform.SetParent(parent, false);
@@ -1222,7 +1240,9 @@ namespace WordPuzzle.UI
             rt.anchorMin = aMin; rt.anchorMax = aMax; rt.pivot = new Vector2(0.5f, 1f);
             rt.anchoredPosition = pos; rt.sizeDelta = new Vector2(-40f, 56f);
             var tmp = go.AddComponent<TextMeshProUGUI>();
-            tmp.text = text; tmp.fontSize = size; tmp.color = color; tmp.fontStyle = style;
+            tmp.text = text;
+            TypeScale.Apply(tmp, role); // Task 42
+            tmp.color = color;
             tmp.alignment = TextAlignmentOptions.Center; tmp.raycastTarget = false; tmp.enableWordWrapping = false;
             return tmp;
         }
@@ -1240,7 +1260,7 @@ namespace WordPuzzle.UI
             var btn = go.AddComponent<Button>();
             btn.transition = Selectable.Transition.None;
             btn.onClick.AddListener(() => onClick?.Invoke());
-            var lbl = MakeWinText(go.transform, "Label", label, 28, Vector2.zero, Vector2.one, Vector2.zero, fg, FontStyles.Bold);
+            var lbl = MakeWinText(go.transform, "Label", label, TypeRole.Label, Vector2.zero, Vector2.one, Vector2.zero, fg);
             lbl.rectTransform.anchoredPosition = Vector2.zero;
             lbl.rectTransform.sizeDelta = Vector2.zero;
             lbl.alignment = TextAlignmentOptions.Center;

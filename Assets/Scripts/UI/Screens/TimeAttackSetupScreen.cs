@@ -89,9 +89,8 @@ namespace WordPuzzle.UI
             if (titleText != null)
             {
                 titleText.text = "TIME ATTACK";
+                TypeScale.Apply(titleText, TypeRole.Headline); // Task 42 — screen title
                 titleText.color = C_TITLE;
-                titleText.fontStyle = FontStyles.Bold;
-                titleText.fontSize = 76f;
                 titleText.alignment = TextAlignmentOptions.Center;
                 titleText.raycastTarget = false;
             }
@@ -100,8 +99,8 @@ namespace WordPuzzle.UI
             if (subtitleText != null)
             {
                 subtitleText.text = "Choose your duration & mode";
+                TypeScale.Apply(subtitleText, TypeRole.Body); // Task 42
                 subtitleText.color = C_TEXT_MUTED;
-                subtitleText.fontSize = 38f;
                 subtitleText.alignment = TextAlignmentOptions.Center;
                 subtitleText.raycastTarget = false;
             }
@@ -160,9 +159,7 @@ namespace WordPuzzle.UI
             var top = card.transform.Find("LabelTop")?.GetComponent<TMP_Text>();
             if (top != null)
             {
-                top.color = C_TEXT_PRIMARY;
-                top.fontStyle = FontStyles.Bold;
-                top.fontSize = 72f;
+                TypeScale.Apply(top, TypeRole.Headline); // Task 42 — the card's hero duration number
                 top.alignment = TextAlignmentOptions.Center;
                 top.enableWordWrapping = false;
                 top.raycastTarget = false;
@@ -172,9 +169,8 @@ namespace WordPuzzle.UI
             var bottom = card.transform.Find("LabelBottom")?.GetComponent<TMP_Text>();
             if (bottom != null)
             {
+                TypeScale.Apply(bottom, TypeRole.Body); // Task 42
                 bottom.color = accent;
-                bottom.fontStyle = FontStyles.Bold;
-                bottom.fontSize = 34f;
                 bottom.characterSpacing = 4f;
                 bottom.alignment = TextAlignmentOptions.Center;
                 bottom.enableWordWrapping = false;
@@ -192,7 +188,6 @@ namespace WordPuzzle.UI
                 var go = new GameObject("ExplainerText", typeof(RectTransform));
                 go.transform.SetParent(transform, false);
                 explainerText = go.AddComponent<TextMeshProUGUI>();
-                explainerText.font = titleText != null ? titleText.font : null;
             }
 
             int reward = Mathf.RoundToInt(TimeAttackConfig.DefaultSurvival().survivalRewardSeconds);
@@ -202,8 +197,8 @@ namespace WordPuzzle.UI
             explainerText.text =
                 $"<color={timed}><b>TIMED</b></color>  ·  fixed countdown — beat the clock\n" +
                 $"<color={survival}><b>SURVIVAL</b></color>  ·  each solved word adds +{reward}s";
+            TypeScale.Apply(explainerText, TypeRole.Body); // Task 42
             explainerText.color = C_TEXT_MUTED;
-            explainerText.fontSize = 32f;
             explainerText.lineSpacing = 18f;
             explainerText.alignment = TextAlignmentOptions.Center;
             explainerText.raycastTarget = false;
@@ -257,9 +252,7 @@ namespace WordPuzzle.UI
                 else
                 {
                     lbl.text = "HOME";
-                    lbl.fontStyle = FontStyles.Bold;
-                    lbl.fontSize = 26f;
-                    lbl.color = C_TEXT_PRIMARY;
+                    TypeScale.Apply(lbl, TypeRole.Label); // Task 42
                     lbl.alignment = TextAlignmentOptions.Center;
                 }
             }

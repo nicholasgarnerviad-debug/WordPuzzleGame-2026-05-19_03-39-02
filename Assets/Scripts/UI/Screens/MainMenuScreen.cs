@@ -93,10 +93,8 @@ namespace WordPuzzle.UI
         //  Design tokens are centralized here — no scattered inline hex.
         // ============================================================
         // Task 23A — per-button menu colours now live in WordPuzzle.UI.MenuPalette (UITheme.cs);
-        // no gold on this screen. Font sizes per tier (named — no magic numbers).
-        private const float FONT_HERO = 46f;  // Daily — slightly larger to read as the hero
-        private const float FONT_MODE = 40f;  // Resume + game modes
-        private const float FONT_TERT = 30f;  // Library / Stats (bumped — fix tiny Stats text)
+        // no gold on this screen. Task 42 — every button label is TypeScale Label (one role,
+        // no per-tier sizes); Daily reads as the hero by GLOW, not by a larger label.
 
         // Layout constants (named — no magic numbers). Task 23B — even composed rhythm:
         // uniform primary height, uniform gap, a tighter title row to close the void under it.
@@ -122,14 +120,14 @@ namespace WordPuzzle.UI
             StyleTitle();
             // Task 25 — outline ("ghost") buttons: each keeps its colour as a rounded BORDER over the
             // black, transparent centre. Daily is the faint-fill hero; Library/Stats use a muted ring.
-            StyleMenuButton(resumeButton,      MenuPalette.ResumeFill,     MenuPalette.ResumeLabel,     FONT_MODE, bold: true);
-            StyleMenuButton(dailyButton,       MenuPalette.DailyFill,      MenuPalette.DailyLabel,      FONT_HERO, bold: true, hero: true);
-            StyleMenuButton(classicModeButton, MenuPalette.ClassicFill,    MenuPalette.ClassicLabel,    FONT_MODE, bold: true);
-            StyleMenuButton(puzzleShowButton,  MenuPalette.PuzzleShowFill, MenuPalette.PuzzleShowLabel, FONT_MODE, bold: true);
-            StyleMenuButton(timeAttackButton,  MenuPalette.TimeAttackFill, MenuPalette.TimeAttackLabel, FONT_MODE, bold: true);
-            StyleMenuButton(libraryButton,     MenuPalette.SecondaryBorder, MenuPalette.SecondaryLabel, FONT_TERT, bold: false, primary: false);
-            StyleMenuButton(statsButton,       MenuPalette.SecondaryBorder, MenuPalette.SecondaryLabel, FONT_TERT, bold: false, primary: false);
-            StyleMenuButton(settingsButton,    MenuPalette.SecondaryBorder, MenuPalette.SecondaryLabel, FONT_TERT, bold: false, primary: false);
+            StyleMenuButton(resumeButton,      MenuPalette.ResumeFill,     MenuPalette.ResumeLabel);
+            StyleMenuButton(dailyButton,       MenuPalette.DailyFill,      MenuPalette.DailyLabel,      hero: true);
+            StyleMenuButton(classicModeButton, MenuPalette.ClassicFill,    MenuPalette.ClassicLabel);
+            StyleMenuButton(puzzleShowButton,  MenuPalette.PuzzleShowFill, MenuPalette.PuzzleShowLabel);
+            StyleMenuButton(timeAttackButton,  MenuPalette.TimeAttackFill, MenuPalette.TimeAttackLabel);
+            StyleMenuButton(libraryButton,     MenuPalette.SecondaryBorder, MenuPalette.SecondaryLabel, primary: false);
+            StyleMenuButton(statsButton,       MenuPalette.SecondaryBorder, MenuPalette.SecondaryLabel, primary: false);
+            StyleMenuButton(settingsButton,    MenuPalette.SecondaryBorder, MenuPalette.SecondaryLabel, primary: false);
 
             // Settings now lives in the shared top-right gear (UIManager.CreateGlobalSettingsButton),
             // so remove the bottom-row Settings from the menu — the tertiary row is Library + Stats.
@@ -146,9 +144,8 @@ namespace WordPuzzle.UI
             var title = t != null ? t.GetComponent<TextMeshProUGUI>() : null;
             if (title == null) return;
             title.text = "STAR LADDER";
+            TypeScale.Apply(title, TypeRole.Display); // Task 42 — Rungo Bold 96 masthead (Display role)
             title.color = MenuPalette.TitleColor; // Task 23C — clean flat title, bright + non-gold
-            title.fontStyle = FontStyles.Bold;
-            title.fontSize = 92f;
             title.characterSpacing = 8f;
             title.alignment = TextAlignmentOptions.Center;
             title.enableWordWrapping = false;
@@ -157,7 +154,7 @@ namespace WordPuzzle.UI
         // Task 25 — render a button as a coloured rounded OUTLINE (transparent centre over black).
         // `color` is the border colour (its existing identity colour); `hero` adds a faint fill wash so
         // Daily still reads as the primary action. Visual only; never touches onClick/routing.
-        private static void StyleMenuButton(Button btn, Color color, Color labelColor, float fontSize, bool bold, bool hero = false, bool primary = true)
+        private static void StyleMenuButton(Button btn, Color color, Color labelColor, bool hero = false, bool primary = true)
         {
             if (btn == null) return;
             var img = btn.GetComponent<Image>();
@@ -186,9 +183,8 @@ namespace WordPuzzle.UI
             var label = btn.GetComponentInChildren<TMP_Text>(true);
             if (label != null)
             {
+                TypeScale.Apply(label, TypeRole.Label); // Task 42 — one Label role for every menu button
                 label.color = labelColor;
-                label.fontStyle = bold ? FontStyles.Bold : FontStyles.Normal;
-                label.fontSize = fontSize;
                 // Root cause of the tiny STATS label: its Label child carried a stray localScale (~0.53) that
                 // shrank the rendered text by ~half even though its fontSize matched its Library pair (both 30).
                 // ArrangeMenu/PlaceMenuRowAtX only normalizes the BUTTON's scale, not the label child — so
@@ -347,7 +343,7 @@ namespace WordPuzzle.UI
         {
             if (dailyButtonLabel != null)
                 dailyButtonLabel.text = completedToday
-                    ? $"DAILY  ·  {currentStreak}"   // streak count (· is font-safe; ✓ U+2713 may be missing)
+                    ? $"DAILY  ·  {currentStreak}"   // streak count (· — renders in every theme weight)
                     : "DAILY";
             // Daily 2.0 (Task 38) — the button stays ENABLED when played; tapping RE-SHOWS today's result.
             // One-and-done is enforced in GameBootstrap.StartDailyMode (shows the stored result, not a fresh

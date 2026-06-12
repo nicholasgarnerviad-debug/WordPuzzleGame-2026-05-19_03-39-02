@@ -28,9 +28,8 @@ namespace WordPuzzle.UI.Components
         private const float KeyCornerPpuMultiplier = 2.5f;
 
         // Key palette — centralized in UITheme.KeyboardPalette (no inline hex here). KeyFill is the deep
-        // indigo-purple (Classic polish pass); letters stay cream, DEL red, GO green.
+        // indigo-purple (Classic polish pass); DEL red, GO green. Letters are TypeScale Label (Task 42).
         private static readonly Color C_KEY_FILL    = KeyboardPalette.KeyFill;
-        private static readonly Color C_KEY_TEXT    = KeyboardPalette.KeyText;
         private static readonly Color C_DEL_FILL    = KeyboardPalette.DelFill;
         private static readonly Color C_GO_FILL     = KeyboardPalette.GoFill;
 
@@ -119,7 +118,7 @@ namespace WordPuzzle.UI.Components
         private void CreateLetterButton(Transform root, char letter, float x, float y)
         {
             GameObject obj = CreateButtonObject(root, letter.ToString(), x, y, KeyWidth, KeyHeight,
-                C_KEY_FILL, C_KEY_TEXT, 32f);
+                C_KEY_FILL);
             Button btn = obj.GetComponent<Button>();
             char captured = letter;
             btn.onClick.AddListener(() => OnLetterPressed?.Invoke(captured));
@@ -130,13 +129,13 @@ namespace WordPuzzle.UI.Components
             Color bgColor, float width, Action action)
         {
             GameObject obj = CreateButtonObject(root, label, x, y, width, KeyHeight,
-                bgColor, Color.white, 26f);
+                bgColor);
             Button btn = obj.GetComponent<Button>();
             btn.onClick.AddListener(() => action?.Invoke());
         }
 
         private GameObject CreateButtonObject(Transform root, string label, float x, float y,
-            float width, float height, Color bgColor, Color textColor, float fontSize)
+            float width, float height, Color bgColor)
         {
             var obj = new GameObject(label + "Key", typeof(RectTransform), typeof(Image), typeof(Button));
             obj.transform.SetParent(root, false);
@@ -172,10 +171,8 @@ namespace WordPuzzle.UI.Components
 
             var tmp = textObj.GetComponent<TextMeshProUGUI>();
             tmp.text = label;
-            tmp.color = textColor;
-            tmp.fontSize = fontSize;
+            TypeScale.Apply(tmp, TypeRole.Label); // Task 42 — Rungo SemiBold 38, TextPrimary (weight from the asset, not the Bold flag)
             tmp.alignment = TextAlignmentOptions.Center;
-            tmp.fontStyle = FontStyles.Bold;
             tmp.raycastTarget = false; // prevent TMP label from intercepting pointer events meant for the parent Button
 
             return obj;

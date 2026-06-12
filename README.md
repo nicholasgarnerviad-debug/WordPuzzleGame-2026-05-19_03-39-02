@@ -400,7 +400,8 @@ The word data is **machine-generated and validated**, not hand-edited — re-run
     - **Consent + analytics device swap-ins (Task 41):** `NullConsentService` is the live default — a `UmpConsentService` (Google UMP Update → LoadAndShowForm) is the device implementation; `LogAnalytics` (Debug.Log) stands in for `FirebaseAnalytics` until `google-services.json` lands. Both swap behind existing seams, no call-site changes.
     - **Notification platform scheduler (Task 41C):** `NotificationRules` (pure, fully tested) has no consumer yet — a `LocalNotificationService` over Unity Mobile Notifications needs wiring (cancel-then-reschedule on boot/settings-change/daily-finish) plus the Settings toggle row.
 11. ✅ **Done (Task 38):** the daily-HUD leak into Classic is fixed (`GameplayScreen.SetDailyPar` always writes/clears the slot via the pure `ComposeDailyHud`); the Results doubler + streak lines no longer leak onto non-daily results; the **Stats screen was rebuilt** into grouped runtime cards; **one-and-done now truly locks** (re-shows the stored result on re-tap, no replay/coin-farm); and the pre-existing **missing-script** scene errors were cleaned (`Tools/Cleanup/Remove Missing Scripts In Open Scenes`).
-12. **Balance-audit flags (Task 38 — surfaced, NOT applied; these shift feel/monetization, so they're deliberate calls):** *par-relative* daily detour grading (cutoffs are currently absolute, so long dailies grade proportionally stricter); Starter Pack generosity (~502 coins/$ one-time). Also: the per-use `HintCost`/`RevealCost`/`UndoCost` constants are **vestigial** (the owned-inventory model consumes a *charge*, not coins) — deletable once `Constants.cs` stops forwarding them.
+12. **Typography follow-ups (Task 42):** the Rungo TMP assets are **dynamic** SDF atlases built at runtime — fine for a word game's glyph set, but **bake static atlases in-Editor before the production build** (first-frame cost + determinism). Once the ★/✓ symbols fallback proves stable on device: `StarGraphic` (drawn star meshes) is retirable in favour of real ★ glyphs, and the tile ✓/✗ state cues + the Results "⌂ HOME" glyph — disabled when the bundled font lacked them — can be re-enabled (deliberate visual calls, not bugs).
+13. **Balance-audit flags (Task 38 — surfaced, NOT applied; these shift feel/monetization, so they're deliberate calls):** *par-relative* daily detour grading (cutoffs are currently absolute, so long dailies grade proportionally stricter); Starter Pack generosity (~502 coins/$ one-time). Also: the per-use `HintCost`/`RevealCost`/`UndoCost` constants are **vestigial** (the owned-inventory model consumes a *charge*, not coins) — deletable once `Constants.cs` stops forwarding them.
 
 > **Verification note (important for any agent):** the unityMCP **`run_tests(mode="PlayMode")` path works** and reports real pass/fail — the full suite runs green at **329/329** and genuine failures surface correctly. Two caveats: **(a)** `mode="EditMode"` with a filter returns `total:0` (a false `"Passed"`) because this project's test assembly is **PlayMode-registered** — always run PlayMode; **(b)** PlayMode occasionally "fails to initialize (timeout)" — retry, and if a timed-out run left the editor in Play Mode, `manage_editor(stop)` first. See [§17](#17-notes-for-ai-agents-working-in-this-repo) for the full workflow.
 
@@ -507,13 +508,17 @@ Amethyst #473A7E. Buttons + start/target tiles are colored OUTLINES; modes are o
 magenta #B25EB8), Resume/HOME/Library/Stats use periwinkle #8E78C8. Aqua-spark #54A8B4 is the one cool
 highlight (title, success/correct tile, GO key). Coins #E9C98C (warm gold — hints, active input, win/tier
 accents, streak) and Alert #E08A8A (warm red — errors/destructive) are the only warm notes. text-primary
-#EFEAF8, text-muted #9A8FBE.
+#EFEAF8, text-muted #ABA0CE (Task 42; was #9A8FBE).
+Typography (Task 42): Rungo (Poppins-derived, OFL) x4 weights as runtime dynamic TMP SDF assets + a
+symbols fallback (star/check/triangle glyphs render tofu-free). ONE seam: WordPuzzle.UI.TypeScale roles
+(Display 96/Headline 64/Title 44/Label 38/TileLetter 56 responsive/Body 32/Caption 26) via
+TypeScale.Apply(text, role) (= UITheme.ApplyType). NEVER set a raw fontSize or font asset in a screen.
 
 Hard constraints (ALL prompts):
 - Preserve the immutable GameState + Dispatch architecture and the public interfaces
   IWordValidator, IDataManager, IGameMode, IEconomyManager (extended additively in Task 33),
   IStoreService unless a task says otherwise.
-- All tests stay green — run via run_tests(mode="PlayMode") (PlayMode-registered suite, ~329 tests;
+- All tests stay green — run via run_tests(mode="PlayMode") (PlayMode-registered suite, ~339 tests;
   EditMode returns total:0). Delete the .meta when you delete a Unity asset, and GUID-check
   scenes/prefabs before deleting any MonoBehaviour script.
 - Never commit Library/Temp/obj. Minimal, surgical diffs.
@@ -563,9 +568,11 @@ the only warm notes; **Aqua-spark** is the single cool highlight.
 | Token | Hex | Use |
 |---|---|---|
 | `TextPrimary` | `#EFEAF8` | Body, button / tile labels |
-| `TextMuted` | `#9A8FBE` | Captions, subtitles |
+| `TextMuted` | `#ABA0CE` | Captions, subtitles *(Task 42 — raised from `#9A8FBE` to clear WCAG AA at Caption sizes on `Panel`)* |
 | `Coins` | `#E9C98C` | **Warm gold** — coins, hints, active-input tiles, win "Next Puzzle", in-progress & current-tier rings, streak headline (`GameAccents.Gold` forwards here) |
 | `Alert` | `#E08A8A` | **Warm red** — errors, destructive actions, invalid flash (`GameAccents.Danger` forwards here) |
+
+**Typography (Task 42)** — the app typeface is **Rungo** (the Poppins-derived four-weight OFL 1.1 family; TTFs + license under `Assets/Fonts/Rungo/`, runtime copies under `Assets/Resources/Fonts/Rungo/`), built at runtime as **dynamic TMP SDF assets** with an OFL symbols fallback (`Resources/Fonts/Symbols.ttf` — ★ ☆ ✓ ▸ · render tofu-free through every weight). One source of truth: `WordPuzzle.UI.TypeScale` (roles `Display 96·Bold` / `Headline 64·Bold` / `Title 44·SemiBold` / `Label 38·SemiBold` / `TileLetter 56·SemiBold`, responsive via `ApplyTileLetter` / `Body 32·Medium` / `Caption 26·Regular`) applied via `TypeScale.Apply(text, role)` (forwarder: `UITheme.ApplyType`). **No screen sets a raw `fontSize` or font asset** — pinned by `TypeScaleTests`.
 
 ---
 
@@ -575,7 +582,7 @@ the only warm notes; **Aqua-spark** is the single cool highlight.
 
 1. Clone, open the root folder via Unity Hub → *Add project from disk*.
 2. Open `Assets/Scenes/GameUI.unity` and press **Play**.
-3. Tests: Window → General → Test Runner → **PlayMode** → Run All (the suite is PlayMode-registered, ~329 tests).
+3. Tests: Window → General → Test Runner → **PlayMode** → Run All (the suite is PlayMode-registered, ~339 tests).
 
 ---
 

@@ -129,9 +129,7 @@ namespace WordPuzzle.UI
                 if (label != null)
                 {
                     label.text = "HOME";
-                    label.fontStyle = FontStyles.Bold;
-                    label.fontSize = 28f;
-                    label.color = Palette.TextPrimary;
+                    TypeScale.Apply(label, TypeRole.Label); // Task 42
                     label.alignment = TextAlignmentOptions.Center;
                 }
             }
@@ -255,38 +253,38 @@ namespace WordPuzzle.UI
                                                             : C_LOCKED_BG; // all near-black centres now
 
             // Title row: "Tier N"  +  progress / lock on the right
-            CreateAnchored(fill.transform, "TierName", $"Tier {tier.tierId}", 30,
+            CreateAnchored(fill.transform, "TierName", $"Tier {tier.tierId}", TypeRole.Title,
                 TextAlignmentOptions.TopLeft, unlocked ? C_HEADER_TIER : C_HEADER_TIER_LK,
-                FontStyles.Bold, new Vector2(0f, 1f), new Vector2(0f, 1f),
-                new Vector2(24f, -16f), new Vector2(300f, 38f));
+                new Vector2(0f, 1f), new Vector2(0f, 1f),
+                new Vector2(24f, -16f), new Vector2(420f, 56f)); // Title (44) needs a taller slot than the old 30pt
 
-            CreateAnchored(fill.transform, "TierTheme", TierTheme(tier.tierId), 22,
-                TextAlignmentOptions.BottomLeft, C_SUBTITLE, FontStyles.Normal,
+            CreateAnchored(fill.transform, "TierTheme", TierTheme(tier.tierId), TypeRole.Caption,
+                TextAlignmentOptions.BottomLeft, C_SUBTITLE,
                 new Vector2(0f, 0f), new Vector2(0f, 0f),
-                new Vector2(24f, 18f), new Vector2(360f, 26f));
+                new Vector2(24f, 18f), new Vector2(360f, 32f));
 
             if (unlocked)
             {
                 string progressText = tierComplete ? $"✓ {completed}/{total}" : $"{completed}/{total}";
                 Color progressColor = tierComplete ? C_COMPLETED_ICON : isCurrent ? C_GOLD : C_HEADER_COUNT;
-                CreateAnchored(fill.transform, "TierProgress", progressText, 24,
-                    TextAlignmentOptions.Right, progressColor, FontStyles.Bold,
+                CreateAnchored(fill.transform, "TierProgress", progressText, TypeRole.Caption,
+                    TextAlignmentOptions.Right, progressColor,
                     new Vector2(1f, 0.5f), new Vector2(1f, 0.5f),
                     new Vector2(-24f, 0f), new Vector2(190f, 40f));
             }
             else
             {
                 int need = PuzzleShowMode.PuzzlesRequiredToAdvance(tier.tierId - 1);
-                CreateAnchored(fill.transform, "LockLabel", "□", 26,
-                    TextAlignmentOptions.Right, C_LOCKED_TEXT, FontStyles.Bold,
+                CreateAnchored(fill.transform, "LockLabel", "□", TypeRole.Caption,
+                    TextAlignmentOptions.Right, C_LOCKED_TEXT,
                     new Vector2(1f, 1f), new Vector2(1f, 1f),
                     new Vector2(-24f, -16f), new Vector2(40f, 32f));
                 // Polish — was C_SUBTITLE @18 (flagged low-contrast/tiny); brighter + larger for legibility.
                 CreateAnchored(fill.transform, "UnlockHint",
-                    $"Clear {need} in Tier {tier.tierId - 1} to unlock", 24,
-                    TextAlignmentOptions.BottomRight, C_HEADER_COUNT, FontStyles.Normal,
+                    $"Clear {need} in Tier {tier.tierId - 1} to unlock", TypeRole.Caption,
+                    TextAlignmentOptions.BottomRight, C_HEADER_COUNT,
                     new Vector2(1f, 0f), new Vector2(1f, 0f),
-                    new Vector2(-24f, 18f), new Vector2(360f, 28f));
+                    new Vector2(-24f, 18f), new Vector2(380f, 32f));
             }
 
             // Modern feel — staggered cascade reveal (slide-up + fade), ReduceMotion-gated.
@@ -331,7 +329,7 @@ namespace WordPuzzle.UI
             var go = new GameObject("GridHeader", typeof(RectTransform));
             go.transform.SetParent(contentRoot, false);
             var le = go.AddComponent<LayoutElement>();
-            le.minHeight = 84f; le.preferredHeight = 84f; le.flexibleWidth = 1f;
+            le.minHeight = 100f; le.preferredHeight = 100f; le.flexibleWidth = 1f; // Title-role header needs the room
 
             // Back chip
             var backGo = new GameObject("BackToTiers", typeof(RectTransform));
@@ -340,7 +338,7 @@ namespace WordPuzzle.UI
             brt.anchorMin = new Vector2(0f, 0.5f); brt.anchorMax = new Vector2(0f, 0.5f);
             brt.pivot = new Vector2(0f, 0.5f);
             brt.anchoredPosition = new Vector2(16f, 0f);
-            brt.sizeDelta = new Vector2(96f, 52f);
+            brt.sizeDelta = new Vector2(160f, 64f); // Task 42 — fits the Label-role "‹ Back" (was 96×52)
             var backImg = backGo.AddComponent<Image>();
             UIThemeManager.ApplyOutlineButton(backImg, Palette.AccentPeriwinkle); // ghost back chip
             var backBtn = backGo.AddComponent<Button>(); backBtn.transition = Selectable.Transition.None;
@@ -350,17 +348,17 @@ namespace WordPuzzle.UI
                     StartCoroutine(UIAnimations.ScaleButtonTap(brt));
                 BackToTierSelect();
             });
-            CreateText(backGo.transform, "BackLabel", "‹ Back", 24,
-                TextAlignmentOptions.Center, C_UNPLAYED_TEXT, FontStyles.Bold);
+            CreateText(backGo.transform, "BackLabel", "‹ Back", TypeRole.Label,
+                TextAlignmentOptions.Center, C_UNPLAYED_TEXT);
 
-            CreateAnchored(go.transform, "GridTitle", $"Tier {tier.tierId}", 28,
-                TextAlignmentOptions.Top, C_HEADER_TIER, FontStyles.Bold,
+            CreateAnchored(go.transform, "GridTitle", $"Tier {tier.tierId}", TypeRole.Title,
+                TextAlignmentOptions.Top, C_HEADER_TIER,
                 new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
-                new Vector2(0f, -8f), new Vector2(360f, 34f));
-            CreateAnchored(go.transform, "GridTheme", $"{TierTheme(tier.tierId)}   ·   {completed}/{total}", 22,
-                TextAlignmentOptions.Bottom, C_SUBTITLE, FontStyles.Normal,
+                new Vector2(0f, -8f), new Vector2(420f, 52f));
+            CreateAnchored(go.transform, "GridTheme", $"{TierTheme(tier.tierId)}   ·   {completed}/{total}", TypeRole.Caption,
+                TextAlignmentOptions.Bottom, C_SUBTITLE,
                 new Vector2(0.5f, 0f), new Vector2(0.5f, 0f),
-                new Vector2(0f, 12f), new Vector2(420f, 24f));
+                new Vector2(0f, 12f), new Vector2(460f, 30f));
         }
 
         private void BackToTierSelect()
@@ -430,11 +428,10 @@ namespace WordPuzzle.UI
             fillImg.color = StateBg(state); // near-black centre; state read from the border ring
 
             // Row 1 — id + state icon (shape-coded, legible in grayscale / colorblind).
-            CreateAnchored(fillGo.transform, "PuzzleId", $"#{puzzle.puzzleId:000}", 18,
+            CreateAnchored(fillGo.transform, "PuzzleId", $"#{puzzle.puzzleId:000}", TypeRole.Caption,
                 TextAlignmentOptions.TopLeft,
                 state == PuzzleState.Locked ? C_LOCKED_TEXT : C_PUZZLE_ID,
-                FontStyles.Bold | FontStyles.Italic,
-                new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(10f, -8f), new Vector2(64f, 24f));
+                new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(10f, -8f), new Vector2(96f, 30f));
 
             string icon = state switch
             {
@@ -444,25 +441,25 @@ namespace WordPuzzle.UI
                 PuzzleState.Completed         => "✓", // ✓ done (non-color cue)
                 _                             => string.Empty
             };
-            CreateAnchored(fillGo.transform, "StateIcon", icon, 18,
-                TextAlignmentOptions.TopRight, StateIconColor(state), FontStyles.Bold,
-                new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-10f, -8f), new Vector2(30f, 22f));
+            CreateAnchored(fillGo.transform, "StateIcon", icon, TypeRole.Caption,
+                TextAlignmentOptions.TopRight, StateIconColor(state),
+                new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-10f, -8f), new Vector2(36f, 30f));
 
             // Row 2 — word pair.
             string pair = state == PuzzleState.Locked
                 ? "??? → ???"
                 : $"{(puzzle.startWord ?? "").ToUpper()} → {(puzzle.endWord ?? "").ToUpper()}";
-            CreateAnchored(fillGo.transform, "WordPair", pair, 24,
-                TextAlignmentOptions.Center, StateLetterColor(state), FontStyles.Bold,
+            CreateAnchored(fillGo.transform, "WordPair", pair, TypeRole.Caption,
+                TextAlignmentOptions.Center, StateLetterColor(state),
                 new Vector2(0f, 0.5f), new Vector2(1f, 0.5f), new Vector2(0f, 6f), Vector2.zero,
                 fillSize: true, fillHeight: 52f);
 
             // Row 3 — steps subtitle.
             CreateAnchored(fillGo.transform, "Subtitle",
-                state == PuzzleState.Locked ? "" : $"{puzzle.optimalSteps} steps", 18,
-                TextAlignmentOptions.Center, C_SUBTITLE, FontStyles.Normal,
+                state == PuzzleState.Locked ? "" : $"{puzzle.optimalSteps} steps", TypeRole.Caption,
+                TextAlignmentOptions.Center, C_SUBTITLE,
                 new Vector2(0f, 0f), new Vector2(1f, 0f), new Vector2(0f, 14f), Vector2.zero,
-                fillSize: true, fillHeight: 24f);
+                fillSize: true, fillHeight: 30f);
 
             // Modern feel — staggered cascade reveal (slide-up + fade), ReduceMotion-gated.
             // Wrapped by column so the 3-wide grid ripples diagonally rather than row-by-row.
@@ -477,13 +474,13 @@ namespace WordPuzzle.UI
             var go = new GameObject("ScreenTitle", typeof(RectTransform));
             go.transform.SetParent(contentRoot, false);
             var le = go.AddComponent<LayoutElement>();
-            le.minHeight = 70f; le.preferredHeight = 70f; le.flexibleWidth = 1f;
-            CreateAnchored(go.transform, "Title", title, 26, TextAlignmentOptions.Top,
-                C_GOLD, FontStyles.Bold, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
-                new Vector2(0f, -2f), new Vector2(420f, 34f));
-            CreateAnchored(go.transform, "Sub", subtitle, 22, TextAlignmentOptions.Bottom,
-                C_SUBTITLE, FontStyles.Normal, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f),
-                new Vector2(0f, 6f), new Vector2(420f, 24f));
+            le.minHeight = 116f; le.preferredHeight = 116f; le.flexibleWidth = 1f; // Headline header row
+            CreateAnchored(go.transform, "Title", title, TypeRole.Headline, TextAlignmentOptions.Top,
+                C_GOLD, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
+                new Vector2(0f, -2f), new Vector2(760f, 76f)); // the library tier-select header is Headline (spec)
+            CreateAnchored(go.transform, "Sub", subtitle, TypeRole.Caption, TextAlignmentOptions.Bottom,
+                C_SUBTITLE, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f),
+                new Vector2(0f, 6f), new Vector2(460f, 30f));
         }
 
         private int CountCompleted(TierData tier)
@@ -597,7 +594,7 @@ namespace WordPuzzle.UI
         };
 
         private static TextMeshProUGUI CreateText(Transform parent, string name,
-            string text, float fontSize, TextAlignmentOptions align, Color color, FontStyles style)
+            string text, TypeRole role, TextAlignmentOptions align, Color color)
         {
             var go = new GameObject(name, typeof(RectTransform));
             go.transform.SetParent(parent, false);
@@ -605,14 +602,15 @@ namespace WordPuzzle.UI
             rt.anchorMin = Vector2.zero; rt.anchorMax = Vector2.one;
             rt.offsetMin = Vector2.zero; rt.offsetMax = Vector2.zero;
             var tmp = go.AddComponent<TextMeshProUGUI>();
-            tmp.text = text; tmp.fontSize = fontSize; tmp.color = color;
-            tmp.alignment = align; tmp.fontStyle = style;
+            tmp.text = text;
+            TypeScale.Apply(tmp, role); // Task 42
+            tmp.color = color; tmp.alignment = align;
             tmp.raycastTarget = false; tmp.enableWordWrapping = false;
             return tmp;
         }
 
         private static TextMeshProUGUI CreateAnchored(Transform parent, string name,
-            string text, float fontSize, TextAlignmentOptions align, Color color, FontStyles style,
+            string text, TypeRole role, TextAlignmentOptions align, Color color,
             Vector2 anchorMin, Vector2 anchorMax, Vector2 anchoredPos, Vector2 sizeDelta,
             bool fillSize = false, float fillHeight = 0f)
         {
@@ -626,8 +624,9 @@ namespace WordPuzzle.UI
             rt.anchoredPosition = anchoredPos;
             rt.sizeDelta = fillSize ? new Vector2(0f, fillHeight) : sizeDelta;
             var tmp = go.AddComponent<TextMeshProUGUI>();
-            tmp.text = text; tmp.fontSize = fontSize; tmp.color = color;
-            tmp.alignment = align; tmp.fontStyle = style;
+            tmp.text = text;
+            TypeScale.Apply(tmp, role); // Task 42
+            tmp.color = color; tmp.alignment = align;
             tmp.raycastTarget = false; tmp.enableWordWrapping = false;
             return tmp;
         }
@@ -707,12 +706,12 @@ namespace WordPuzzle.UI
 
             // Title: the word pair.
             string pair = $"{(puzzle.startWord ?? "").ToUpper()}  →  {(puzzle.endWord ?? "").ToUpper()}";
-            AddDetailLabel(content.transform, pair, 28, C_HEADER_TIER, FontStyles.Bold, 38f);
+            AddDetailLabel(content.transform, pair, TypeRole.Title, C_HEADER_TIER, 52f);
             AddDetailLabel(content.transform, $"#{puzzle.puzzleId:000} · {puzzle.optimalSteps} steps optimal",
-                15, C_SUBTITLE, FontStyles.Normal, 20f);
+                TypeRole.Caption, C_SUBTITLE, 32f);
 
             // (A) Best solve.
-            AddDetailLabel(content.transform, "YOUR BEST SOLVE", 15, C_GOLD, FontStyles.Bold, 20f);
+            AddDetailLabel(content.transform, "YOUR BEST SOLVE", TypeRole.Caption, C_GOLD, 32f);
             string[] best = record != null ? record.bestSolvePath : null;
             bool isPerfect = best != null && best.Length > 0 && (best.Length - 1) == puzzle.optimalSteps;
             if (best != null && best.Length > 0)
@@ -720,18 +719,18 @@ namespace WordPuzzle.UI
                 AddWordRow(content.transform, best, _ => C_BEST_WORD, null, animate: false);
                 int steps = best.Length - 1;
                 string sub = isPerfect ? "Perfect — optimal length!" : $"{steps} steps";
-                AddDetailLabel(content.transform, sub, 15,
-                    isPerfect ? C_PERFECT_TXT : C_SUBTITLE, FontStyles.Italic, 20f);
+                AddDetailLabel(content.transform, sub, TypeRole.Caption,
+                    isPerfect ? C_PERFECT_TXT : C_SUBTITLE, 32f);
             }
             else
             {
                 // Graceful degrade: beaten on an OLD save (pre-Path-View) with no stored best.
                 AddDetailLabel(content.transform, "Replay to record your best route.",
-                    15, C_SUBTITLE, FontStyles.Italic, 20f);
+                    TypeRole.Caption, C_SUBTITLE, 32f);
             }
 
             // (B) Optimal path — revealed slots vs blanks.
-            AddDetailLabel(content.transform, "OPTIMAL PATH", 15, C_GOLD, FontStyles.Bold, 20f);
+            AddDetailLabel(content.transform, "OPTIMAL PATH", TypeRole.Caption, C_GOLD, 32f);
             string[] solution = puzzle.solution ?? Array.Empty<string>();
             var revealed = new HashSet<int>();
             if (record != null && record.revealedOptimalIndices != null)
@@ -743,7 +742,7 @@ namespace WordPuzzle.UI
             int revealedCount = 0;
             for (int i = 0; i < solution.Length; i++) if (revealed.Contains(i)) revealedCount++;
             AddDetailLabel(content.transform, $"{revealedCount}/{solution.Length} revealed",
-                15, C_SUBTITLE, FontStyles.Normal, 20f);
+                TypeRole.Caption, C_SUBTITLE, 32f);
 
             // Replay button (reuses the existing launch path — no spoiler concern; already beaten).
             AddReplayButton(content.transform, puzzle.puzzleId);
@@ -799,9 +798,8 @@ namespace WordPuzzle.UI
                 UIThemeManager.ApplyRoundedButton(sFillImg);
                 sFillImg.color = C_SLOT_BG;
 
-                var txt = CreateText(sFill.transform, "Word", shown, 26,
-                    TextAlignmentOptions.Center, textColor != null ? textColor(i) : C_BEST_WORD,
-                    FontStyles.Bold);
+                var txt = CreateText(sFill.transform, "Word", shown, TypeRole.Caption,
+                    TextAlignmentOptions.Center, textColor != null ? textColor(i) : C_BEST_WORD);
                 txt.enableWordWrapping = false;
                 var padded = (RectTransform)txt.transform;
                 padded.offsetMin = new Vector2(8f, 2f); padded.offsetMax = new Vector2(-8f, -2f);
@@ -881,16 +879,18 @@ namespace WordPuzzle.UI
             return sb.ToString();
         }
 
-        private void AddDetailLabel(Transform parent, string text, float size, Color color,
-            FontStyles style, float height)
+        private void AddDetailLabel(Transform parent, string text, TypeRole role, Color color,
+            float height)
         {
             var go = new GameObject("Label", typeof(RectTransform));
             go.transform.SetParent(parent, false);
             var le = go.AddComponent<LayoutElement>();
             le.minHeight = height; le.flexibleWidth = 1f;
             var tmp = go.AddComponent<TextMeshProUGUI>();
-            tmp.text = text; tmp.fontSize = size; tmp.color = color;
-            tmp.alignment = TextAlignmentOptions.Center; tmp.fontStyle = style;
+            tmp.text = text;
+            TypeScale.Apply(tmp, role); // Task 42
+            tmp.color = color;
+            tmp.alignment = TextAlignmentOptions.Center;
             tmp.raycastTarget = false;
             tmp.enableWordWrapping = true;       // Large-Text safe — wraps rather than clipping.
             tmp.overflowMode = TextOverflowModes.Overflow;
@@ -907,8 +907,8 @@ namespace WordPuzzle.UI
             var btn = go.AddComponent<Button>(); btn.transition = Selectable.Transition.None;
             int captured = puzzleId;
             btn.onClick.AddListener(() => { ClosePathDetail(); OnPuzzleSelected?.Invoke(captured); });
-            CreateText(go.transform, "ReplayLabel", "REPLAY", 26,
-                TextAlignmentOptions.Center, C_UNPLAYED_TEXT, FontStyles.Bold);
+            CreateText(go.transform, "ReplayLabel", "REPLAY", TypeRole.Label,
+                TextAlignmentOptions.Center, C_UNPLAYED_TEXT);
         }
 
         // Safe-area insets (left,bottom,right,top) in UI-space px relative to this Canvas. Returns

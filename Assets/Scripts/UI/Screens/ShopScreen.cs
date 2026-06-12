@@ -96,26 +96,26 @@ namespace WordPuzzle.UI
             UIThemeManager.ApplyOverlayBackground(gameObject);
 
             // Title — cyan, matches the menu header.
-            var title = MakeText(transform, "SHOP", 56f, MenuPalette.TitleColor, FontStyles.Bold, TextAlignmentOptions.Center);
+            var title = MakeText(transform, "SHOP", TypeRole.Headline, MenuPalette.TitleColor, TextAlignmentOptions.Center);
             Anchor(title.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -120f), new Vector2(600f, 70f));
 
             // Coin balance — gold, top centre under the title.
-            balanceText = MakeText(transform, "0 coins", 34f, C_GOLD, FontStyles.Bold, TextAlignmentOptions.Center);
+            balanceText = MakeText(transform, "0 coins", TypeRole.Body, C_GOLD, TextAlignmentOptions.Center);
             Anchor(balanceText.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -196f), new Vector2(600f, 48f));
 
             // Back button — outline, top-left.
-            var back = MakeButton(transform, "Back", 30f, MenuPalette.SecondaryBorder, C_CREAM);
+            var back = MakeButton(transform, "Back", MenuPalette.SecondaryBorder, C_CREAM);
             Anchor(((RectTransform)back.transform), new Vector2(0f, 1f), new Vector2(40f, -110f), new Vector2(190f, 80f));
             back.onClick.AddListener(Close);
 
             // Restore Purchases — outline, top-right (mirrors Back). Re-establishes owned non-consumables
             // (remove-ads / starter-pack) after a reinstall; store policy requires this when selling them.
-            var restore = MakeButton(transform, "Restore", 26f, MenuPalette.SecondaryBorder, C_CREAM);
+            var restore = MakeButton(transform, "Restore", MenuPalette.SecondaryBorder, C_CREAM);
             Anchor(((RectTransform)restore.transform), new Vector2(1f, 1f), new Vector2(-40f, -110f), new Vector2(230f, 80f));
             restore.onClick.AddListener(RestorePurchases);
 
             // Feedback line near the bottom.
-            feedbackText = MakeText(transform, "", 26f, C_CREAM, FontStyles.Normal, TextAlignmentOptions.Center);
+            feedbackText = MakeText(transform, "", TypeRole.Caption, C_CREAM, TextAlignmentOptions.Center);
             Anchor(feedbackText.rectTransform, new Vector2(0.5f, 0f), new Vector2(0f, 60f), new Vector2(900f, 40f));
 
             // Scroll view for the (tall) content.
@@ -212,16 +212,16 @@ namespace WordPuzzle.UI
 
         private void SectionHeader(string label)
         {
-            var t = MakeText(contentRoot, label, 26f, C_MUTED, FontStyles.Bold, TextAlignmentOptions.Left);
+            var t = MakeText(contentRoot, label, TypeRole.Title, C_MUTED, TextAlignmentOptions.Left);
             var le = t.gameObject.AddComponent<LayoutElement>();
-            le.minHeight = 44f; le.preferredHeight = 44f;
+            le.minHeight = 56f; le.preferredHeight = 56f; // Title (44) needs more than the old 26pt row
             t.margin = new Vector4(8f, 0f, 0f, 0f);
         }
 
         private void PowerUpRow(string name, int owned, int[] bundlePrices, AddKind kind, int coins)
         {
             var row = MakeRow(150f);
-            var label = MakeText(row, $"{name}\n<size=24><color=#{Hx(C_MUTED)}>owned {owned}</color></size>", 30f, C_CREAM, FontStyles.Bold, TextAlignmentOptions.Left);
+            var label = MakeText(row, $"{name}\n<size=24><color=#{Hx(C_MUTED)}>owned {owned}</color></size>", TypeRole.Body, C_CREAM, TextAlignmentOptions.Left);
             var lle = label.gameObject.AddComponent<LayoutElement>(); lle.preferredWidth = 220f; lle.minWidth = 200f; lle.flexibleWidth = 1f;
             label.richText = true;
 
@@ -231,7 +231,7 @@ namespace WordPuzzle.UI
                 int size = sizes[i];
                 int price = (bundlePrices != null && i < bundlePrices.Length) ? bundlePrices[i] : size;
                 bool canAfford = coins >= price;
-                var btn = MakeButton(row, $"x{size}\n<size=22>{price}c</size>", 24f, canAfford ? MenuPalette.ClassicFill : C_SECTION, canAfford ? C_CREAM : C_MUTED);
+                var btn = MakeButton(row, $"x{size}\n<size=22>{price}c</size>", canAfford ? MenuPalette.ClassicFill : C_SECTION, canAfford ? C_CREAM : C_MUTED);
                 var ble = btn.gameObject.AddComponent<LayoutElement>(); ble.preferredWidth = 150f; ble.flexibleWidth = 0f;
                 btn.interactable = canAfford;
                 var label2 = btn.GetComponentInChildren<TMP_Text>(); if (label2 != null) label2.richText = true;
@@ -247,11 +247,11 @@ namespace WordPuzzle.UI
             var row = MakeRow(120f);
             string sub = canWatch ? $"{remaining} left today" : "back tomorrow";
             var label = MakeText(row, $"Watch for Coins\n<size=24><color=#{Hx(C_MUTED)}>Free  ·  {sub}</color></size>",
-                                  30f, C_CREAM, FontStyles.Bold, TextAlignmentOptions.Left);
+                                  TypeRole.Body, C_CREAM, TextAlignmentOptions.Left);
             label.richText = true;
             var lle = label.gameObject.AddComponent<LayoutElement>(); lle.flexibleWidth = 1f;
 
-            var btn = MakeButton(row, canWatch ? "Watch" : "Done", 26f,
+            var btn = MakeButton(row, canWatch ? "Watch" : "Done",
                                  canWatch ? MenuPalette.TimeAttackFill : C_SECTION, canWatch ? C_CREAM : C_MUTED);
             var ble = btn.gameObject.AddComponent<LayoutElement>(); ble.preferredWidth = 200f; ble.flexibleWidth = 0f;
             btn.interactable = canWatch;
@@ -271,11 +271,11 @@ namespace WordPuzzle.UI
             string title = string.IsNullOrEmpty(p.displayName) ? $"{p.coins} Coins" : p.displayName;
             string badge = string.IsNullOrEmpty(p.badge) ? "" : $"  <size=22><color=#{Hx(C_GOLD)}>[ {p.badge} ]</color></size>";
             var label = MakeText(row, $"{title}{badge}\n<size=24><color=#{Hx(C_MUTED)}>{p.coins} coins</color></size>",
-                                  30f, C_GOLD, FontStyles.Bold, TextAlignmentOptions.Left);
+                                  TypeRole.Body, C_GOLD, TextAlignmentOptions.Left);
             label.richText = true;
             var lle = label.gameObject.AddComponent<LayoutElement>(); lle.flexibleWidth = 1f;
 
-            var btn = MakeButton(row, $"${p.priceUsd:0.00}", 26f, MenuPalette.DailyFill, C_CREAM);
+            var btn = MakeButton(row, $"${p.priceUsd:0.00}", MenuPalette.DailyFill, C_CREAM);
             var ble = btn.gameObject.AddComponent<LayoutElement>(); ble.preferredWidth = 200f; ble.flexibleWidth = 0f;
             string id = p.id;
             btn.onClick.AddListener(() => BuyRealMoney(id, "Coins added!"));
@@ -292,11 +292,11 @@ namespace WordPuzzle.UI
             string price = ads != null ? $"${ads.priceUsd:0.00}" : "";
             var label = MakeText(row, owned ? $"Remove Ads\n<size=24><color=#{Hx(Palette.AccentAqua)}>Owned</color></size>"
                                             : $"Remove Ads\n<size=24><color=#{Hx(C_MUTED)}>{price}</color></size>",
-                                  30f, C_CREAM, FontStyles.Bold, TextAlignmentOptions.Left);
+                                  TypeRole.Body, C_CREAM, TextAlignmentOptions.Left);
             label.richText = true;
             var lle = label.gameObject.AddComponent<LayoutElement>(); lle.flexibleWidth = 1f;
 
-            var btn = MakeButton(row, owned ? "Owned" : "Buy", 28f, owned ? C_SECTION : MenuPalette.TimeAttackFill, owned ? C_MUTED : C_CREAM);
+            var btn = MakeButton(row, owned ? "Owned" : "Buy", owned ? C_SECTION : MenuPalette.TimeAttackFill, owned ? C_MUTED : C_CREAM);
             var ble = btn.gameObject.AddComponent<LayoutElement>(); ble.preferredWidth = 200f; ble.flexibleWidth = 0f;
             btn.interactable = !owned && ads != null;
             if (ads != null) { string id = ads.id; btn.onClick.AddListener(() => BuyRealMoney(id, "Ads removed!")); }
@@ -308,11 +308,11 @@ namespace WordPuzzle.UI
             var row = MakeRow(150f);
             string contents = $"{p.coins} coins  ·  {p.powerUpsEach} of each power-up  ·  {p.adFreeDays} days ad-free";
             var label = MakeText(row, $"{p.displayName}\n<size=24><color=#{Hx(C_MUTED)}>{contents}</color></size>",
-                                  30f, C_GOLD, FontStyles.Bold, TextAlignmentOptions.Left);
+                                  TypeRole.Body, C_GOLD, TextAlignmentOptions.Left);
             label.richText = true;
             var lle = label.gameObject.AddComponent<LayoutElement>(); lle.flexibleWidth = 1f;
 
-            var btn = MakeButton(row, owned ? "Owned" : $"${p.priceUsd:0.00}", 26f,
+            var btn = MakeButton(row, owned ? "Owned" : $"${p.priceUsd:0.00}",
                                  owned ? C_SECTION : MenuPalette.DailyFill, owned ? C_MUTED : C_CREAM);
             var ble = btn.gameObject.AddComponent<LayoutElement>(); ble.preferredWidth = 220f; ble.flexibleWidth = 0f;
             btn.interactable = !owned;
@@ -381,17 +381,19 @@ namespace WordPuzzle.UI
             return (RectTransform)go.transform;
         }
 
-        private TMP_Text MakeText(Transform parent, string text, float size, Color color, FontStyles style, TextAlignmentOptions align)
+        private TMP_Text MakeText(Transform parent, string text, TypeRole role, Color color, TextAlignmentOptions align)
         {
             var go = new GameObject("Text", typeof(RectTransform));
             go.transform.SetParent(parent, false);
             var t = go.AddComponent<TextMeshProUGUI>();
-            t.text = text; t.fontSize = size; t.color = color; t.fontStyle = style; t.alignment = align;
+            t.text = text;
+            TypeScale.Apply(t, role); // Task 42
+            t.color = color; t.alignment = align;
             t.raycastTarget = false; t.enableWordWrapping = false;
             return t;
         }
 
-        private Button MakeButton(Transform parent, string label, float fontSize, Color outline, Color labelColor)
+        private Button MakeButton(Transform parent, string label, Color outline, Color labelColor)
         {
             var go = new GameObject("Button", typeof(RectTransform), typeof(Image), typeof(Button));
             go.transform.SetParent(parent, false);
@@ -402,7 +404,7 @@ namespace WordPuzzle.UI
             var btn = go.GetComponent<Button>();
             btn.targetGraphic = img;
 
-            var t = MakeText(go.transform, label, fontSize, labelColor, FontStyles.Bold, TextAlignmentOptions.Center);
+            var t = MakeText(go.transform, label, TypeRole.Label, labelColor, TextAlignmentOptions.Center);
             Stretch(t.rectTransform);
             return btn;
         }

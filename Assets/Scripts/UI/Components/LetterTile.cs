@@ -127,7 +127,9 @@ namespace WordPuzzle.UI.Components
             le.minHeight = currentSize;
 
             if (letterText != null)
-                letterText.fontSize = Mathf.Max(12f, currentSize * 0.55f * AccessiblePalette.TextScale);
+                letterText.fontSize = TypeScale.TileLetterFontSize(currentSize);
+            if (stateGlyphText != null)
+                stateGlyphText.fontSize = TypeScale.TileStateGlyphFontSize(currentSize);
         }
 
         /// <summary>Punch-scale animation (ease-OutBack feel) over the given duration.</summary>
@@ -355,8 +357,6 @@ namespace WordPuzzle.UI.Components
                     grt.sizeDelta = new Vector2(20f, 20f);
                     stateGlyphText = glyphGO.AddComponent<TextMeshProUGUI>();
                     stateGlyphText.alignment = TextAlignmentOptions.TopRight;
-                    stateGlyphText.fontStyle = FontStyles.Bold;
-                    stateGlyphText.fontSize = 14f;
                     stateGlyphText.raycastTarget = false;
                     stateGlyphText.enableWordWrapping = false;
                     stateGlyphText.text = string.Empty;
@@ -380,13 +380,15 @@ namespace WordPuzzle.UI.Components
                     lrt.offsetMax = Vector2.zero;
                     letterText = labelGO.AddComponent<TextMeshProUGUI>();
                     letterText.alignment = TextAlignmentOptions.Center;
-                    letterText.fontStyle = FontStyles.Bold;
-                    letterText.fontSize = Mathf.Max(12f, currentSize * 0.55f * AccessiblePalette.TextScale);
-                    letterText.color = C_TEXT;
                     letterText.enableWordWrapping = false;
-                    if (font != null) letterText.font = font;
                 }
             }
+            // Task 42 — both labels route through the type system (covers scene-authored children
+            // too, which would otherwise keep the legacy default font; the serialized `font` field
+            // is vestigial). Colour is STATE-driven — ApplyStateVisuals owns it after this.
+            TypeScale.ApplyTileLetter(letterText, currentSize);
+            letterText.color = C_TEXT;
+            TypeScale.ApplyTileStateGlyph(stateGlyphText, currentSize);
             // Always ensure the letter label renders on top of Border/Shadow/StateGlyph,
             // and never blocks raycasts (input must reach the tile's Button or parent).
             letterText.raycastTarget = false;
@@ -466,8 +468,9 @@ namespace WordPuzzle.UI.Components
                     fill = AccessiblePalette.Correct;
                     hasBorder = false;
                     textC = C_TEXT;
-                    // Non-color cue: checkmark glyph survives grayscale.
-                    glyph = string.Empty; // ✓ (U+2713) not in LiberationSans SDF — green fill is the cue
+                    // Non-color cue: a ✓ glyph is renderable since Task 42 (symbols fallback) but
+                    // re-enabling it is a deliberate visual call — the fill stays the cue for now.
+                    glyph = string.Empty;
                     glyphC = new Color(1f, 1f, 1f, 0.85f);
                     break;
 
@@ -476,8 +479,9 @@ namespace WordPuzzle.UI.Components
                     fill = AccessiblePalette.Error;
                     hasBorder = false;
                     textC = C_TEXT;
-                    // Non-color cue: X glyph survives grayscale.
-                    glyph = string.Empty; // ✗ not in LiberationSans SDF — red flash + shake are the cue
+                    // Non-color cue: an ✗ glyph is renderable since Task 42 (symbols fallback) but
+                    // re-enabling it is a deliberate visual call — flash + shake stay the cue for now.
+                    glyph = string.Empty;
                     glyphC = new Color(1f, 1f, 1f, 0.85f);
                     if (invalidFlashCoroutine != null) StopCoroutine(invalidFlashCoroutine);
                     if (isActiveAndEnabled)

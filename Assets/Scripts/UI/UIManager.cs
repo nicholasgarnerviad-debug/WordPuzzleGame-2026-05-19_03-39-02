@@ -221,8 +221,7 @@ namespace WordPuzzle.UI
             trt.offsetMin = new Vector2(64f, 0f); trt.offsetMax = new Vector2(-12f, 0f);
             coinPillText = txtGO.AddComponent<TextMeshProUGUI>();
             coinPillText.text = "0";
-            coinPillText.fontSize = 32f;
-            coinPillText.fontStyle = FontStyles.Bold;
+            TypeScale.Apply(coinPillText, TypeRole.Body); // Task 42 — Body 32; gold token re-applied below
             coinPillText.color = Palette.Coins;
             coinPillText.alignment = TextAlignmentOptions.MidlineLeft;
             coinPillText.raycastTarget = false;

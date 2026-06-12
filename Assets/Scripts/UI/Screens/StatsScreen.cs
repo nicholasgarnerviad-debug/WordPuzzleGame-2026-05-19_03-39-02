@@ -101,14 +101,11 @@ namespace WordPuzzle.UI
         private const int   CARD_PAD_TOP    = 16;
         private const int   CARD_PAD_BOT    = 18;
         private const float CARD_SPACING    = 8f;    // gap between a card's header and body
-        private const float SECTION_FONT    = 24f;   // card section header
-        private const float HERO_FONT       = 76f;   // DAILY streak — the focal number
+        // Task 42 — font sizes come from TypeScale roles (Headline hero, Title section headers,
+        // Body values, Caption captions/footer); the old per-screen *_FONT constants are gone.
         private const float HERO_BAND_H     = 116f;  // hero + support band height (snug → no dead space)
         private const float HERO_BLOCK_W    = 300f;  // hero column width (support stats take the rest)
-        private const float CAPTION_FONT    = 24f;   // stat captions (raised 19→24 for legibility)
-        private const float SUPPORT_VALUE_FONT = 34f; // stat values (longest / mode numbers)
         private const float MODE_CELLS_H    = 74f;   // CLASSIC / TIME ATTACK value-cell row height
-        private const float FOOTER_FONT     = 24f;   // overall footer line
 
         private void OnEnable()
         {
@@ -359,12 +356,25 @@ namespace WordPuzzle.UI
             if (title != null)
             {
                 var tl = title.GetComponent<TMP_Text>();
-                if (tl != null) { tl.text = "STATS"; tl.color = MenuPalette.TitleColor; tl.fontStyle = FontStyles.Bold; }
+                if (tl != null)
+                {
+                    tl.text = "STATS";
+                    TypeScale.Apply(tl, TypeRole.Headline); // Task 42 — screen title
+                    tl.color = MenuPalette.TitleColor;
+                }
             }
 
             // HOME — restyle the scene-authored grey slab into the app's glowing outline button (no scene edit).
             if (homeButton != null)
+            {
                 UIThemeManager.ApplyOutlineButton(homeButton, MenuPalette.SecondaryBorder, MenuPalette.SecondaryLabel);
+                var homeLbl = homeButton.GetComponentInChildren<TMP_Text>(true);
+                if (homeLbl != null)
+                {
+                    TypeScale.Apply(homeLbl, TypeRole.Label); // Task 42
+                    homeLbl.color = MenuPalette.SecondaryLabel;
+                }
+            }
 
             BuildCoinPill();
             BuildContent();
@@ -397,7 +407,7 @@ namespace WordPuzzle.UI
             UIThemeManager.ApplyRoundedButton(dimg); // rounded gold token
             var dle = token.AddComponent<LayoutElement>(); dle.preferredWidth = 26f; dle.preferredHeight = 26f;
 
-            _coinText = MakeText(go.transform, "0", 30f, GameAccents.Gold, FontStyles.Bold, TextAlignmentOptions.Center);
+            _coinText = MakeText(go.transform, "0", TypeRole.Body, GameAccents.Gold, TextAlignmentOptions.Center);
 
             RegisterReveal(go); // coin pill reveals first
         }
@@ -425,8 +435,8 @@ namespace WordPuzzle.UI
             CardHeader(daily, "DAILY");
             var band = MakeHRow(daily, HERO_BAND_H, expandChildHeight: true, forceExpandWidth: false);
             var heroCol = MakeVColumn(band, HERO_BLOCK_W);
-            _streakHero = MakeText(heroCol, "0", HERO_FONT, GameAccents.Gold, FontStyles.Bold, TextAlignmentOptions.Center);
-            var heroCap = MakeText(heroCol, "DAY STREAK", CAPTION_FONT, Palette.TextMuted, FontStyles.Bold, TextAlignmentOptions.Center);
+            _streakHero = MakeText(heroCol, "0", TypeRole.Headline, GameAccents.Gold, TextAlignmentOptions.Center); // the focal number
+            var heroCap = MakeText(heroCol, "DAY STREAK", TypeRole.Caption, Palette.TextMuted, TextAlignmentOptions.Center);
             heroCap.characterSpacing = 4f;
             var tri = MakeHRow(band, 0f, expandChildHeight: false, forceExpandWidth: true);
             tri.GetComponent<LayoutElement>().flexibleWidth = 1f;
@@ -452,7 +462,7 @@ namespace WordPuzzle.UI
 
             // ── OVERALL footer — slim full-width card (closing rhythm). ──
             var footer = MakeCard(content, 0f);
-            _overallText = MakeText(footer, "0 puzzles completed", FOOTER_FONT, Palette.TextMuted, FontStyles.Normal, TextAlignmentOptions.Center);
+            _overallText = MakeText(footer, "0 puzzles completed", TypeRole.Caption, Palette.TextMuted, TextAlignmentOptions.Center);
             _overallText.gameObject.AddComponent<LayoutElement>().minHeight = 34f;
             RegisterReveal(footer.gameObject);
         }
@@ -488,7 +498,7 @@ namespace WordPuzzle.UI
 
         private void CardHeader(Transform card, string label)
         {
-            var t = MakeText(card, label, SECTION_FONT, MenuPalette.TitleColor, FontStyles.Bold, TextAlignmentOptions.Left);
+            var t = MakeText(card, label, TypeRole.Title, MenuPalette.TitleColor, TextAlignmentOptions.Left);
             t.characterSpacing = 3f;
             t.gameObject.AddComponent<LayoutElement>().minHeight = 34f;
         }
@@ -531,16 +541,18 @@ namespace WordPuzzle.UI
             vlg.childControlHeight = true; vlg.childForceExpandHeight = false;
             vlg.spacing = 2f; vlg.childAlignment = TextAnchor.MiddleCenter;
             go.GetComponent<LayoutElement>().flexibleWidth = 1f;
-            MakeText(go.transform, caption, CAPTION_FONT, Palette.TextMuted, FontStyles.Bold, TextAlignmentOptions.Center);
-            return MakeText(go.transform, "0", SUPPORT_VALUE_FONT, Palette.TextPrimary, FontStyles.Bold, TextAlignmentOptions.Center);
+            MakeText(go.transform, caption, TypeRole.Caption, Palette.TextMuted, TextAlignmentOptions.Center);
+            return MakeText(go.transform, "0", TypeRole.Body, Palette.TextPrimary, TextAlignmentOptions.Center);
         }
 
-        private TMP_Text MakeText(Transform parent, string text, float size, Color color, FontStyles style, TextAlignmentOptions align)
+        private TMP_Text MakeText(Transform parent, string text, TypeRole role, Color color, TextAlignmentOptions align)
         {
             var go = new GameObject("Text", typeof(RectTransform));
             go.transform.SetParent(parent, false);
             var t = go.AddComponent<TextMeshProUGUI>();
-            t.text = text; t.fontSize = size; t.color = color; t.fontStyle = style; t.alignment = align;
+            t.text = text;
+            TypeScale.Apply(t, role); // Task 42
+            t.color = color; t.alignment = align;
             t.raycastTarget = false; t.richText = true; t.enableWordWrapping = false;
             return t;
         }

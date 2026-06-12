@@ -105,16 +105,15 @@ namespace WordPuzzle.UI
             for (int i = contentRoot.childCount - 1; i >= 0; i--)
                 Destroy(contentRoot.GetChild(i).gameObject);
 
-            var title = Label("DAILY REWARDS", MenuPalette.TitleColor, 46f);
-            title.fontStyle = FontStyles.Bold;
+            var title = Label("DAILY REWARDS", MenuPalette.TitleColor, TypeRole.Title); // weight from the role asset
 
             // Login reward.
             if (loginAvailable)
             {
                 if (!loginClaimed)
                 {
-                    Label($"Day {loginDay} reward", C_CREAM, 30f);
-                    Label($"<color=#{Hx(C_GOLD)}>+{loginCoins} coins</color>", C_CREAM, 42f);
+                    Label($"Day {loginDay} reward", C_CREAM, TypeRole.Body);
+                    Label($"<color=#{Hx(C_GOLD)}>+{loginCoins} coins</color>", C_CREAM, TypeRole.Title);
                     Btn("CLAIM", C_GOLD, true, () =>
                     {
                         if (claimLogin == null) return;
@@ -123,7 +122,7 @@ namespace WordPuzzle.UI
                 }
                 else
                 {
-                    Label($"<color=#{Hx(C_GREEN)}>Claimed  ·  +{loginCoins} coins</color>", C_CREAM, 32f);
+                    Label($"<color=#{Hx(C_GREEN)}>Claimed  ·  +{loginCoins} coins</color>", C_CREAM, TypeRole.Body);
                 }
             }
 
@@ -131,12 +130,12 @@ namespace WordPuzzle.UI
             if (repairAvailable)
             {
                 Spacer(8f);
-                Label("Your streak slipped", C_CREAM, 30f);
-                Label("Repair yesterday to keep it alive", C_MUTED, 24f);
+                Label("Your streak slipped", C_CREAM, TypeRole.Body);
+                Label("Repair yesterday to keep it alive", C_MUTED, TypeRole.Caption);
 
                 if (!string.IsNullOrEmpty(repairMsg))
                 {
-                    Label($"<color=#{Hx(C_GREEN)}>{repairMsg}</color>", C_CREAM, 28f);
+                    Label($"<color=#{Hx(C_GREEN)}>{repairMsg}</color>", C_CREAM, TypeRole.Caption);
                 }
                 else
                 {
@@ -168,15 +167,17 @@ namespace WordPuzzle.UI
         }
 
         // ── tiny builders (mirror ShopScreen) ──
-        private TMP_Text Label(string text, Color color, float size)
+        private TMP_Text Label(string text, Color color, TypeRole role)
         {
             var go = new GameObject("Line", typeof(RectTransform));
             go.transform.SetParent(contentRoot, false);
             var t = go.AddComponent<TextMeshProUGUI>();
-            t.text = text; t.fontSize = size; t.color = color;
+            t.text = text;
+            TypeScale.Apply(t, role); // Task 42
+            t.color = color;
             t.alignment = TextAlignmentOptions.Center; t.richText = true;
             t.raycastTarget = false; t.enableWordWrapping = true;
-            var le = go.AddComponent<LayoutElement>(); le.minHeight = size + 16f;
+            var le = go.AddComponent<LayoutElement>(); le.minHeight = TypeScale.Size(role) + 16f;
             return t;
         }
 
@@ -203,8 +204,10 @@ namespace WordPuzzle.UI
             tgo.transform.SetParent(go.transform, false);
             var t = tgo.AddComponent<TextMeshProUGUI>();
             Stretch(t.rectTransform);
-            t.text = label; t.fontSize = 28f; t.color = interactable ? C_CREAM : C_MUTED;
-            t.fontStyle = FontStyles.Bold; t.alignment = TextAlignmentOptions.Center;
+            t.text = label;
+            TypeScale.Apply(t, TypeRole.Label); // Task 42
+            t.color = interactable ? C_CREAM : C_MUTED;
+            t.alignment = TextAlignmentOptions.Center;
             t.raycastTarget = false; t.richText = true;
         }
 

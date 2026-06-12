@@ -191,7 +191,7 @@ namespace WordPuzzle.UI
 
         private void BuildTitle()
         {
-            var t = MakeText(transform, "SETTINGS", 52f, Header, FontStyles.Bold, TextAlignmentOptions.Center);
+            var t = MakeText(transform, "SETTINGS", TypeRole.Headline, Header, TextAlignmentOptions.Center);
             t.characterSpacing = 6f;
             var rt = t.rectTransform;
             rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 1f);
@@ -210,7 +210,8 @@ namespace WordPuzzle.UI
             var lbl = homeButton.GetComponentInChildren<TMP_Text>(true);
             if (lbl != null)
             {
-                lbl.text = "HOME"; lbl.fontStyle = FontStyles.Bold; lbl.fontSize = 28f;
+                lbl.text = "HOME";
+                TypeScale.Apply(lbl, TypeRole.Label); // Task 42
                 lbl.color = Knob; lbl.alignment = TextAlignmentOptions.Center;
             }
             var rt = homeButton.transform as RectTransform;
@@ -231,6 +232,7 @@ namespace WordPuzzle.UI
             rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0f);
             rt.pivot = new Vector2(0.5f, 0f);
             rt.anchoredPosition = new Vector2(0f, 36f);
+            TypeScale.Apply(versionLabel, TypeRole.Caption); // Task 42 — build version is Caption
             versionLabel.alignment = TextAlignmentOptions.Center;
             versionLabel.color = Muted;
         }
@@ -279,7 +281,7 @@ namespace WordPuzzle.UI
             _sfxSlider    = MakeSliderRow(audio, "SFX",    out _sfxVal,    OnSfxVolumeChanged);
             _muteToggle   = MakeToggleRow(audio, "Mute",   OnMuteToggleChanged);
             var note = MakeText(audio, "Music & SFX volumes are saved but silent until audio is added.",
-                                22f, Muted, FontStyles.Italic, TextAlignmentOptions.Left);
+                                TypeRole.Caption, Muted, TextAlignmentOptions.Left);
             note.enableWordWrapping = true;
             note.gameObject.AddComponent<LayoutElement>().minHeight = 36f;
 
@@ -289,7 +291,7 @@ namespace WordPuzzle.UI
             _hapticsToggle      = MakeToggleRow(a11y, "Haptics",         OnHapticsToggleChanged);
             _colorBlindToggle   = MakeToggleRow(a11y, "Colorblind Mode", OnColorBlindModeChanged);
             var note2 = MakeText(a11y, "Colorblind Mode recolors the gameplay tiles.",
-                                 22f, Muted, FontStyles.Italic, TextAlignmentOptions.Left);
+                                 TypeRole.Caption, Muted, TextAlignmentOptions.Left);
             note2.enableWordWrapping = true;
             note2.gameObject.AddComponent<LayoutElement>().minHeight = 32f;
 
@@ -297,7 +299,7 @@ namespace WordPuzzle.UI
             var data = MakeSection(crt, "DATA");
             _resetButton = MakeActionButton(data, "RESET PROGRESS", GameAccents.Danger, Knob, OnResetClicked);
             var warn = MakeText(data, "Erases all puzzle progress permanently.",
-                                22f, GameAccents.Danger, FontStyles.Italic, TextAlignmentOptions.Left);
+                                TypeRole.Caption, GameAccents.Danger, TextAlignmentOptions.Left);
             warn.enableWordWrapping = true;
             warn.gameObject.AddComponent<LayoutElement>().minHeight = 34f;
             _replayButton = MakeActionButton(data, "REPLAY TUTORIAL", Muted, Knob, OnReplayTutorialClicked);
@@ -314,6 +316,18 @@ namespace WordPuzzle.UI
                 UIThemeManager.ApplyOutlineButton(resetConfirmResetButton, GameAccents.Danger, Knob);
                 resetConfirmResetButton.onClick.RemoveListener(OnResetConfirmReset);
                 resetConfirmResetButton.onClick.AddListener(OnResetConfirmReset);
+            }
+
+            // Task 42 — the scene-authored confirm modal joins the type system: button labels are
+            // Label-role, everything else (the warning message) Body. Colours untouched.
+            if (resetConfirmOverlay != null)
+            {
+                foreach (var txt in resetConfirmOverlay.GetComponentsInChildren<TMP_Text>(true))
+                {
+                    var keep = txt.color;
+                    TypeScale.Apply(txt, txt.GetComponentInParent<Button>() != null ? TypeRole.Label : TypeRole.Body);
+                    txt.color = keep;
+                }
             }
         }
 
@@ -333,9 +347,9 @@ namespace WordPuzzle.UI
             go.GetComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
             go.GetComponent<LayoutElement>().flexibleWidth = 1f;
 
-            var h = MakeText(go.transform, title, 26f, Header, FontStyles.Bold, TextAlignmentOptions.Left);
+            var h = MakeText(go.transform, title, TypeRole.Title, Header, TextAlignmentOptions.Left);
             h.characterSpacing = 4f;
-            h.gameObject.AddComponent<LayoutElement>().minHeight = 38f;
+            h.gameObject.AddComponent<LayoutElement>().minHeight = 56f; // Title (44) needs more than the old 26pt row
             return go.transform;
         }
 
@@ -343,13 +357,13 @@ namespace WordPuzzle.UI
         private Slider MakeSliderRow(Transform section, string label, out TMP_Text valueLabel, UnityEngine.Events.UnityAction<float> onChanged)
         {
             var row = MakeRow(section, 60f);
-            var cap = MakeText(row, label, 24f, Label, FontStyles.Normal, TextAlignmentOptions.Left);
+            var cap = MakeText(row, label, TypeRole.Body, Label, TextAlignmentOptions.Left);
             var capLe = cap.gameObject.AddComponent<LayoutElement>(); capLe.preferredWidth = 150f; capLe.flexibleWidth = 0f;
 
             var slider = BuildSlider(row);
             slider.onValueChanged.AddListener(onChanged);
 
-            valueLabel = MakeText(row, "0", 24f, Knob, FontStyles.Bold, TextAlignmentOptions.Right);
+            valueLabel = MakeText(row, "0", TypeRole.Body, Knob, TextAlignmentOptions.Right);
             var vle = valueLabel.gameObject.AddComponent<LayoutElement>(); vle.preferredWidth = 64f; vle.flexibleWidth = 0f;
             return slider;
         }
@@ -395,7 +409,7 @@ namespace WordPuzzle.UI
         private Toggle MakeToggleRow(Transform section, string label, UnityEngine.Events.UnityAction<bool> onChanged)
         {
             var row = MakeRow(section, 60f);
-            var cap = MakeText(row, label, 24f, Label, FontStyles.Normal, TextAlignmentOptions.Left);
+            var cap = MakeText(row, label, TypeRole.Body, Label, TextAlignmentOptions.Left);
             cap.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
 
             var toggle = BuildSwitch(row);
@@ -481,7 +495,7 @@ namespace WordPuzzle.UI
             go.transform.SetParent(section, false);
             var le = go.GetComponent<LayoutElement>(); le.minHeight = 68f; le.flexibleWidth = 1f;
             var btn = go.GetComponent<Button>();
-            var t = MakeText(go.transform, label, 26f, labelColor, FontStyles.Bold, TextAlignmentOptions.Center);
+            var t = MakeText(go.transform, label, TypeRole.Label, labelColor, TextAlignmentOptions.Center);
             t.rectTransform.anchorMin = Vector2.zero; t.rectTransform.anchorMax = Vector2.one;
             t.rectTransform.offsetMin = Vector2.zero; t.rectTransform.offsetMax = Vector2.zero;
             t.raycastTarget = false;
@@ -503,12 +517,14 @@ namespace WordPuzzle.UI
             return (RectTransform)go.transform;
         }
 
-        private TMP_Text MakeText(Transform parent, string text, float size, Color color, FontStyles style, TextAlignmentOptions align)
+        private TMP_Text MakeText(Transform parent, string text, TypeRole role, Color color, TextAlignmentOptions align)
         {
             var go = new GameObject("Text", typeof(RectTransform));
             go.transform.SetParent(parent, false);
             var t = go.AddComponent<TextMeshProUGUI>();
-            t.text = text; t.fontSize = size; t.color = color; t.fontStyle = style; t.alignment = align;
+            t.text = text;
+            TypeScale.Apply(t, role); // Task 42 — font/size/weight from the role
+            t.color = color; t.alignment = align;
             t.raycastTarget = false; t.richText = true; t.enableWordWrapping = false;
             return t;
         }

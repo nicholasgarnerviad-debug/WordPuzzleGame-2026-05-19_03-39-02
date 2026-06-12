@@ -57,7 +57,7 @@ namespace WordPuzzle.UI
 
         // Text & semantic. Coins + Alert are WARM — the only warm notes; keep.
         public static readonly Color TextPrimary = Hex("#EFEAF8");
-        public static readonly Color TextMuted   = Hex("#9A8FBE");
+        public static readonly Color TextMuted   = Hex("#ABA0CE"); // Task 42 — raised from #9A8FBE: clears WCAG AA on Panel at Caption sizes
         public static readonly Color Coins       = Hex("#E9C98C"); // warm gold — in-game accent, hints, streak
         public static readonly Color Alert       = Hex("#E08A8A"); // warm red — errors, destructive actions
 
@@ -253,6 +253,20 @@ public class UITheme : ScriptableObject
     public Color SubtleText     => subtleText;
     public Color AccentGold     => accentGold;
     public Color ErrorRed       => errorRed;
+
+    // ── Task 42 — typography seam. The canonical type system lives in WordPuzzle.UI
+    //    (TypeScale / ThemeFonts in Themes/UITypeScale.cs — sibling file, <500-line rule);
+    //    these statics keep the documented UITheme.* seam names callable from anywhere.
+    public static void ApplyType(TMPro.TMP_Text text, WordPuzzle.UI.TypeRole role)
+        => WordPuzzle.UI.TypeScale.Apply(text, role);
+
+    public static class Fonts
+    {
+        public static TMPro.TMP_FontAsset Regular  => WordPuzzle.UI.ThemeFonts.Regular;
+        public static TMPro.TMP_FontAsset Medium   => WordPuzzle.UI.ThemeFonts.Medium;
+        public static TMPro.TMP_FontAsset SemiBold => WordPuzzle.UI.ThemeFonts.SemiBold;
+        public static TMPro.TMP_FontAsset Bold     => WordPuzzle.UI.ThemeFonts.Bold;
+    }
 }
 
 /// <summary>

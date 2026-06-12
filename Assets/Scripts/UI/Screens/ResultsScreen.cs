@@ -80,7 +80,11 @@ namespace WordPuzzle.UI
             // Task 2A — share button listener.
             if (shareButton != null)
                 shareButton.onClick.AddListener(() => OnShareRequested?.Invoke());
-            if (toastText != null) toastText.gameObject.SetActive(false);
+            if (toastText != null)
+            {
+                TypeScale.Apply(toastText, TypeRole.Body); // Task 42 (colour set per toast)
+                toastText.gameObject.SetActive(false);
+            }
 
             UIThemeManager.ApplyScreenBackground(gameObject); // Task 25 — true-black background
 
@@ -88,6 +92,11 @@ namespace WordPuzzle.UI
             UIThemeManager.ApplyOutlineButton(playAgainButton, Palette.AccentAqua, Palette.TextPrimary);
             UIThemeManager.ApplyOutlineButton(mainMenuButton,  Palette.AccentPeriwinkle, Palette.TextPrimary);
             UIThemeManager.ApplyOutlineButton(shareButton,     Palette.AccentPeriwinkle, Palette.TextPrimary);
+
+            // Task 42 — button labels carry the Label role (the outline call above only tints them).
+            ApplyButtonLabelType(playAgainButton);
+            ApplyButtonLabelType(mainMenuButton);
+            ApplyButtonLabelType(shareButton);
 
             // Consolidate + modernize the stat block (display-only; see StyleResultsLayout).
             StyleResultsLayout();
@@ -102,10 +111,16 @@ namespace WordPuzzle.UI
             if (label == null) return;
             bool glyphSupported = label.font != null && label.font.HasCharacter('⌂');
             label.text = glyphSupported ? "⌂ HOME" : "HOME";
-            label.fontSize = glyphSupported ? 26f : 28f;
-            label.fontStyle = FontStyles.Bold;
+            TypeScale.Apply(label, TypeRole.Label); // Task 42
             label.alignment = TextAlignmentOptions.Center;
-            label.color = Palette.TextPrimary;
+        }
+
+        // Task 42 — apply the Label role to a button's TMP child (idempotent).
+        private static void ApplyButtonLabelType(Button host)
+        {
+            if (host == null) return;
+            var label = host.GetComponentInChildren<TextMeshProUGUI>(true);
+            if (label != null) TypeScale.Apply(label, TypeRole.Label);
         }
 
         private void OnDisable()
@@ -199,9 +214,8 @@ namespace WordPuzzle.UI
             if (modeNameText != null)
             {
                 if (_isDaily) modeNameText.text = "Daily Results"; // never inherit a stale "Puzzle Show Results"
+                TypeScale.Apply(modeNameText, TypeRole.Headline); // Task 42 — screen title
                 modeNameText.color = MenuPalette.TitleColor;
-                modeNameText.fontStyle = FontStyles.Bold;
-                modeNameText.fontSize = 54f;
                 modeNameText.enableAutoSizing = false;
                 modeNameText.enableWordWrapping = true;
                 modeNameText.alignment = TextAlignmentOptions.Center;
@@ -231,9 +245,7 @@ namespace WordPuzzle.UI
                 if (wordsFoundText != null) // holds the grade/par/stars line (set by ShowDailyResult)
                 {
                     wordsFoundText.gameObject.SetActive(true);
-                    wordsFoundText.color = Palette.TextPrimary;
-                    wordsFoundText.fontStyle = FontStyles.Bold;
-                    wordsFoundText.fontSize = 44f;
+                    TypeScale.Apply(wordsFoundText, TypeRole.Title); // Task 42 — the Daily grade word IS the Title role
                     wordsFoundText.enableAutoSizing = false;
                     wordsFoundText.enableWordWrapping = true;
                     wordsFoundText.alignment = TextAlignmentOptions.Center;
@@ -261,15 +273,14 @@ namespace WordPuzzle.UI
             if (_dailyCard != null) _dailyCard.gameObject.SetActive(false);
 
             // "FINAL SCORE" caption (scene-only label) — quiet, muted.
-            StyleResultText(scoreLabel, 28f, Palette.TextMuted, FontStyles.Bold, -560f, 44f);
+            StyleResultText(scoreLabel, TypeRole.Caption, Palette.TextMuted, -560f, 44f);
 
             // Score — the hero number. Gold is the app's reward/achievement accent (same token as the
             // streak), routed through GameAccents.Gold so it's a token, not a scene straggler.
             if (scoreText != null)
             {
+                TypeScale.Apply(scoreText, TypeRole.Headline); // Task 42 — hero number (64)
                 scoreText.color = GameAccents.Gold;
-                scoreText.fontStyle = FontStyles.Bold;
-                scoreText.fontSize = 64f;
                 scoreText.enableAutoSizing = false;
                 scoreText.alignment = TextAlignmentOptions.Center;
                 PlaceTopCenter(scoreText.rectTransform, -680f, 88f);
@@ -289,23 +300,20 @@ namespace WordPuzzle.UI
         private static void PlaceStatLine(TMP_Text t, float topOffsetY)
         {
             if (t == null) return;
-            t.color = Palette.TextPrimary;
-            t.fontStyle = FontStyles.Normal;
-            t.fontSize = 34f;
+            TypeScale.Apply(t, TypeRole.Body); // Task 42
             t.enableAutoSizing = false;
             t.alignment = TextAlignmentOptions.Center;
             PlaceTopCenter(t.rectTransform, topOffsetY, 60f);
         }
 
-        private static void StyleResultText(Transform tf, float size, Color color, FontStyles style,
+        private static void StyleResultText(Transform tf, TypeRole role, Color color,
             float topOffsetY, float height)
         {
             if (tf == null) return;
             var t = tf.GetComponent<TMP_Text>();
             if (t == null) return;
+            TypeScale.Apply(t, role); // Task 42
             t.color = color;
-            t.fontStyle = style;
-            t.fontSize = size;
             t.enableAutoSizing = false;
             t.alignment = TextAlignmentOptions.Center;
             PlaceTopCenter(t.rectTransform, topOffsetY, height);
@@ -393,8 +401,7 @@ namespace WordPuzzle.UI
             var go = new GameObject("DailyStreakLine", typeof(RectTransform));
             go.transform.SetParent(transform, false);
             _dailyStreakLine = go.AddComponent<TextMeshProUGUI>();
-            _dailyStreakLine.fontSize = 30f;
-            _dailyStreakLine.color = Palette.TextPrimary;
+            TypeScale.Apply(_dailyStreakLine, TypeRole.Body); // Task 42
             _dailyStreakLine.alignment = TextAlignmentOptions.Center;
             _dailyStreakLine.raycastTarget = false;
             _dailyStreakLine.enableWordWrapping = true;

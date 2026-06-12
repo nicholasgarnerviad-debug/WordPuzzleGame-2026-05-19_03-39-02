@@ -209,10 +209,10 @@ namespace WordPuzzle.UI
             _calloutCard.GetComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
             _calloutGroup = _calloutCard.GetComponent<CanvasGroup>();
 
-            _calloutLabel = MakeText(_calloutCard.transform, "", 30f, MenuPalette.SecondaryLabel, FontStyles.Bold, TextAlignmentOptions.Center);
+            _calloutLabel = MakeText(_calloutCard.transform, "", TypeRole.Body, MenuPalette.SecondaryLabel, TextAlignmentOptions.Center);
             _calloutLabel.enableWordWrapping = true; // holds under Large Text
 
-            _tapHintLabel = MakeText(_calloutCard.transform, TapHint, 24f, MenuPalette.SecondaryBorder, FontStyles.Italic, TextAlignmentOptions.Center);
+            _tapHintLabel = MakeText(_calloutCard.transform, TapHint, TypeRole.Caption, MenuPalette.SecondaryBorder, TextAlignmentOptions.Center);
 
             _lessonSkip = MakeOutlineButton(_calloutCard.transform, SkipLabel, MenuPalette.SecondaryBorder, MenuPalette.SecondaryLabel, 200f, 56f);
             _lessonSkip.onClick.AddListener(() => OnSkipRequested?.Invoke());
@@ -245,9 +245,9 @@ namespace WordPuzzle.UI
             vlg.childAlignment = TextAnchor.UpperCenter;
             card.GetComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
 
-            var title = MakeText(card.transform, WelcomeTitle, 40f, MenuPalette.TitleColor, FontStyles.Bold, TextAlignmentOptions.Center);
+            var title = MakeText(card.transform, WelcomeTitle, TypeRole.Title, MenuPalette.TitleColor, TextAlignmentOptions.Center);
             title.gameObject.AddComponent<LayoutElement>().minHeight = 54f;
-            var body = MakeText(card.transform, WelcomeBody, 26f, MenuPalette.SecondaryLabel, FontStyles.Normal, TextAlignmentOptions.Center);
+            var body = MakeText(card.transform, WelcomeBody, TypeRole.Body, MenuPalette.SecondaryLabel, TextAlignmentOptions.Center);
             body.enableWordWrapping = true;
             body.gameObject.AddComponent<LayoutElement>().minHeight = 70f;
 
@@ -321,12 +321,14 @@ namespace WordPuzzle.UI
             rt.localScale = Vector3.one;
         }
 
-        private TMP_Text MakeText(Transform parent, string text, float size, Color color, FontStyles style, TextAlignmentOptions align)
+        private TMP_Text MakeText(Transform parent, string text, TypeRole role, Color color, TextAlignmentOptions align)
         {
             var go = new GameObject("Text", typeof(RectTransform));
             go.transform.SetParent(parent, false);
             var t = go.AddComponent<TextMeshProUGUI>();
-            t.text = text; t.fontSize = size; t.color = color; t.fontStyle = style; t.alignment = align;
+            t.text = text;
+            TypeScale.Apply(t, role); // Task 42
+            t.color = color; t.alignment = align;
             t.raycastTarget = false; t.richText = true;
             return t;
         }
@@ -337,7 +339,7 @@ namespace WordPuzzle.UI
             go.transform.SetParent(parent, false);
             var le = go.GetComponent<LayoutElement>(); le.minHeight = height; le.preferredHeight = height;
             if (preferredWidth > 0f) { le.preferredWidth = preferredWidth; le.flexibleWidth = 0f; } else le.flexibleWidth = 1f;
-            var t = MakeText(go.transform, label, 26f, labelColor, FontStyles.Bold, TextAlignmentOptions.Center);
+            var t = MakeText(go.transform, label, TypeRole.Label, labelColor, TextAlignmentOptions.Center);
             var trt = t.rectTransform; trt.anchorMin = Vector2.zero; trt.anchorMax = Vector2.one; trt.offsetMin = Vector2.zero; trt.offsetMax = Vector2.zero;
             var btn = go.GetComponent<Button>();
             UIThemeManager.ApplyOutlineButton(btn, border, labelColor);
