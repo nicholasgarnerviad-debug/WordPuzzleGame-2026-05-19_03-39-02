@@ -795,6 +795,12 @@ public static partial class UIThemeManager
             glow = go.GetComponent<UnityEngine.UI.Image>();
         }
 
+        // The glow is an overlay, NEVER content: under a layout-group parent (stats cards,
+        // coin pill) a glow child without ignoreLayout gets laid out as a phantom empty cell.
+        var gle = glow.GetComponent<UnityEngine.UI.LayoutElement>();
+        if (gle == null) gle = glow.gameObject.AddComponent<UnityEngine.UI.LayoutElement>();
+        gle.ignoreLayout = true;
+
         // Match the button's rounded-ring sprite so the halo follows the same shape.
         glow.sprite = img.sprite;
         glow.type = UnityEngine.UI.Image.Type.Sliced;

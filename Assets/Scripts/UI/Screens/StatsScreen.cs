@@ -364,17 +364,9 @@ namespace WordPuzzle.UI
                 }
             }
 
-            // HOME — restyle the scene-authored grey slab into the app's glowing outline button (no scene edit).
+            // HOME — Task 43 tier 3: navigation recedes to a ghost (same as results Home / library Back).
             if (homeButton != null)
-            {
-                UIThemeManager.ApplyOutlineButton(homeButton, MenuPalette.SecondaryBorder, MenuPalette.SecondaryLabel);
-                var homeLbl = homeButton.GetComponentInChildren<TMP_Text>(true);
-                if (homeLbl != null)
-                {
-                    TypeScale.Apply(homeLbl, TypeRole.Label); // Task 42
-                    homeLbl.color = MenuPalette.SecondaryLabel;
-                }
-            }
+                UIThemeManager.ApplyGhostButton(homeButton, Palette.AccentPeriwinkle);
 
             BuildCoinPill();
             BuildContent();
@@ -431,8 +423,9 @@ namespace WordPuzzle.UI
 
             // ── DAILY headline card — hero streak LEFT, support stats RIGHT, vertically centred together
             //    in one snug band so there is no dead vertical space. ──
-            var daily = MakeCard(content, 0f);
-            CardHeader(daily, "DAILY");
+            // Card accents reuse the menu's mode tokens so stats read in the same colour language.
+            var daily = MakeCard(content, 0f, Palette.ModeDaily);
+            CardHeader(daily, "DAILY", Palette.ModeDaily);
             var band = MakeHRow(daily, HERO_BAND_H, expandChildHeight: true, forceExpandWidth: false);
             var heroCol = MakeVColumn(band, HERO_BLOCK_W);
             _streakHero = MakeText(heroCol, "0", TypeRole.Headline, GameAccents.Gold, TextAlignmentOptions.Center); // the focal number
@@ -447,21 +440,21 @@ namespace WordPuzzle.UI
 
             // ── CLASSIC + TIME ATTACK — matched pair, content-sized, caption-over-value cells (no sparse gap). ──
             var modeRow = MakeHRow(content, 0f, expandChildHeight: false, forceExpandWidth: true, controlHeight: false);
-            var classic = MakeCard(modeRow, 0f);
-            CardHeader(classic, "CLASSIC");
+            var classic = MakeCard(modeRow, 0f, Palette.ModeClassic);
+            CardHeader(classic, "CLASSIC", Palette.ModeClassic);
             var classicCells = MakeHRow(classic, MODE_CELLS_H, expandChildHeight: true, forceExpandWidth: true);
             _classicPlayedVal = MakeStatCell(classicCells, "PLAYED");
             _classicWonVal    = MakeStatCell(classicCells, "WON");
             RegisterReveal(classic.gameObject);
-            var timeAttack = MakeCard(modeRow, 0f);
-            CardHeader(timeAttack, "TIME ATTACK");
+            var timeAttack = MakeCard(modeRow, 0f, Palette.ModeTimeAttack);
+            CardHeader(timeAttack, "TIME ATTACK", Palette.ModeTimeAttack);
             var taCells = MakeHRow(timeAttack, MODE_CELLS_H, expandChildHeight: true, forceExpandWidth: true);
             _taPlayedVal = MakeStatCell(taCells, "PLAYED");
             _taBestVal   = MakeStatCell(taCells, "BEST");
             RegisterReveal(timeAttack.gameObject);
 
             // ── OVERALL footer — slim full-width card (closing rhythm). ──
-            var footer = MakeCard(content, 0f);
+            var footer = MakeCard(content, 0f, GameAccents.CardOutline);
             _overallText = MakeText(footer, "0 puzzles completed", TypeRole.Caption, Palette.TextMuted, TextAlignmentOptions.Center);
             _overallText.gameObject.AddComponent<LayoutElement>().minHeight = 34f;
             RegisterReveal(footer.gameObject);
@@ -479,12 +472,26 @@ namespace WordPuzzle.UI
             _revealTargets.Add(new RevealTarget { group = cg, rect = (RectTransform)go.transform });
         }
 
-        private RectTransform MakeCard(Transform parent, float fixedHeight)
+        private RectTransform MakeCard(Transform parent, float fixedHeight, Color accent)
         {
             var go = new GameObject("Card", typeof(RectTransform), typeof(Image), typeof(VerticalLayoutGroup), typeof(LayoutElement));
             go.transform.SetParent(parent, false);
+            // Modern card recipe (tutorial welcome modal): a SOLID rounded surface so the numbers
+            // sit on readable ground (the old transparent-centre ring let backdrop planets collide
+            // with the copy), with the accent ring + glow as a layout-ignored overlay child.
             var img = go.GetComponent<Image>(); img.raycastTarget = false;
-            UIThemeManager.ApplyOutlineButton(img, GameAccents.CardOutline); // subtle slate ring, transparent centre
+            UIThemeManager.ApplyRoundedButton(img);
+            img.color = new Color(Palette.SurfaceVoid.r, Palette.SurfaceVoid.g, Palette.SurfaceVoid.b, 0.97f);
+
+            var ring = new GameObject("Ring", typeof(RectTransform), typeof(Image), typeof(LayoutElement));
+            ring.transform.SetParent(go.transform, false);
+            var rrt = (RectTransform)ring.transform;
+            rrt.anchorMin = Vector2.zero; rrt.anchorMax = Vector2.one;
+            rrt.offsetMin = Vector2.zero; rrt.offsetMax = Vector2.zero;
+            ring.GetComponent<LayoutElement>().ignoreLayout = true;
+            var rimg = ring.GetComponent<Image>(); rimg.raycastTarget = false;
+            UIThemeManager.ApplyOutlineButton(rimg, accent);
+
             var vlg = go.GetComponent<VerticalLayoutGroup>();
             vlg.childControlWidth = true; vlg.childForceExpandWidth = true;
             vlg.childControlHeight = true; vlg.childForceExpandHeight = false;
@@ -496,9 +503,9 @@ namespace WordPuzzle.UI
             return (RectTransform)go.transform;
         }
 
-        private void CardHeader(Transform card, string label)
+        private void CardHeader(Transform card, string label, Color accent)
         {
-            var t = MakeText(card, label, TypeRole.Title, MenuPalette.TitleColor, TextAlignmentOptions.Left);
+            var t = MakeText(card, label, TypeRole.Title, accent, TextAlignmentOptions.Left);
             t.characterSpacing = 3f;
             t.gameObject.AddComponent<LayoutElement>().minHeight = 34f;
         }
