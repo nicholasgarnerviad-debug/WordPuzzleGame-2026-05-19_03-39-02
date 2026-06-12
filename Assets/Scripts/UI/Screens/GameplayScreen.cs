@@ -440,12 +440,13 @@ namespace WordPuzzle.UI
             rt.sizeDelta = new Vector2(40f, 40f);
             badge.alignment = TextAlignmentOptions.Center;
             TypeScale.Apply(badge, TypeRole.Caption);
-            // Task 47 — the count is INVENTORY ("charges you own"), not an error: dark digit on a
-            // warm-gold pill (the hint-tile gold-on-dark precedent), replacing the alert-red square.
+            // Task 47 — the count pill stays in the BAR'S OWN family (periwinkle, the chip ring
+            // token) with a dark digit; the gold pass read as an off-theme mustard chip.
             badge.color = Palette.SurfaceVoid;
             badge.raycastTarget = false;
 
-            // The gold count pill behind the digit — ROUND via the shared bubbly 9-slice.
+            // The count pill behind the digit — fully ROUND via the shared bubbly 9-slice
+            // (corner radius = 44px art ÷ multiplier, so 2.2 ⇒ a 20px radius on the 40px pill).
             var imgGO = badge.transform.Find("__BadgeBg");
             if (imgGO == null)
             {
@@ -459,8 +460,8 @@ namespace WordPuzzle.UI
                 var img = go.AddComponent<Image>();
                 img.sprite = UIThemeManager.RoundedButtonSprite;
                 img.type = Image.Type.Sliced;
-                img.pixelsPerUnitMultiplier = 5.5f; // 44px corner art on a 40px pill ⇒ fully round
-                img.color = new Color(Palette.Coins.r, Palette.Coins.g, Palette.Coins.b, 0.9f);
+                img.pixelsPerUnitMultiplier = 2.2f;
+                img.color = new Color(C_PU_BORDER.r, C_PU_BORDER.g, C_PU_BORDER.b, 0.9f);
                 img.raycastTarget = false;
                 go.transform.SetAsFirstSibling();
             }

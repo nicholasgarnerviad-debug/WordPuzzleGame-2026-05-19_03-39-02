@@ -85,33 +85,34 @@ namespace WordPuzzle.UI.Components
             }
         }
 
+        private const float SpecialKeyWidth = 120f; // DEL / GO
+
         private void BuildRow(Transform root, string letters, float y, bool addSpecialKeys)
         {
-            int totalKeys = letters.Length + (addSpecialKeys ? 2 : 0);
-            float totalWidth = totalKeys * (KeyWidth + KeySpacing) - KeySpacing;
-            float xStart = -totalWidth / 2f + KeyWidth / 2f;
-
-            int keyIndex = 0;
+            // Task 47 fix — advance by each key's ACTUAL width. The old uniform-slot grid placed
+            // the 120px DEL/GO on 88px letter slots, so they overhung Z and M by 16px a side.
+            float totalWidth = letters.Length * KeyWidth
+                + (addSpecialKeys ? 2f * SpecialKeyWidth : 0f)
+                + (letters.Length + (addSpecialKeys ? 2 : 0) - 1) * KeySpacing;
+            float x = -totalWidth / 2f; // running LEFT edge
 
             if (addSpecialKeys)
             {
-                CreateSpecialButton(root, "DEL", xStart + keyIndex * (KeyWidth + KeySpacing), y,
-                    C_DEL_FILL, 120f, () => OnBackspacePressed?.Invoke());
-                keyIndex++;
+                CreateSpecialButton(root, "DEL", x + SpecialKeyWidth / 2f, y,
+                    C_DEL_FILL, SpecialKeyWidth, () => OnBackspacePressed?.Invoke());
+                x += SpecialKeyWidth + KeySpacing;
             }
 
             for (int i = 0; i < letters.Length; i++)
             {
-                char c = letters[i];
-                float x = xStart + keyIndex * (KeyWidth + KeySpacing);
-                CreateLetterButton(root, c, x, y);
-                keyIndex++;
+                CreateLetterButton(root, letters[i], x + KeyWidth / 2f, y);
+                x += KeyWidth + KeySpacing;
             }
 
             if (addSpecialKeys)
             {
-                CreateSpecialButton(root, "GO", xStart + keyIndex * (KeyWidth + KeySpacing), y,
-                    C_GO_FILL, 120f, () => OnEnterPressed?.Invoke());
+                CreateSpecialButton(root, "GO", x + SpecialKeyWidth / 2f, y,
+                    C_GO_FILL, SpecialKeyWidth, () => OnEnterPressed?.Invoke());
             }
         }
 
