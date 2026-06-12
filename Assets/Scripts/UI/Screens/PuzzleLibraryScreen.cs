@@ -147,16 +147,15 @@ namespace WordPuzzle.UI
             if (backButton != null)
             {
                 backButton.onClick.AddListener(HandleTopBack);
-                UIThemeManager.ApplyOutlineButton(backButton.GetComponent<Image>(),
-                    Palette.AccentPeriwinkle); // ghost HOME pill
-                // Preserve the existing HOME pill look (label styled in-code as before).
+                // Task 43 tier 3 — HOME recedes to a true ghost (matches results Home / shop Back).
+                // ApplyGhostButton applies the Label role then tints, so set the text first.
                 var label = backButton.GetComponentInChildren<TMP_Text>(true);
                 if (label != null)
                 {
                     label.text = "HOME";
-                    TypeScale.Apply(label, TypeRole.Label); // Task 42
                     label.alignment = TextAlignmentOptions.Center;
                 }
+                UIThemeManager.ApplyGhostButton(backButton, Palette.AccentPeriwinkle);
             }
         }
 
@@ -215,7 +214,9 @@ namespace WordPuzzle.UI
 
             if (tierData == null || tierData.tiers == null) return;
 
-            SetSceneTitleVisible(viewMode == ViewMode.TierSelect); // Task 48 — one header band in grid view
+            // The scene-authored masthead is unthemed (default font/white) and stacks over the
+            // runtime header as mush — the runtime ScreenTitle/GridHeader is the ONE header now.
+            SetSceneTitleVisible(false);
 
             if (viewMode == ViewMode.TierSelect) PopulateTierSelect();
             else PopulatePuzzleGrid(selectedTierId);
@@ -244,6 +245,10 @@ namespace WordPuzzle.UI
             go.transform.SetParent(contentRoot, false);
             var le = go.AddComponent<LayoutElement>();
             le.minHeight = TIER_ROW_H; le.preferredHeight = TIER_ROW_H; le.flexibleWidth = 1f;
+            // The root VLG runs childControlHeight=false, which IGNORES LayoutElement heights and
+            // uses the child's own rect — left at the 100px default, every row squashed and the
+            // Title overprinted the theme line. The rect height IS the row height; set it.
+            ((RectTransform)go.transform).sizeDelta = new Vector2(0f, TIER_ROW_H);
 
             bool tierComplete = unlocked && total > 0 && completed >= total;
 
@@ -302,10 +307,8 @@ namespace WordPuzzle.UI
             else
             {
                 int need = PuzzleShowMode.PuzzlesRequiredToAdvance(tier.tierId - 1);
-                CreateAnchored(fill.transform, "LockLabel", "□", TypeRole.Caption,
-                    TextAlignmentOptions.Right, C_LOCKED_TEXT,
-                    new Vector2(1f, 1f), new Vector2(1f, 1f),
-                    new Vector2(-24f, -16f), new Vector2(40f, 32f));
+                // (the old "□" lock glyph rendered as a missing-glyph box in Rungo — the unlock
+                // hint below carries the locked state on its own)
                 // Polish — was C_SUBTITLE @18 (flagged low-contrast/tiny); brighter + larger for legibility.
                 CreateAnchored(fill.transform, "UnlockHint",
                     $"Clear {need} in Tier {tier.tierId - 1} to unlock", TypeRole.Caption,
@@ -377,6 +380,9 @@ namespace WordPuzzle.UI
             go.transform.SetParent(contentRoot, false);
             var le = go.AddComponent<LayoutElement>();
             le.minHeight = 170f; le.preferredHeight = 170f; le.flexibleWidth = 1f; // Task 48 — title + theme + progress bar stack (100 made the bar overprint the caption)
+            // childControlHeight=false on the root VLG ignores the LayoutElement — the rect height
+            // IS the band height (the same squash that overprinted the tier-select rows).
+            ((RectTransform)go.transform).sizeDelta = new Vector2(0f, 170f);
 
             // Back chip
             var backGo = new GameObject("BackToTiers", typeof(RectTransform));
@@ -608,6 +614,8 @@ namespace WordPuzzle.UI
             go.transform.SetParent(contentRoot, false);
             var le = go.AddComponent<LayoutElement>();
             le.minHeight = 116f; le.preferredHeight = 116f; le.flexibleWidth = 1f; // Headline header row
+            // childControlHeight=false on the root VLG — set the rect height too (see tier cards).
+            ((RectTransform)go.transform).sizeDelta = new Vector2(0f, 116f);
             CreateAnchored(go.transform, "Title", title, TypeRole.Headline, TextAlignmentOptions.Top,
                 C_GOLD, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
                 new Vector2(0f, -2f), new Vector2(760f, 76f)); // the library tier-select header is Headline (spec)
