@@ -66,6 +66,7 @@ namespace WordPuzzle.UI
 
         // Runtime UI
         private GameObject _welcomePanel, _calloutCard;
+        private RectTransform _welcomeCard;
         private Button _tapCatcher, _lessonSkip, _playButton, _welcomeSkipButton;
         private TMP_Text _calloutLabel, _tapHintLabel;
         private CanvasGroup _calloutGroup;
@@ -85,6 +86,8 @@ namespace WordPuzzle.UI
             _calloutCard.SetActive(false);
             _tapCatcher.gameObject.SetActive(false);
             SetHighlight(null);
+            if (_welcomeCard != null && isActiveAndEnabled)
+                StartCoroutine(UIAnimations.StaggeredPop(new[] { _welcomeCard })); // ReduceMotion-safe pop
         }
 
         /// <summary>Start the lesson on the real puzzle (Beat 1). <paramref name="par"/> = the puzzle's optimal steps.</summary>
@@ -221,13 +224,15 @@ namespace WordPuzzle.UI
         }
 
         // Centered welcome card: title, one line, PLAY TUTORIAL + SKIP. A dim backing blocks the menu.
+        // Modern modal recipe (matches DailyRewardPopup): heavy SurfaceVoid scrim + a SOLID card —
+        // the old outline-only card had a transparent centre, so the menu bled through the copy.
         private void BuildWelcomePanel()
         {
             _welcomePanel = new GameObject("WelcomePanel", typeof(RectTransform), typeof(Image));
             _welcomePanel.transform.SetParent(transform, false);
             Stretch((RectTransform)_welcomePanel.transform);
             var dim = _welcomePanel.GetComponent<Image>();
-            dim.color = new Color(Palette.SurfaceVoid.r, Palette.SurfaceVoid.g, Palette.SurfaceVoid.b, 0.62f); // Task 46 — SurfaceVoid dim (token at reduced alpha); blocks the menu
+            dim.color = new Color(Palette.SurfaceVoid.r, Palette.SurfaceVoid.g, Palette.SurfaceVoid.b, 0.86f); // Task 46 — SurfaceVoid dim (modal-grade alpha, same as DailyRewardPopup)
             dim.raycastTarget = true;
 
             var card = new GameObject("Card", typeof(RectTransform), typeof(Image),
@@ -237,13 +242,23 @@ namespace WordPuzzle.UI
             crt.anchorMin = crt.anchorMax = new Vector2(0.5f, 0.5f); crt.pivot = new Vector2(0.5f, 0.5f);
             crt.anchoredPosition = Vector2.zero; crt.sizeDelta = new Vector2(820f, 0f);
             var cimg = card.GetComponent<Image>(); cimg.raycastTarget = true;
-            UIThemeManager.ApplyOutlineButton(cimg, MenuPalette.TitleColor);
+            UIThemeManager.ApplyRoundedButton(cimg); // rounded 9-slice, SOLID fill
+            cimg.color = new Color(Palette.SurfaceVoid.r, Palette.SurfaceVoid.g, Palette.SurfaceVoid.b, 0.97f);
             var vlg = card.GetComponent<VerticalLayoutGroup>();
             vlg.childControlWidth = true; vlg.childForceExpandWidth = true;
             vlg.childControlHeight = true; vlg.childForceExpandHeight = false;
             vlg.spacing = 18f; vlg.padding = new RectOffset(44, 44, 40, 40);
             vlg.childAlignment = TextAnchor.UpperCenter;
             card.GetComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            _welcomeCard = crt;
+
+            // Aqua ring + neon glow OVER the solid fill (a stretched, layout-ignored overlay child).
+            var ring = new GameObject("Ring", typeof(RectTransform), typeof(Image), typeof(LayoutElement));
+            ring.transform.SetParent(card.transform, false);
+            Stretch((RectTransform)ring.transform);
+            ring.GetComponent<LayoutElement>().ignoreLayout = true;
+            var rimg = ring.GetComponent<Image>(); rimg.raycastTarget = false;
+            UIThemeManager.ApplyOutlineButton(rimg, MenuPalette.TitleColor);
 
             var title = MakeText(card.transform, WelcomeTitle, TypeRole.Title, MenuPalette.TitleColor, TextAlignmentOptions.Center);
             title.gameObject.AddComponent<LayoutElement>().minHeight = 54f;
@@ -252,9 +267,13 @@ namespace WordPuzzle.UI
             body.gameObject.AddComponent<LayoutElement>().minHeight = 70f;
 
             // Task 46 — both welcome actions meet the ≥88px hit target (96 = the ghost-tier minimum).
+            // Task 43 tiers: PLAY TUTORIAL is this surface's ONE filled hero (the DAILY gradient);
+            // SKIP recedes to a ghost — tinted text on an invisible full-width hit target.
             _playButton = MakeOutlineButton(card.transform, PlayLabel, MenuPalette.TitleColor, MenuPalette.SecondaryLabel, 0f, 96f);
+            UIThemeManager.ApplyFilledHeroButton(_playButton, Palette.ModeDaily, Palette.ModePuzzleShow);
             _playButton.onClick.AddListener(() => { _welcomePanel.SetActive(false); _onPlay?.Invoke(); });
             _welcomeSkipButton = MakeOutlineButton(card.transform, SkipLabel, MenuPalette.SecondaryBorder, MenuPalette.SecondaryLabel, 0f, 96f);
+            UIThemeManager.ApplyGhostButton(_welcomeSkipButton, Palette.TextMuted);
             _welcomeSkipButton.onClick.AddListener(() => { _welcomePanel.SetActive(false); _onSkip?.Invoke(); });
 
             _welcomePanel.SetActive(false);
