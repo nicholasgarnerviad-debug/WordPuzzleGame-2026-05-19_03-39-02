@@ -882,7 +882,12 @@ namespace WordPuzzle
                 cachedDailyProgress.todayResultFailed,
                 dailyPuzzleService != null ? dailyPuzzleService.TodayIndex() : 0,
                 cachedDailyProgress.currentStreak,
-                cachedDailyProgress.todayResultUsedPowerUp);   // Task 40B — re-show keeps the disclosure
+                cachedDailyProgress.todayResultUsedPowerUp,    // Task 40B — re-show keeps the disclosure
+                animate: false);                               // Task 45 — a recall renders AT REST
+            // Task 45 — today's payout, recomputed (deterministic) and rendered static: a re-show
+            // is a recall, not a payout — no count-up, no haptics, no doubler re-offer.
+            results.ShowDailyCoinReward(BalanceConfig.DailyCoinReward(
+                cachedDailyProgress.todayResultStars, cachedDailyProgress.todayResultFailed));
             results.ShowDailyStreak(cachedDailyProgress.currentStreak, cachedDailyProgress.longestStreak, true);
             lastWinContext = PostWin.Daily;         // Home routes correctly
             uiManager.ShowResults();
@@ -1191,6 +1196,8 @@ namespace WordPuzzle
 #endif
                 var gameplay = uiManager?.GetGameplay();
                 if (gameplay != null) gameplay.SetHaptics(haptics);
+                var resultsScreen = uiManager?.GetResults();
+                if (resultsScreen != null) resultsScreen.SetHaptics(haptics); // Task 45 — star-pop taps
             }
 
             // 7C — sfx: GetComponent fallback if not serialized.
@@ -1200,6 +1207,8 @@ namespace WordPuzzle
                 sfxManager.SetSettings(cachedSettings);
                 var gameplay = uiManager?.GetGameplay();
                 if (gameplay != null) gameplay.SetSfxManager(sfxManager);
+                var resultsScreen = uiManager?.GetResults();
+                if (resultsScreen != null) resultsScreen.SetSfxManager(sfxManager); // Task 45 — no-op slots
             }
         }
 
@@ -1808,12 +1817,38 @@ namespace WordPuzzle
                 bool hasNextTier = pendingPuzzleShowNextTier > 0
                     && pendingPuzzleShowNextTier <= BalanceConfig.MaxTier;
                 results.ConfigureForPuzzleShow(hasNextTier, pendingPuzzleShowNextTier);
+                // Task 45 — a NEWLY unlocked tier gets its celebration modal exactly once ever
+                // (pendingPuzzleShowNextTier is only set when the unlock just happened).
+                if (CelebrationModal.ShouldCelebrateTier(
+                        cachedPuzzleProgress?.celebratedTiers, hasNextTier, pendingPuzzleShowNextTier))
+                    CelebrateTierUnlocked(pendingPuzzleShowNextTier);
                 pendingPuzzleShowNextTier = 0; // consumed
             }
             else // Time Attack run-end (Classic never reaches EndGame — it uses the panel).
             {
                 lastWinContext = PostWin.TimeAttack;
                 results.ConfigureForEndless(timeAttackLaddersCompleted); // "Play Again" → new run
+            }
+        }
+
+        // Task 45 — the tier-unlock retention beat: a compact celebration modal above the Puzzle
+        // Show results, shown ONCE per tier ever. The celebrated set persists in PuzzleProgressData
+        // (additive field; old saves default empty); the unlock logic itself is untouched.
+        private async void CelebrateTierUnlocked(int tier)
+        {
+            if (cachedPuzzleProgress == null) return;
+            if (cachedPuzzleProgress.celebratedTiers == null)
+                cachedPuzzleProgress.celebratedTiers = new System.Collections.Generic.List<int>();
+            cachedPuzzleProgress.celebratedTiers.Add(tier);
+
+            sfxManager?.PlayCelebration(); // Task 45 no-op hook — a clip drops in later (§13)
+            CelebrationModal.ShowTierUnlocked(uiManager.GetResults().transform, tier,
+                PuzzleLibraryScreen.TierTheme(tier), null);
+
+            if (dataManagerRef != null)
+            {
+                try { await dataManagerRef.SavePuzzleProgressAsync(cachedPuzzleProgress); }
+                catch (System.Exception ex) { Debug.LogWarning($"[Celebrate] tier persist failed: {ex.Message}"); }
             }
         }
 
@@ -2022,11 +2057,17 @@ namespace WordPuzzle
                         await economyManager.AddCoinsAsync(reward, "daily_par");
                         lastDailyRewardCoins = reward;      // the doubler re-grants exactly this much
                         dailyDoublerConsumed = false;
+                        // Task 45 — surface the payout on screen; the results payout sequence
+                        // counts it up from 0 (display only — the grant above is untouched).
+                        uiManager.GetResults().ShowDailyCoinReward(reward);
 
-                        // 36K — one-time streak-milestone coin pop (7/30/100); surface it as a toast.
+                        // 36K — one-time streak-milestone coin pop (7/30/100). Task 45 — the toast
+                        // became a celebration MODAL; the award call and its once-ever idempotence
+                        // are untouched, only the surface changed.
                         int milestonePaid = await economyManager.AwardStreakMilestonesAsync(cachedDailyProgress.currentStreak);
                         if (milestonePaid > 0)
-                            uiManager.GetResults().ShowToast($"{cachedDailyProgress.currentStreak}-day streak!  +{milestonePaid} coins");
+                            CelebrationModal.ShowStreakMilestone(uiManager.GetResults().transform,
+                                cachedDailyProgress.currentStreak, milestonePaid, null);
                     }
                     catch (System.Exception ex) { Debug.LogWarning($"[Economy] daily reward/milestone failed: {ex.Message}"); }
 

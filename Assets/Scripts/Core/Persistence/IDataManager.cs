@@ -75,6 +75,11 @@ namespace WordPuzzle.Persistence
         // a previously-beaten puzzle with no record simply shows nothing extra until next played.
         public List<PuzzlePathRecord> puzzlePaths = new List<PuzzlePathRecord>();
 
+        // Task 45 — tiers whose "Tier N Unlocked" celebration modal has been shown (once per tier
+        // EVER). Additive field: JsonUtility defaults it to an empty list for old saves, so every
+        // already-unlocked tier celebrates at most once more, then never again. No migration.
+        public List<int> celebratedTiers = new List<int>();
+
         public PuzzleProgressData() { }
     }
 

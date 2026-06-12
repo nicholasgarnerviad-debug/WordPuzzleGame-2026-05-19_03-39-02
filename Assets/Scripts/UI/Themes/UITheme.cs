@@ -631,6 +631,8 @@ public static partial class UIThemeManager
     /// <summary>Convenience: render a Button as a coloured outline and set its label colour in one call.</summary>
     public static void ApplyOutlineButton(UnityEngine.UI.Button btn, UnityEngine.Color borderColor, UnityEngine.Color labelColor)
     {
+        if (btn == null) return; // null-safe like its siblings — optional scene refs may be unwired
+
         if (btn == null) return;
         ApplyOutlineButton(btn.GetComponent<UnityEngine.UI.Image>(), borderColor);
         var label = btn.GetComponentInChildren<TMPro.TMP_Text>(true);

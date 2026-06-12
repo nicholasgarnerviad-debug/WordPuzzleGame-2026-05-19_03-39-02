@@ -18,6 +18,8 @@ namespace WordPuzzle.UI
         [SerializeField] private AudioClip wordAcceptClip;
         [SerializeField] private AudioClip wordRejectClip;
         [SerializeField] private AudioClip winStingClip;
+        [SerializeField] private AudioClip starPopClip;     // Task 45 — daily star pop (no clip yet)
+        [SerializeField] private AudioClip celebrationClip; // Task 45 — celebration modal (no clip yet)
 
         private AudioSource[] _pool;
         private int _poolIndex;
@@ -51,6 +53,11 @@ namespace WordPuzzle.UI
         public void PlayAccept()    => Play(wordAcceptClip);
         public void PlayReject()    => Play(wordRejectClip);
         public void PlayWin()       => Play(winStingClip);
+
+        // Task 45 — celebration slots (results payout + modals). No clips ship yet (AudioMixer is
+        // §13 tech debt) so these are deliberate no-ops until clips drop into the scene fields.
+        public void PlayStarPop()     => Play(starPopClip);
+        public void PlayCelebration() => Play(celebrationClip);
 
         private void Play(AudioClip clip)
         {

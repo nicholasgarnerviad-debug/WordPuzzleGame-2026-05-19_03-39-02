@@ -293,5 +293,84 @@ namespace WordPuzzle.UI
                 return -1f + (4f - 2f * t) * t;
             }
         }
+
+        // ============================================================
+        //  Task 45 — payout vocabulary: count-ups + staggered pops.
+        //  Composes ONLY the existing constants (MICRO / STANDARD) and
+        //  EaseOutCubic — no new timing or easing language. The value
+        //  curves (CountUpValue / PopScale) are pure for unit tests.
+        //  Idempotence is the CALLER's job: hold the Coroutine handle
+        //  and stop it before restarting a view — never stack a payout
+        //  on a re-shown view (the Reveal-flicker lesson).
+        // ============================================================
+
+        /// <summary>Pure count-up curve: from→to with EaseOutCubic on the VALUE at normalized t01.</summary>
+        public static int CountUpValue(int from, int to, float t01)
+            => from + Mathf.RoundToInt((to - from) * EaseOutCubic(Mathf.Clamp01(t01)));
+
+        /// <summary>Pure pop curve: scale 0.6→1.0 with EaseOutCubic at normalized t01 (no bounce).</summary>
+        public static float PopScale(float t01)
+            => Mathf.Lerp(0.6f, 1f, EaseOutCubic(Mathf.Clamp01(t01)));
+
+        /// <summary>
+        /// Task 45 — animate an integer readout from→to over <paramref name="duration"/> seconds
+        /// (EaseOutCubic on the value; clamped-dt so it rides through hitches). <paramref name="format"/>
+        /// is a standard format string (e.g. "+{0} coins"). ReduceMotion ⇒ snap to the final text
+        /// and return immediately.
+        /// </summary>
+        public static IEnumerator CountUpInt(TMPro.TMP_Text label, int from, int to,
+            float duration = STANDARD, string format = "{0}")
+        {
+            if (label == null) yield break;
+            if (ReduceMotion || duration <= 0f)
+            {
+                label.text = string.Format(format, to);
+                yield break;
+            }
+            float t = 0f;
+            while (t < duration)
+            {
+                t += Mathf.Min(Time.unscaledDeltaTime, MICRO); // clamped-dt — no frame leaps
+                label.text = string.Format(format, CountUpValue(from, to, t / duration));
+                yield return null;
+            }
+            label.text = string.Format(format, to);
+        }
+
+        /// <summary>
+        /// Task 45 — staggered scale pop: each item punches 0.6→1.0 over <paramref name="per"/>
+        /// seconds, item i starting <c>per * overlap</c> after the previous (EaseOutCubic —
+        /// deliberate and weighted, no cartoon bounce). ReduceMotion ⇒ everything at rest instantly.
+        /// </summary>
+        public static IEnumerator StaggeredPop(System.Collections.Generic.IReadOnlyList<RectTransform> items,
+            float per = MICRO, float overlap = 0.5f)
+        {
+            if (items == null || items.Count == 0) yield break;
+            if (ReduceMotion || per <= 0f)
+            {
+                for (int i = 0; i < items.Count; i++)
+                    if (items[i] != null) items[i].localScale = Vector3.one;
+                yield break;
+            }
+
+            for (int i = 0; i < items.Count; i++)
+                if (items[i] != null) items[i].localScale = Vector3.one * PopScale(0f);
+
+            float total = per + (items.Count - 1) * per * overlap;
+            float t = 0f;
+            while (t < total)
+            {
+                t += Mathf.Min(Time.unscaledDeltaTime, MICRO); // clamped-dt
+                for (int i = 0; i < items.Count; i++)
+                {
+                    if (items[i] == null) continue;
+                    float local = (t - i * per * overlap) / per; // PopScale clamps internally
+                    items[i].localScale = Vector3.one * PopScale(local);
+                }
+                yield return null;
+            }
+            for (int i = 0; i < items.Count; i++)
+                if (items[i] != null) items[i].localScale = Vector3.one;
+        }
     }
 }

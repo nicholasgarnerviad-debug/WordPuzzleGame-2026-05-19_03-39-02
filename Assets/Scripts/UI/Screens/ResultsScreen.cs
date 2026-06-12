@@ -49,6 +49,31 @@ namespace WordPuzzle.UI
         private bool _isDaily;
         private TextMeshProUGUI _dailyStreakLine;
 
+        // Task 45 — payout choreography. The GameBootstrap daily chain arrives in PIECES
+        // (result → coins → doubler → streak), so the pieces are BUFFERED and the single master
+        // sequence starts at ShowDailyStreak — the caboose of BOTH the fresh and re-show paths.
+        // Exactly ONE payout coroutine per view, stopped before any restart (never stacked —
+        // the Reveal-flicker lesson). The re-show path is a recall, not a payout: at rest,
+        // no haptics, no doubler re-offer (Task 38's lock stays authoritative).
+        private Coroutine _payoutRoutine;
+        private bool _payoutAnimated;          // fresh show (animate) vs re-show / ReduceMotion (rest)
+        private bool _pendingDoublerReveal;    // the doubler waits for the coin count-up
+        private int  _pendingCoinReward = -1;  // <0 ⇒ no coin line this view
+        private int  _pendingLadders = -1;     // Time Attack "N puzzles solved" count-up
+        private int  _earnedStars;
+        private TextMeshProUGUI _dailyCoinLine;
+        private IHaptics _haptics;             // one light tap per EARNED star (toggle-respecting impl)
+        private SfxManager _sfx;               // Task 45 no-op hooks — clips drop in later (§13)
+
+        /// <summary>True while a payout sequence is animating (test probe; false at rest).</summary>
+        public bool PayoutAnimating => _payoutRoutine != null;
+
+        /// <summary>Task 45 — inject haptics (GameBootstrap, beside the gameplay wiring).</summary>
+        public void SetHaptics(IHaptics haptics) => _haptics = haptics;
+
+        /// <summary>Task 45 — inject the SFX manager (no-op slots until clips exist).</summary>
+        public void SetSfxManager(SfxManager sfx) => _sfx = sfx;
+
         // Style tokens.
         // Task 8A: gold is kept for the primary streak number (focal element in streakText richtext)
         // and for the toast confirmation. longestStreakText (Best: N) is secondary — demoted to muted.
@@ -127,6 +152,8 @@ namespace WordPuzzle.UI
 
         private void OnDisable()
         {
+            StopPayout(); // Task 45 — never carry a half-run payout into the next view
+
             if (playAgainButton != null && playAgainAction != null)
                 playAgainButton.onClick.RemoveListener(playAgainAction);
 
@@ -142,13 +169,16 @@ namespace WordPuzzle.UI
         /// </summary>
         public void ShowToast(string message)
         {
+            // Task 45 — stop only the prior TOAST timer. The old StopAllCoroutines() here would
+            // have killed an in-flight payout sequence whenever a toast appeared mid-celebration
+            // (e.g. tapping Share during the star pops).
             if (toastText != null)
             {
                 toastText.text = message;
                 toastText.color = GameAccents.Gold;
                 toastText.gameObject.SetActive(true);
-                StopAllCoroutines();
-                StartCoroutine(HideToastAfter(1.6f));
+                if (_toastRoutine != null) StopCoroutine(_toastRoutine);
+                _toastRoutine = StartCoroutine(HideToastAfter(1.6f));
                 return;
             }
             // Fallback: append to mode name briefly (silent if that's also null).
@@ -156,10 +186,12 @@ namespace WordPuzzle.UI
             {
                 string original = modeNameText.text;
                 modeNameText.text = $"{original}   <color=#{Hx(Palette.Coins)}>· {message}</color>";
-                StopAllCoroutines();
-                StartCoroutine(RestoreModeNameAfter(1.6f, original));
+                if (_toastRoutine != null) StopCoroutine(_toastRoutine);
+                _toastRoutine = StartCoroutine(RestoreModeNameAfter(1.6f, original));
             }
         }
+
+        private Coroutine _toastRoutine;
 
         private System.Collections.IEnumerator HideToastAfter(float seconds)
         {
@@ -175,6 +207,9 @@ namespace WordPuzzle.UI
 
         public void DisplayStats(GameModeStats stats)
         {
+            StopPayout(); // Task 45 — a re-shown view renders fresh; never stack payout coroutines
+            _pendingLadders = -1;
+
             if (modeNameText != null)
                 modeNameText.text = $"{stats.modeName} Results"; // drop redundant "Mode" — reads cleaner
 
@@ -189,6 +224,55 @@ namespace WordPuzzle.UI
 
             if (scoreText != null)
                 scoreText.text = $"Score: {stats.score}";
+
+            // Task 45 — the run-end payout beat: the hero Final Score counts up, then
+            // Words/Accuracy/Time fade in as ONE calm group (no per-stat stagger). ReduceMotion
+            // renders everything at rest (the guard here + the helpers' own snap paths). The
+            // Daily route re-hides these texts and stops this sequence via its own StopPayout.
+            if (isActiveAndEnabled && !UIAnimations.ReduceMotion)
+                _payoutRoutine = StartCoroutine(StatsPayoutSequence(stats.score));
+        }
+
+        // Task 45 — Puzzle Show / Time Attack payout: hero score count-up → grouped stat fade →
+        // (Time Attack) the solved-ladders line counts up, buffered by ConfigureForEndless.
+        private System.Collections.IEnumerator StatsPayoutSequence(int score)
+        {
+            var a = EnsureGroupAlpha(wordsFoundText, 0f);
+            var b = EnsureGroupAlpha(accuracyText, 0f);
+            var c = EnsureGroupAlpha(timeText, 0f);
+
+            if (scoreText != null)
+                yield return UIAnimations.CountUpInt(scoreText, 0, score, UIAnimations.STANDARD, "Score: {0}");
+
+            float t = 0f;
+            while (t < UIAnimations.STANDARD)
+            {
+                t += Mathf.Min(Time.unscaledDeltaTime, UIAnimations.MICRO); // clamped-dt
+                float p = UIAnimations.EaseOutCubic(Mathf.Clamp01(t / UIAnimations.STANDARD));
+                if (a != null) a.alpha = p;
+                if (b != null) b.alpha = p;
+                if (c != null) c.alpha = p;
+                yield return null;
+            }
+            if (a != null) a.alpha = 1f;
+            if (b != null) b.alpha = 1f;
+            if (c != null) c.alpha = 1f;
+
+            // Time Attack's "N puzzles solved" headline counts up (singular stays static).
+            if (_pendingLadders > 1 && wordsFoundText != null)
+                yield return UIAnimations.CountUpInt(wordsFoundText, 0, _pendingLadders,
+                    UIAnimations.STANDARD, "{0} puzzles solved");
+
+            _payoutRoutine = null;
+        }
+
+        private static CanvasGroup EnsureGroupAlpha(TMP_Text label, float alpha)
+        {
+            if (label == null) return null;
+            var cg = label.GetComponent<CanvasGroup>();
+            if (cg == null) cg = label.gameObject.AddComponent<CanvasGroup>();
+            cg.alpha = alpha;
+            return cg;
         }
 
         // ================================================================
@@ -393,6 +477,10 @@ namespace WordPuzzle.UI
                     _dailyStreakLine.gameObject.SetActive(true);
                 }
             }
+
+            // Task 45 — the GameBootstrap daily chain ends here on BOTH paths (fresh and re-show),
+            // so this is where the buffered payout choreography starts (or renders at rest).
+            StartDailyPayout();
         }
 
         // Create the dedicated Daily streak label once (cached). Positioned by StyleResultsLayout's Daily
@@ -424,8 +512,14 @@ namespace WordPuzzle.UI
             SetButtonVisible(nextTierButton, false);
             HideDailyOnlyWidgets(); // Task 38 — a non-daily result shows NONE of the daily-only widgets
             if (laddersCompleted >= 0 && wordsFoundText != null)
+            {
                 wordsFoundText.text = laddersCompleted == 1
                     ? "1 puzzle solved" : $"{laddersCompleted} puzzles solved";
+                // Task 45 — buffer for the running StatsPayoutSequence (started by DisplayStats this
+                // same frame), which counts the headline up after the group fade. At rest (ReduceMotion)
+                // no sequence runs and the final text above already stands.
+                _pendingLadders = laddersCompleted;
+            }
         }
 
         /// <summary>Daily: no "Play Again" (don't re-run the daily). Just Home (+ streak + share).</summary>
@@ -448,8 +542,14 @@ namespace WordPuzzle.UI
         /// the bundled font has no U+26A1 glyph — same tofu class as the ★ that became meshes).
         /// </summary>
         public void ShowDailyResult(int stars, int par, int playerSteps, bool failed, int dailyNumber, int streak,
-                                    bool usedPowerUp = false)
+                                    bool usedPowerUp = false, bool animate = true)
         {
+            StopPayout(); // Task 45 — fresh view; never stack on a running payout
+            _payoutAnimated = animate && !UIAnimations.ReduceMotion && isActiveAndEnabled;
+            _pendingCoinReward = -1;
+            _pendingDoublerReveal = false;
+            _earnedStars = Mathf.Clamp(stars, 0, 3);
+
             int s = Mathf.Clamp(stars, 0, 3);
             string headline = failed ? "Failed today" : DailyGradeName(s);
             // Tint just the grade name — gold to tie it to the gold stars; muted for a failed day.
@@ -469,6 +569,156 @@ namespace WordPuzzle.UI
 
             // The grade stars render as real geometry (the bundled font has no ★ glyph — it tofu'd to □).
             SetDailyStars(s);
+
+            // Task 45 — an animated payout starts hidden: grade line at alpha 0, stars at the pop
+            // trough. The master sequence (started by ShowDailyStreak, the chain's last call) then
+            // pops stars → settles the grade → counts the coins → punches the streak → doubler.
+            var gradeLabel = wordsFoundText != null ? wordsFoundText : modeNameText;
+            EnsureGroupAlpha(gradeLabel, _payoutAnimated ? 0f : 1f);
+            if (_payoutAnimated && _dailyStars != null)
+                foreach (var star in _dailyStars)
+                    if (star != null) star.rectTransform.localScale = Vector3.one * UIAnimations.PopScale(0f);
+        }
+
+        /// <summary>
+        /// Task 45 — surface today's coin payout ("+N coins", warm gold). Animated views count it
+        /// up from 0 inside the payout sequence; at-rest views (re-show / ReduceMotion) render the
+        /// final value immediately. Display only — the grant already happened in the economy.
+        /// </summary>
+        public void ShowDailyCoinReward(int coins)
+        {
+            if (coins < 0) coins = 0;
+            EnsureDailyCoinLine();
+            if (_dailyCoinLine == null) return;
+            _pendingCoinReward = coins;
+            _dailyCoinLine.gameObject.SetActive(true);
+            _dailyCoinLine.text = _payoutAnimated ? "+0 coins" : $"+{coins} coins";
+        }
+
+        // Created once (cached), SET each view — the same anti-stacking discipline as the streak line.
+        private void EnsureDailyCoinLine()
+        {
+            if (_dailyCoinLine != null) return;
+            var go = new GameObject("DailyCoinLine", typeof(RectTransform));
+            go.transform.SetParent(transform, false);
+            _dailyCoinLine = go.AddComponent<TextMeshProUGUI>();
+            TypeScale.Apply(_dailyCoinLine, TypeRole.Title); // the payout is a moment — Title-weight
+            _dailyCoinLine.color = GameAccents.Gold;
+            _dailyCoinLine.alignment = TextAlignmentOptions.Center;
+            _dailyCoinLine.raycastTarget = false;
+            PlaceTopCenter(_dailyCoinLine.rectTransform, -850f, 64f); // between the daily card and the streak line
+        }
+
+        // Task 45 — start (or settle) the buffered payout. ShowDailyStreak calls this on BOTH
+        // paths; the re-show path buffered animate:false, so it renders at rest with no motion.
+        private void StartDailyPayout()
+        {
+            if (_payoutRoutine != null) { StopCoroutine(_payoutRoutine); _payoutRoutine = null; }
+            if (!_payoutAnimated || !isActiveAndEnabled)
+            {
+                RenderPayoutAtRest();
+                return;
+            }
+            _payoutRoutine = StartCoroutine(DailyPayoutSequence());
+        }
+
+        private void RenderPayoutAtRest()
+        {
+            if (_dailyStars != null)
+                foreach (var star in _dailyStars)
+                    if (star != null) star.rectTransform.localScale = Vector3.one;
+            RestoreLabelAlpha(wordsFoundText);
+            RestoreLabelAlpha(modeNameText);
+            if (_dailyCoinLine != null && _pendingCoinReward >= 0)
+                _dailyCoinLine.text = $"+{_pendingCoinReward} coins";
+            if (_pendingDoublerReveal)
+            {
+                SetButtonVisible(doublerButton, true);
+                _pendingDoublerReveal = false;
+            }
+        }
+
+        // The Daily payout beat (~1s total): stars → grade → coins → streak → doubler. Weighted,
+        // not slot-machine; every step is the existing motion vocabulary and ReduceMotion never
+        // reaches this coroutine (StartDailyPayout routes to RenderPayoutAtRest instead).
+        private System.Collections.IEnumerator DailyPayoutSequence()
+        {
+            // 1 — stars pop in a stagger; one light haptic per EARNED star on its pop beat.
+            if (_dailyStars != null && _dailyStars.Length > 0)
+            {
+                var rects = new RectTransform[_dailyStars.Length];
+                for (int i = 0; i < _dailyStars.Length; i++)
+                    rects[i] = _dailyStars[i] != null ? _dailyStars[i].rectTransform : null;
+                _starPopRoutine = StartCoroutine(UIAnimations.StaggeredPop(rects));
+                var pop = _starPopRoutine;
+                for (int i = 0; i < _earnedStars; i++)
+                {
+                    if (_haptics != null) _haptics.LightTap();
+                    if (_sfx != null) _sfx.PlayStarPop();
+                    yield return new WaitForSecondsRealtime(UIAnimations.MICRO * 0.5f); // the stagger beat (per × overlap)
+                }
+                yield return pop;
+            }
+
+            // 2 — the gold grade word fades/settles in after the last star.
+            var gradeLabel = wordsFoundText != null ? wordsFoundText : modeNameText;
+            if (gradeLabel != null)
+            {
+                var cg = EnsureGroupAlpha(gradeLabel, 0f);
+                yield return UIAnimations.FadeTransition(cg, true);
+            }
+
+            // 3 — the coin payout counts up from 0.
+            if (_dailyCoinLine != null && _pendingCoinReward >= 0)
+                yield return UIAnimations.CountUpInt(_dailyCoinLine, 0, _pendingCoinReward,
+                    UIAnimations.STANDARD, "+{0} coins");
+
+            // 4 — the streak number gets its single punch (the existing tile-tap scale).
+            if (_dailyStreakLine != null && _dailyStreakLine.gameObject.activeSelf)
+                yield return UIAnimations.ScaleTileTap(_dailyStreakLine.rectTransform);
+            else if (streakText != null && streakText.gameObject.activeSelf)
+                yield return UIAnimations.ScaleTileTap(streakText.rectTransform);
+
+            // 5 — only now does the doubler offer appear (no double-grant race perception).
+            if (_pendingDoublerReveal)
+            {
+                SetButtonVisible(doublerButton, true);
+                _pendingDoublerReveal = false;
+            }
+            _payoutRoutine = null;
+        }
+
+        // Stop the running payout and settle every VISUAL half-state (scales/alphas) to rest.
+        // Logical reveals (doubler/coins) stay with their owners — a stale pending reveal must
+        // never leak onto the next view (ShowDailyResult resets the buffers).
+        private Coroutine _starPopRoutine; // nested under the master — must be stopped explicitly
+
+        private void StopPayout()
+        {
+            if (_payoutRoutine != null)
+            {
+                StopCoroutine(_payoutRoutine);
+                _payoutRoutine = null;
+            }
+            if (_starPopRoutine != null)
+            {
+                // Stopping the master does NOT cascade to coroutines it spawned.
+                StopCoroutine(_starPopRoutine);
+                _starPopRoutine = null;
+            }
+            if (_dailyStars != null)
+                foreach (var star in _dailyStars)
+                    if (star != null) star.rectTransform.localScale = Vector3.one;
+            RestoreLabelAlpha(wordsFoundText);
+            RestoreLabelAlpha(accuracyText);
+            RestoreLabelAlpha(timeText);
+            RestoreLabelAlpha(modeNameText);
+        }
+
+        private static void RestoreLabelAlpha(TMP_Text label)
+        {
+            var cg = label != null ? label.GetComponent<CanvasGroup>() : null;
+            if (cg != null) cg.alpha = 1f;
         }
 
         private static string DailyGradeName(int stars) =>
@@ -586,7 +836,18 @@ namespace WordPuzzle.UI
         public void ConfigureDailyDoubler(bool available)
         {
             EnsureDoublerButton();
-            SetButtonVisible(doublerButton, available);
+            // Task 45 — on an animated payout the doubler appears only AFTER the coin count-up
+            // completes (kills the double-grant race perception; the grant logic is untouched).
+            if (available && _payoutAnimated)
+            {
+                _pendingDoublerReveal = true;
+                SetButtonVisible(doublerButton, false);
+            }
+            else
+            {
+                _pendingDoublerReveal = false;
+                SetButtonVisible(doublerButton, available);
+            }
             if (available) SetButtonLabel(doublerButton, "DOUBLE (WATCH AD)");
         }
 
@@ -630,6 +891,7 @@ namespace WordPuzzle.UI
             if (_dailyStreakLine != null)     _dailyStreakLine.gameObject.SetActive(false);
             if (_dailyStarRow != null)        _dailyStarRow.gameObject.SetActive(false);
             if (_dailyCard != null)           _dailyCard.gameObject.SetActive(false);
+            if (_dailyCoinLine != null)       _dailyCoinLine.gameObject.SetActive(false); // Task 45
         }
 
         private static void SetButtonVisible(Button b, bool visible)

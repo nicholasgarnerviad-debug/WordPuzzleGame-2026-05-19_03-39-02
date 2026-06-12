@@ -492,7 +492,8 @@ namespace WordPuzzle.UI
             return n;
         }
 
-        private static string TierTheme(int tierId) => tierId switch
+        // Task 45 — public: the tier-unlock celebration modal reuses the library's theme line.
+        public static string TierTheme(int tierId) => tierId switch
         {
             1 => "3-letter words",
             2 => "4-letter words",
