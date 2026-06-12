@@ -79,7 +79,14 @@ namespace WordPuzzle.Persistence
         }
 
         string json = PlayerPrefs.GetString(SAVE_FILE_KEY);
-        SaveData saveData = JsonUtility.FromJson<SaveData>(json);
+        // B7 — corrupt JSON throws from JsonUtility; recover to a sane default like the
+        // settings/daily loaders do instead of letting the exception escape the boot path.
+        SaveData saveData = null;
+        try { saveData = JsonUtility.FromJson<SaveData>(json); } catch { saveData = null; }
+        if (saveData == null || saveData.gameState == null)
+        {
+            return CreateEmptySnapshot();
+        }
 
         var snapshot = new GameStateSnapshot
         {
@@ -126,9 +133,18 @@ namespace WordPuzzle.Persistence
         }
 
         string json = PlayerPrefs.GetString(PROGRESS_FILE_KEY);
-        PlayerProgressData data = JsonUtility.FromJson<PlayerProgressData>(json);
-
-        playerProgress = ConvertDataToProgress(data);
+        // B7 — this is the MONEY path: a corrupt blob must degrade to a fresh progress
+        // object, never throw out of the boot path. Convert inside the try so nested
+        // nulls (e.g. missing classicStats) also fall back cleanly.
+        try
+        {
+            PlayerProgressData data = JsonUtility.FromJson<PlayerProgressData>(json);
+            playerProgress = data != null ? ConvertDataToProgress(data) : new PlayerProgress();
+        }
+        catch
+        {
+            playerProgress = new PlayerProgress();
+        }
         await Task.Delay(0);
         return playerProgress;
     }
@@ -180,7 +196,9 @@ namespace WordPuzzle.Persistence
         }
 
         string json = PlayerPrefs.GetString(PUZZLE_PROGRESS_KEY);
-        PuzzleProgressData data = JsonUtility.FromJson<PuzzleProgressData>(json);
+        // B7 — corrupt JSON throws; catch and fall through to the null-defaults below.
+        PuzzleProgressData data = null;
+        try { data = JsonUtility.FromJson<PuzzleProgressData>(json); } catch { data = null; }
 
         // Defensive: JsonUtility leaves null lists if JSON was malformed
         if (data == null) data = new PuzzleProgressData();
