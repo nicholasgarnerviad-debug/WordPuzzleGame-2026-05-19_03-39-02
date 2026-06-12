@@ -354,7 +354,7 @@ public static partial class UIThemeManager
     /// shared backdrop video so its art (e.g. the space-scene rocket) stops competing with foreground text.</summary>
     public const float ReadabilityScrimAlpha = 0.4f;
 
-    public static void ApplyScreenBackground(UnityEngine.GameObject root, float scrimAlpha = 0f)
+    public static void ApplyScreenBackground(UnityEngine.GameObject root, float scrimAlpha = 0f, bool gameplayScrim = false)
     {
         if (root != null)
         {
@@ -370,6 +370,13 @@ public static partial class UIThemeManager
             }
             if (img != null) img.color = new UnityEngine.Color(0f, 0f, 0f, UnityEngine.Mathf.Clamp01(scrimAlpha));
             EnsureBackgroundLayer(root.transform);
+            SetGameplayScrim(root.transform, gameplayScrim); // Task 44 — gradient scrim, gameplay-only
+
+            // Task 44 — systematized safe-area: every screen that requests its background through this
+            // seam gets its content root safe-area'd; the shared backdrop + gameplay scrim live on the
+            // canvas-level BackgroundLayer, so they intentionally stay full-bleed outside the panel.
+            if (root.GetComponent<WordPuzzle.UI.Components.SafeAreaPanel>() == null)
+                root.AddComponent<WordPuzzle.UI.Components.SafeAreaPanel>();
         }
         var cam = UnityEngine.Camera.main;
         if (cam != null)
@@ -397,23 +404,26 @@ public static partial class UIThemeManager
         img.color = AppBackground;   // opaque purple-black base — occludes the screen behind this overlay
         img.raycastTarget = true;    // swallow taps so they don't fall through
 
+        // Task 44 — the overlay's backdrop obeys the same video gating as the shared layer.
         var clip = UnityEngine.Resources.Load<UnityEngine.Video.VideoClip>("UI/CloudBackground")
                 ?? UnityEngine.Resources.Load<UnityEngine.Video.VideoClip>("UI/SpaceBackground");
-        if (clip != null)
+        var sprite = UnityEngine.Resources.Load<UnityEngine.Sprite>("UI/CloudBackground")
+                  ?? UnityEngine.Resources.Load<UnityEngine.Sprite>("UI/SpaceBackground");
+        switch (ResolveBackdrop(clip != null, sprite != null,
+                    WordPuzzle.UI.UIAnimations.ReduceMotion, LowPowerGated))
         {
-            EnsureVideoBackground(root.transform, clip, sendToBack: true);
-        }
-        else
-        {
-            RemoveVideoBackground(root.transform);
-            var sprite = UnityEngine.Resources.Load<UnityEngine.Sprite>("UI/CloudBackground")
-                      ?? UnityEngine.Resources.Load<UnityEngine.Sprite>("UI/SpaceBackground");
-            if (sprite != null)
-            {
+            case BackdropKind.Video:
+                EnsureVideoBackground(root.transform, clip, sendToBack: true);
+                break;
+            case BackdropKind.Still:
+                RemoveVideoBackground(root.transform);
                 img.sprite = sprite;
                 img.preserveAspect = false;        // stretch to fill — no gaps on any aspect ratio
                 img.color = UnityEngine.Color.white;
-            }
+                break;
+            default:
+                RemoveVideoBackground(root.transform);
+                break; // the opaque AppBackground base painted above stands
         }
     }
 
@@ -454,30 +464,32 @@ public static partial class UIThemeManager
         img.raycastTarget = false; // never block taps to the buttons in front
 
         // Backdrop priority: a LOOPING VIDEO (Resources/UI/SpaceBackground.mp4) > a still sprite
-        // (SpaceBackground.png) > flat black. All swappable by just dropping the file in — no scene edit.
-        var clip = UnityEngine.Resources.Load<UnityEngine.Video.VideoClip>("UI/SpaceBackground");
-        if (clip != null)
+        // (SpaceBackground.png) > flat black — all swappable by just dropping the file in. Task 44:
+        // the video is GATED (ReduceMotion / OS low-power ⇒ still) through the pure ResolveBackdrop;
+        // this runs on every screen's background request, so a mid-session settings change swaps the
+        // layer on the next screen transition — no hot-swap mid-frame.
+        var clip  = UnityEngine.Resources.Load<UnityEngine.Video.VideoClip>("UI/SpaceBackground");
+        var space = UnityEngine.Resources.Load<UnityEngine.Sprite>("UI/SpaceBackground");
+        switch (ResolveBackdrop(clip != null, space != null,
+                    WordPuzzle.UI.UIAnimations.ReduceMotion, LowPowerGated))
         {
-            img.sprite = null;
-            img.color = AppBackground;        // black base behind the video while it warms up
-            EnsureVideoBackground(img.transform, clip);
-        }
-        else
-        {
-            RemoveVideoBackground(img.transform);
-            var space = UnityEngine.Resources.Load<UnityEngine.Sprite>("UI/SpaceBackground");
-            if (space != null)
-            {
+            case BackdropKind.Video:
+                img.sprite = null;
+                img.color = AppBackground;    // black base behind the video while it warms up
+                EnsureVideoBackground(img.transform, clip);
+                break;
+            case BackdropKind.Still:
+                RemoveVideoBackground(img.transform);
                 img.sprite = space;
                 img.type = UnityEngine.UI.Image.Type.Simple;
                 img.preserveAspect = false;   // stretch to fill — no gaps on any aspect ratio
                 img.color = UnityEngine.Color.white; // untinted so the image shows its true colours
-            }
-            else
-            {
+                break;
+            default:
+                RemoveVideoBackground(img.transform);
                 img.sprite = null;
-                img.color = AppBackground;     // flat neutral black for now
-            }
+                img.color = AppBackground;     // flat neutral base
+                break;
         }
 
         img.transform.SetAsFirstSibling(); // behind every screen
@@ -547,6 +559,10 @@ public static partial class UIThemeManager
         {
             vp.Play();
         }
+
+        // Task 44 — battery hygiene: pause the loop while the app is backgrounded / unfocused.
+        if (vp.GetComponent<WordPuzzle.UI.Components.VideoBackdropPauser>() == null)
+            vp.gameObject.AddComponent<WordPuzzle.UI.Components.VideoBackdropPauser>();
 
         if (sendToBack) raw.transform.SetAsFirstSibling(); // behind an overlay's own content
         else            raw.transform.SetAsLastSibling();  // cover the shared layer's black base

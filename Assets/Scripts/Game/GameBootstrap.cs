@@ -175,6 +175,11 @@ namespace WordPuzzle
                 adService = GetComponent<IAdService>() ?? (IAdService)new NullAdService();
                 adPolicy  = new AdPolicyService(adService);
 
+                // Task 44 — power-mode seam (mirrors the ad/store stubs): when the OS reports
+                // low power the video backdrop resolves to the still. The null impl never gates,
+                // so behaviour is unchanged until a native reader lands (§13 tech debt).
+                UIThemeManager.PowerMode = GetComponent<IPowerModeService>() ?? (IPowerModeService)new NullPowerModeService();
+
                 // Task 33 — initialize the economy, then apply the once-only starting inventory (5 each)
                 // + the once-per-day grant (+2 each), and reflect the persisted remove-ads flag into the ad
                 // policy. Fire-and-forget (like the original init); adPolicy is already constructed above.

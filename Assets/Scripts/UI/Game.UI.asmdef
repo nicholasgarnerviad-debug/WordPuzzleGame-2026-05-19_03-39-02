@@ -5,6 +5,7 @@
         "Game.Modes",
         "Game.State",
         "Game.Persistence",
+        "Game.Puzzle",
         "Unity.TextMeshPro",
         "Utils"
     ],

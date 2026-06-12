@@ -178,7 +178,9 @@ namespace WordPuzzle.UI
         {
             // Task 31A — force a fresh full render on (re)show; the guards below then skip unchanged per-frame ticks.
             _seenStartEnd = _seenChain = _seenInput = _seenHint = _seenReveal = false;
-            UIThemeManager.ApplyScreenBackground(gameObject); // Task 25 — true-black background
+            // Task 25 backdrop + Task 44 gradient readability scrim (gameplay-only — all four modes
+            // share this screen; menu/stats/library keep the unveiled backdrop spectacle).
+            UIThemeManager.ApplyScreenBackground(gameObject, gameplayScrim: true);
             // Task 32 — hide the vestigial legacy SubmitButton: a solid green rect anchored at the
             // bottom that peeked out as a "tiny green bar" at the very bottom of the screen. Submission now
             // goes through the on-screen keyboard's GO key; this button read from the inactive legacy
@@ -1636,9 +1638,12 @@ namespace WordPuzzle.UI
             switch (style)
             {
                 case LadderTileStyle.StartWord:
-                    // Task 27 — start word row = see-through TEAL outline (menu Resume colour), the origin.
+                    // Task 44 — semantic colour hygiene: aqua is RESERVED for success/affirmative
+                    // (correct-letter, win beat, GO), so the start row drops its aqua for a neutral
+                    // TextPrimary white outline — the origin, "where you began". (Flagged alternative
+                    // if white reads too stark at the human gate: Palette.AccentLavender.)
                     tile.SetState(TileState.DefaultPrefilled);
-                    tile.SetOutline(MenuPalette.ResumeFill);
+                    tile.SetOutline(Palette.TextPrimary);
                     SetTextColor(tile, C_TILE_TEXT);
                     break;
 
@@ -1915,15 +1920,16 @@ namespace WordPuzzle.UI
         }
 
         // ============================================================
-        //  Issue 6: Header reposition below notch (no SafeArea script)
+        //  Issue 6 → Task 44: header padding below the SAFE-AREA edge
         // ============================================================
-        // Moves BackButton, ScoreText, TierIndicatorText so their top edges
-        // sit ~130px below the canvas top (well below the iPhone 13 Pro Max notch).
-        // Safe-area offset is baked in as a constant — avoids [ExecuteAlways] scripts
-        // that caused the black-screen regression.
+        // SafeAreaPanel (attached by ApplyScreenBackground) now owns notch clearance by insetting
+        // the screen root, so the old hand-baked 130px physical-top constant would DOUBLE-inset.
+        // This pass remains only to normalize the header elements to one consistent padding below
+        // the (already safe) top. On the iPhone 13 Pro Max design target the end position is
+        // unchanged: ~97px safe inset + this padding ≈ the old 130px.
         private void RepositionHeaderBelowNotch()
         {
-            const float notchClearance = 130f; // px below canvas top edge
+            const float notchClearance = HudLayout.HeaderTopPadding; // below the SAFE top, not the physical top
             // Canvas height = 1920; from anchor=(0,1) top, anchoredPosition.y is negative downward.
             // Target top-edge offset from canvas top = notchClearance → anchoredPosition.y = -notchClearance.
 
