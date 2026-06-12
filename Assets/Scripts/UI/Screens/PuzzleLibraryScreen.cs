@@ -78,6 +78,31 @@ namespace WordPuzzle.UI
         // --- Path View detail overlay (built lazily) ---
         private GameObject detailOverlay;
 
+        // Task 48 — the scene-authored masthead ("Puzzle Library"): cached once and hidden in the
+        // GRID view, so the tier header is the single header band (the two stacked title bands
+        // read as mush). Search is text-based and null-safe — a missing title is simply a no-op.
+        private TextMeshProUGUI _sceneTitle;
+        private bool _sceneTitleSearched;
+
+        private void SetSceneTitleVisible(bool visible)
+        {
+            if (!_sceneTitleSearched)
+            {
+                _sceneTitleSearched = true;
+                foreach (Transform child in transform)
+                {
+                    var tmp = child.GetComponent<TextMeshProUGUI>();
+                    if (tmp != null && tmp.text != null
+                        && tmp.text.IndexOf("Library", System.StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        _sceneTitle = tmp;
+                        break;
+                    }
+                }
+            }
+            if (_sceneTitle != null) _sceneTitle.gameObject.SetActive(visible);
+        }
+
         // Path View palette (on-brand: black + outline, no gold accents on the path itself).
         private static readonly Color C_DETAIL_SCRIM   = new Color(Palette.SurfaceVoid.r, Palette.SurfaceVoid.g, Palette.SurfaceVoid.b, 0.82f); // Task 46 — token dim
         private static readonly Color C_PANEL_BG       = Palette.SurfaceVoid;
@@ -189,6 +214,8 @@ namespace WordPuzzle.UI
             EnsureRootVerticalLayout();
 
             if (tierData == null || tierData.tiers == null) return;
+
+            SetSceneTitleVisible(viewMode == ViewMode.TierSelect); // Task 48 — one header band in grid view
 
             if (viewMode == ViewMode.TierSelect) PopulateTierSelect();
             else PopulatePuzzleGrid(selectedTierId);
@@ -314,12 +341,32 @@ namespace WordPuzzle.UI
 
             var grid = CreateTierGridContainer(tier.tierId);
             if (tier.puzzles == null) return;
-            int cardIndex = 0;
-            foreach (var puzzle in tier.puzzles)
+
+            // Task 48 — "up next": the FIRST not-yet-completed unlocked card carries the hero
+            // glow + a ▸ play cue, so "continue here" reads at a glance across 100 cards.
+            int upNextIndex = -1;
+            if (unlocked)
             {
+                for (int i = 0; i < tier.puzzles.Length; i++)
+                {
+                    var p = tier.puzzles[i];
+                    if (p == null) continue;
+                    var s = PuzzleShowMode.ResolveState(p.puzzleId, true, completedIds, inProgressIds);
+                    if (s == PuzzleState.InProgress || s == PuzzleState.UnlockedUnplayed)
+                    {
+                        upNextIndex = i;
+                        break;
+                    }
+                }
+            }
+
+            int cardIndex = 0;
+            for (int i = 0; i < tier.puzzles.Length; i++)
+            {
+                var puzzle = tier.puzzles[i];
                 if (puzzle == null) continue;
                 var state = PuzzleShowMode.ResolveState(puzzle.puzzleId, unlocked, completedIds, inProgressIds);
-                CreateLevelCard(grid.transform, puzzle, state, cardIndex++);
+                CreateLevelCard(grid.transform, puzzle, state, cardIndex++, upNext: i == upNextIndex);
             }
         }
 
@@ -351,14 +398,87 @@ namespace WordPuzzle.UI
                 TextAlignmentOptions.Center, C_UNPLAYED_TEXT);
             UIThemeManager.ApplyGhostButton(backBtn, Palette.AccentPeriwinkle); // Task 43 — grid Back recedes
 
-            CreateAnchored(go.transform, "GridTitle", $"Tier {tier.tierId}", TypeRole.Title,
+            CreateAnchored(go.transform, "GridTitle", $"TIER {tier.tierId}", TypeRole.Title,
                 TextAlignmentOptions.Top, C_HEADER_TIER,
                 new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
-                new Vector2(0f, -8f), new Vector2(420f, 52f));
-            CreateAnchored(go.transform, "GridTheme", $"{TierTheme(tier.tierId)}   ·   {completed}/{total}", TypeRole.Caption,
-                TextAlignmentOptions.Bottom, C_SUBTITLE,
+                new Vector2(0f, -6f), new Vector2(420f, 52f));
+            CreateAnchored(go.transform, "GridTheme", TierTheme(tier.tierId), TypeRole.Caption,
+                TextAlignmentOptions.Top, C_SUBTITLE,
+                new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
+                new Vector2(0f, -62f), new Vector2(460f, 30f));
+
+            // Task 48 — the progress is a BAR, not buried caption text: a quiet Surface groove
+            // with a tier-accent fill (aqua once the tier is complete) and a count that rolls up.
+            bool tierComplete = total > 0 && completed >= total;
+            Color fillColor = tierComplete ? C_COMPLETED_BORDER : C_GOLD;
+            const float trackW = 360f, trackH = 14f;
+            const float barRadiusPpu = 6.3f; // 44px corner art ÷ 6.3 ≈ a 7px radius on the 14px bar
+
+            var trackGo = new GameObject("ProgressTrack", typeof(RectTransform));
+            trackGo.transform.SetParent(go.transform, false);
+            var trt = (RectTransform)trackGo.transform;
+            trt.anchorMin = trt.anchorMax = new Vector2(0.5f, 0f);
+            trt.pivot = new Vector2(0.5f, 0f);
+            trt.anchoredPosition = new Vector2(-44f, 14f);
+            trt.sizeDelta = new Vector2(trackW, trackH);
+            var trackImg = trackGo.AddComponent<Image>();
+            UIThemeManager.ApplyRoundedButton(trackImg, barRadiusPpu);
+            trackImg.color = C_SLOT_BG; // Surface — the quiet groove
+            trackImg.raycastTarget = false;
+
+            var fillGo = new GameObject("ProgressFill", typeof(RectTransform));
+            fillGo.transform.SetParent(trackGo.transform, false);
+            var frt = (RectTransform)fillGo.transform;
+            frt.anchorMin = new Vector2(0f, 0f);
+            frt.anchorMax = new Vector2(0f, 1f);
+            frt.pivot = new Vector2(0f, 0.5f);
+            frt.anchoredPosition = Vector2.zero;
+            var fillImg = fillGo.AddComponent<Image>();
+            UIThemeManager.ApplyRoundedButton(fillImg, barRadiusPpu);
+            fillImg.color = fillColor;
+            fillImg.raycastTarget = false;
+
+            var countText = CreateAnchored(go.transform, "ProgressCount", $"{completed}/{total}",
+                TypeRole.Caption, TextAlignmentOptions.Left,
+                tierComplete ? C_COMPLETED_ICON : C_HEADER_COUNT,
                 new Vector2(0.5f, 0f), new Vector2(0.5f, 0f),
-                new Vector2(0f, 12f), new Vector2(460f, 30f));
+                new Vector2(150f, 10f), new Vector2(140f, 30f));
+
+            float targetW = total > 0 ? trackW * Mathf.Clamp01((float)completed / total) : 0f;
+            PlayProgressReveal(frt, targetW, countText, completed, total);
+        }
+
+        // Task 48 — the tier progress rolls in on entry: bar width 0→target (EaseOutCubic over
+        // STANDARD, clamped-dt) while the count rolls 0→n (the Task 45 count-up). ReduceMotion ⇒
+        // both snap to final.
+        private void PlayProgressReveal(RectTransform fill, float targetW,
+            TextMeshProUGUI countText, int completed, int total)
+        {
+            if (fill == null) return;
+            if (UIAnimations.ReduceMotion || !isActiveAndEnabled)
+            {
+                fill.sizeDelta = new Vector2(targetW, 0f); // stretch-Y anchors: x is the width
+                return;
+            }
+            fill.sizeDelta = new Vector2(0f, 0f);
+            StartCoroutine(ProgressRevealRoutine(fill, targetW));
+            if (countText != null)
+                StartCoroutine(UIAnimations.CountUpInt(countText, 0, completed,
+                    UIAnimations.STANDARD, "{0}/" + total));
+        }
+
+        private IEnumerator ProgressRevealRoutine(RectTransform fill, float targetW)
+        {
+            float t = 0f;
+            while (t < UIAnimations.STANDARD)
+            {
+                if (fill == null) yield break;
+                t += Mathf.Min(Time.unscaledDeltaTime, UIAnimations.MICRO); // clamped-dt
+                float p = UIAnimations.EaseOutCubic(Mathf.Clamp01(t / UIAnimations.STANDARD));
+                fill.sizeDelta = new Vector2(targetW * p, 0f);
+                yield return null;
+            }
+            if (fill != null) fill.sizeDelta = new Vector2(targetW, 0f);
         }
 
         private void BackToTierSelect()
@@ -387,7 +507,8 @@ namespace WordPuzzle.UI
         }
 
         // ---------------- Puzzle card ----------------
-        private void CreateLevelCard(Transform parent, PuzzleDefinition puzzle, PuzzleState state, int animIndex = 0)
+        private void CreateLevelCard(Transform parent, PuzzleDefinition puzzle, PuzzleState state,
+            int animIndex = 0, bool upNext = false)
         {
             var go = new GameObject($"Card_{puzzle.puzzleId}", typeof(RectTransform));
             go.transform.SetParent(parent, false);
@@ -397,6 +518,10 @@ namespace WordPuzzle.UI
             var border = go.AddComponent<Image>();
             ApplyRounded(border);
             border.color = StateBorder(state);
+
+            // Task 48 — only the ONE "up next" card glows (hero), so the grid keeps a single
+            // focal point (and 100 glow stacks would be a perf hit anyway).
+            if (upNext) UIThemeManager.ApplyNeonGlow(border, C_GOLD, hero: true);
 
             var btn = go.AddComponent<Button>();
             btn.transition = Selectable.Transition.None;
@@ -427,39 +552,47 @@ namespace WordPuzzle.UI
             ApplyRounded(fillImg);
             fillImg.color = StateBg(state); // near-black centre; state read from the border ring
 
-            // Row 1 — id + state icon (shape-coded, legible in grayscale / colorblind).
-            CreateAnchored(fillGo.transform, "PuzzleId", $"#{puzzle.puzzleId:000}", TypeRole.Caption,
+            // Row 1 — a quiet id + the state icon. Task 48: the "#" is dropped and the unplayed
+            // "○" is GONE — it stamped noise on ~all 100 cards; absence-of-mark now means
+            // unplayed, the marks mean something (▸ up next · ◑ in progress · ✓ done · □ locked).
+            CreateAnchored(fillGo.transform, "PuzzleId", $"{puzzle.puzzleId:000}", TypeRole.Caption,
                 TextAlignmentOptions.TopLeft,
                 state == PuzzleState.Locked ? C_LOCKED_TEXT : C_PUZZLE_ID,
                 new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(10f, -8f), new Vector2(96f, 30f));
 
             string icon = state switch
             {
-                PuzzleState.Locked            => "□", // □ padlock-ish
-                PuzzleState.UnlockedUnplayed  => "○", // ○ not started
-                PuzzleState.InProgress        => "◑", // ◑ in progress
-                PuzzleState.Completed         => "✓", // ✓ done (non-color cue)
+                PuzzleState.Locked            => "□",                    // padlock-ish
+                PuzzleState.UnlockedUnplayed  => upNext ? "▸" : "",      // the play cue marks ONLY "up next"
+                PuzzleState.InProgress        => "◑",                    // in progress
+                PuzzleState.Completed         => "✓",                    // done (non-color cue)
                 _                             => string.Empty
             };
+            Color iconColor = upNext && state == PuzzleState.UnlockedUnplayed ? C_GOLD : StateIconColor(state);
             CreateAnchored(fillGo.transform, "StateIcon", icon, TypeRole.Caption,
-                TextAlignmentOptions.TopRight, StateIconColor(state),
+                TextAlignmentOptions.TopRight, iconColor,
                 new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-10f, -8f), new Vector2(36f, 30f));
 
-            // Row 2 — word pair.
-            string pair = state == PuzzleState.Locked
-                ? "??? → ???"
-                : $"{(puzzle.startWord ?? "").ToUpper()} → {(puzzle.endWord ?? "").ToUpper()}";
-            CreateAnchored(fillGo.transform, "WordPair", pair, TypeRole.Caption,
+            // Rows 2–3 — the PAIR is the card (Task 48): start word on top, "→ end" beneath, in
+            // bright Body weight. Two lines so tier-7's 7-letter pairs fit the 210px cell without
+            // shrinking the type.
+            string startW = state == PuzzleState.Locked ? "???" : (puzzle.startWord ?? "").ToUpper();
+            string endW   = state == PuzzleState.Locked ? "???" : (puzzle.endWord ?? "").ToUpper();
+            CreateAnchored(fillGo.transform, "WordStart", startW, TypeRole.Body,
                 TextAlignmentOptions.Center, StateLetterColor(state),
-                new Vector2(0f, 0.5f), new Vector2(1f, 0.5f), new Vector2(0f, 6f), Vector2.zero,
-                fillSize: true, fillHeight: 52f);
+                new Vector2(0f, 0.5f), new Vector2(1f, 0.5f), new Vector2(0f, 24f), Vector2.zero,
+                fillSize: true, fillHeight: 36f);
+            CreateAnchored(fillGo.transform, "WordEnd", $"→ {endW}", TypeRole.Body,
+                TextAlignmentOptions.Center, StateLetterColor(state),
+                new Vector2(0f, 0.5f), new Vector2(1f, 0.5f), new Vector2(0f, -14f), Vector2.zero,
+                fillSize: true, fillHeight: 36f);
 
-            // Row 3 — steps subtitle.
+            // Row 4 — steps subtitle.
             CreateAnchored(fillGo.transform, "Subtitle",
                 state == PuzzleState.Locked ? "" : $"{puzzle.optimalSteps} steps", TypeRole.Caption,
                 TextAlignmentOptions.Center, C_SUBTITLE,
-                new Vector2(0f, 0f), new Vector2(1f, 0f), new Vector2(0f, 14f), Vector2.zero,
-                fillSize: true, fillHeight: 30f);
+                new Vector2(0f, 0f), new Vector2(1f, 0f), new Vector2(0f, 8f), Vector2.zero,
+                fillSize: true, fillHeight: 26f);
 
             // Modern feel — staggered cascade reveal (slide-up + fade), ReduceMotion-gated.
             // Wrapped by column so the 3-wide grid ripples diagonally rather than row-by-row.
