@@ -230,10 +230,12 @@ namespace WordPuzzle.UI
             ReparentBadge(revealCountText, revealButton, new Vector2(38f, 32f));
             ReparentBadge(addTimeCountText, addTimeButton, new Vector2(38f, 32f));
 
-            StylePowerUpButton(hintButton, hintCountText);
-            StylePowerUpButton(revealButton, revealCountText);
-            StylePowerUpButton(undoButton, null);
-            StylePowerUpButton(addTimeButton, addTimeCountText);
+            // Task 43 (gap closed) — each power-up carries its stroke icon, so identity survives
+            // grayscale/colorblind viewing on the bar exactly like the menu modes.
+            StylePowerUpButton(hintButton,    hintCountText,    UIThemeManager.LoadIconSprite("IconHint"));
+            StylePowerUpButton(revealButton,  revealCountText,  UIThemeManager.LoadIconSprite("IconReveal"));
+            StylePowerUpButton(undoButton,    null,             UIThemeManager.LoadIconSprite("IconUndo"));
+            StylePowerUpButton(addTimeButton, addTimeCountText, UIThemeManager.LoadIconSprite("IconAddTime"));
 
             // Task 10B — seat the power-up bar just above the keyboard (deferred one frame so the
             // canvas/keyboard rect is laid out before we read its top edge).
@@ -463,7 +465,7 @@ namespace WordPuzzle.UI
 
         // Task 10B — base style + enabled/disabled look for a power-up button.
         // badge is the count TMP (reparented under the button); pass null for Undo (no count).
-        private static void StylePowerUpButton(Button btn, TMP_Text badge)
+        private static void StylePowerUpButton(Button btn, TMP_Text badge, Sprite icon = null)
         {
             if (btn == null) return;
             var label = FindPowerUpLabel(btn, badge);
@@ -475,6 +477,10 @@ namespace WordPuzzle.UI
                 label.color = keep;
             }
             UIThemeManager.ApplyOutlineButton(btn.GetComponent<Image>(), C_PU_BORDER); // Task 25 — ghost button
+            // Task 43 — the left icon slot (white stroke art × the chip's token tint). 38px @ 14px
+            // inset clears the centered label even in the narrowest 4-up (+TIME) bar slot (~249px).
+            if (icon != null)
+                UIThemeManager.ApplyButtonIcon(btn, icon, C_PU_BORDER, size: 38f, leftInset: 14f);
             ApplyPowerUpVisual(btn, badge, btn.interactable);
         }
 
@@ -502,6 +508,14 @@ namespace WordPuzzle.UI
                 var c = C_PU_BORDER; // Task 25 — tint the outline ring; dim when the power-up is unusable
                 c.a = enabled ? 1f : 0.45f;
                 img.color = c;
+            }
+            // Task 43 — the icon dims in lockstep with the ring (same token, same alphas).
+            var slotIcon = UIThemeManager.FindButtonIcon(btn);
+            if (slotIcon != null)
+            {
+                var ic = C_PU_BORDER;
+                ic.a = enabled ? 1f : 0.45f;
+                slotIcon.color = ic;
             }
             var label = FindPowerUpLabel(btn, badge);
             if (label != null) label.color = enabled ? C_PU_LABEL : C_PU_LABEL_DIM;
