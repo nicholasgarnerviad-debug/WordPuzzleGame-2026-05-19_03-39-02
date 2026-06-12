@@ -376,7 +376,7 @@ namespace WordPuzzle.UI
             var go = new GameObject("GridHeader", typeof(RectTransform));
             go.transform.SetParent(contentRoot, false);
             var le = go.AddComponent<LayoutElement>();
-            le.minHeight = 100f; le.preferredHeight = 100f; le.flexibleWidth = 1f; // Title-role header needs the room
+            le.minHeight = 170f; le.preferredHeight = 170f; le.flexibleWidth = 1f; // Task 48 — title + theme + progress bar stack (100 made the bar overprint the caption)
 
             // Back chip
             var backGo = new GameObject("BackToTiers", typeof(RectTransform));
@@ -411,7 +411,7 @@ namespace WordPuzzle.UI
             // with a tier-accent fill (aqua once the tier is complete) and a count that rolls up.
             bool tierComplete = total > 0 && completed >= total;
             Color fillColor = tierComplete ? C_COMPLETED_BORDER : C_GOLD;
-            const float trackW = 360f, trackH = 14f;
+            const float trackW = 440f, trackH = 14f;
             const float barRadiusPpu = 6.3f; // 44px corner art ÷ 6.3 ≈ a 7px radius on the 14px bar
 
             var trackGo = new GameObject("ProgressTrack", typeof(RectTransform));
@@ -419,7 +419,7 @@ namespace WordPuzzle.UI
             var trt = (RectTransform)trackGo.transform;
             trt.anchorMin = trt.anchorMax = new Vector2(0.5f, 0f);
             trt.pivot = new Vector2(0.5f, 0f);
-            trt.anchoredPosition = new Vector2(-44f, 14f);
+            trt.anchoredPosition = new Vector2(-50f, 18f);
             trt.sizeDelta = new Vector2(trackW, trackH);
             var trackImg = trackGo.AddComponent<Image>();
             UIThemeManager.ApplyRoundedButton(trackImg, barRadiusPpu);
@@ -442,7 +442,7 @@ namespace WordPuzzle.UI
                 TypeRole.Caption, TextAlignmentOptions.Left,
                 tierComplete ? C_COMPLETED_ICON : C_HEADER_COUNT,
                 new Vector2(0.5f, 0f), new Vector2(0.5f, 0f),
-                new Vector2(150f, 10f), new Vector2(140f, 30f));
+                new Vector2(195f, 14f), new Vector2(130f, 30f));
 
             float targetW = total > 0 ? trackW * Mathf.Clamp01((float)completed / total) : 0f;
             PlayProgressReveal(frt, targetW, countText, completed, total);
@@ -493,8 +493,8 @@ namespace WordPuzzle.UI
             go.transform.SetParent(contentRoot, false);
 
             var grid = go.AddComponent<GridLayoutGroup>();
-            grid.cellSize = new Vector2(210f, 150f);
-            grid.spacing = new Vector2(16f, 16f);
+            grid.cellSize = new Vector2(300f, 150f); // Task 48 — fill the row (3×210 wasted ~340px of width)
+            grid.spacing = new Vector2(18f, 16f);
             grid.padding = new RectOffset(24, 24, 16, 32);
             grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
             grid.constraintCount = 3;
@@ -513,7 +513,7 @@ namespace WordPuzzle.UI
             var go = new GameObject($"Card_{puzzle.puzzleId}", typeof(RectTransform));
             go.transform.SetParent(parent, false);
             var rt = (RectTransform)go.transform;
-            rt.sizeDelta = new Vector2(210f, 150f);
+            rt.sizeDelta = new Vector2(300f, 150f); // matches the grid cell (GridLayoutGroup drives it anyway)
 
             var border = go.AddComponent<Image>();
             ApplyRounded(border);
@@ -558,7 +558,7 @@ namespace WordPuzzle.UI
             CreateAnchored(fillGo.transform, "PuzzleId", $"{puzzle.puzzleId:000}", TypeRole.Caption,
                 TextAlignmentOptions.TopLeft,
                 state == PuzzleState.Locked ? C_LOCKED_TEXT : C_PUZZLE_ID,
-                new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(10f, -8f), new Vector2(96f, 30f));
+                new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(16f, -12f), new Vector2(96f, 30f)); // clear of the ring's corner arc
 
             string icon = state switch
             {
@@ -571,10 +571,10 @@ namespace WordPuzzle.UI
             Color iconColor = upNext && state == PuzzleState.UnlockedUnplayed ? C_GOLD : StateIconColor(state);
             CreateAnchored(fillGo.transform, "StateIcon", icon, TypeRole.Caption,
                 TextAlignmentOptions.TopRight, iconColor,
-                new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-10f, -8f), new Vector2(36f, 30f));
+                new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-14f, -12f), new Vector2(36f, 30f));
 
             // Rows 2–3 — the PAIR is the card (Task 48): start word on top, "→ end" beneath, in
-            // bright Body weight. Two lines so tier-7's 7-letter pairs fit the 210px cell without
+            // bright Body weight. Two lines so tier-7's 7-letter pairs fit the cell without
             // shrinking the type.
             string startW = state == PuzzleState.Locked ? "???" : (puzzle.startWord ?? "").ToUpper();
             string endW   = state == PuzzleState.Locked ? "???" : (puzzle.endWord ?? "").ToUpper();
