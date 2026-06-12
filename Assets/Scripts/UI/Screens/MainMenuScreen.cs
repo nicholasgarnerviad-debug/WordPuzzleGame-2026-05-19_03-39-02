@@ -101,7 +101,7 @@ namespace WordPuzzle.UI
         private const float MENU_TITLE_H   = 130f;  // was 180 — close the gap under the title
         private const float MENU_HERO_H    = 130f;  // uniform primary height
         private const float MENU_MODE_H    = 130f;  // uniform primary height
-        private const float MENU_TERT_H    = 80f;
+        private const float MENU_TERT_H    = 96f;   // Task 43 — ghost tier keeps a ≥96px hit target
         private const float MENU_GAP       = 26f;   // uniform gap between rows
         private const float MENU_GROUP_GAP = 44f;   // modest extra gap before the tertiary group
         private const float MENU_TITLE_W   = 940f;
@@ -118,13 +118,20 @@ namespace WordPuzzle.UI
             UIThemeManager.ApplyScreenBackground(gameObject);
 
             StyleTitle();
-            // Task 25 — outline ("ghost") buttons: each keeps its colour as a rounded BORDER over the
-            // black, transparent centre. Daily is the faint-fill hero; Library/Stats use a muted ring.
-            StyleMenuButton(resumeButton,      MenuPalette.ResumeFill,     MenuPalette.ResumeLabel);
-            StyleMenuButton(dailyButton,       MenuPalette.DailyFill,      MenuPalette.DailyLabel,      hero: true);
-            StyleMenuButton(classicModeButton, MenuPalette.ClassicFill,    MenuPalette.ClassicLabel);
-            StyleMenuButton(puzzleShowButton,  MenuPalette.PuzzleShowFill, MenuPalette.PuzzleShowLabel);
-            StyleMenuButton(timeAttackButton,  MenuPalette.TimeAttackFill, MenuPalette.TimeAttackLabel);
+            // Task 43 — the three-tier hierarchy: DAILY is the ONE filled gradient hero ("where do
+            // I tap" answered by FILL, not just glow); the modes stay coloured outlines; Library /
+            // Stats recede to ghost (tinted text on an invisible hit target). Mode buttons carry
+            // their icon so identity survives grayscale/colorblind viewing (hue is not the only cue).
+            StyleMenuButton(resumeButton,      MenuPalette.ResumeFill,     MenuPalette.ResumeLabel,
+                icon: UIThemeManager.LoadIconSprite("IconResume"));
+            StyleMenuButton(dailyButton,       MenuPalette.DailyFill,      MenuPalette.DailyLabel,      hero: true,
+                icon: UIThemeManager.LoadIconSprite("IconDaily"));
+            StyleMenuButton(classicModeButton, MenuPalette.ClassicFill,    MenuPalette.ClassicLabel,
+                icon: UIThemeManager.LoadIconSprite("IconClassic"));
+            StyleMenuButton(puzzleShowButton,  MenuPalette.PuzzleShowFill, MenuPalette.PuzzleShowLabel,
+                icon: UIThemeManager.LoadIconSprite("IconPuzzleShow"));
+            StyleMenuButton(timeAttackButton,  MenuPalette.TimeAttackFill, MenuPalette.TimeAttackLabel,
+                icon: UIThemeManager.LoadIconSprite("IconTimeAttack"));
             StyleMenuButton(libraryButton,     MenuPalette.SecondaryBorder, MenuPalette.SecondaryLabel, primary: false);
             StyleMenuButton(statsButton,       MenuPalette.SecondaryBorder, MenuPalette.SecondaryLabel, primary: false);
             StyleMenuButton(settingsButton,    MenuPalette.SecondaryBorder, MenuPalette.SecondaryLabel, primary: false);
@@ -143,6 +150,40 @@ namespace WordPuzzle.UI
             var t = transform.Find("TitleText");
             var title = t != null ? t.GetComponent<TextMeshProUGUI>() : null;
             if (title == null) return;
+
+            // Task 43 — the masthead is the LOGOTYPE sprite when it resolves; the Task-42 Display
+            // TMP text is the fallback, so a missing asset can never strand the menu. The entrance
+            // + float animation moves the TitleText row itself, so both render paths inherit it.
+            var logo = UIThemeManager.LoadIconSprite("StarLadderLogotype");
+            var logoTf = t.Find("LogotypeImage");
+            if (logo != null)
+            {
+                title.enabled = false; // the sprite carries the masthead
+                Image img;
+                if (logoTf == null)
+                {
+                    var go = new GameObject("LogotypeImage", typeof(RectTransform));
+                    go.transform.SetParent(t, false);
+                    img = go.AddComponent<Image>();
+                }
+                else
+                {
+                    img = logoTf.GetComponent<Image>();
+                    if (img == null) img = logoTf.gameObject.AddComponent<Image>();
+                    logoTf.gameObject.SetActive(true);
+                }
+                var rt = img.rectTransform;
+                rt.anchorMin = Vector2.zero; rt.anchorMax = Vector2.one;
+                rt.offsetMin = Vector2.zero; rt.offsetMax = Vector2.zero;
+                img.sprite = logo;
+                img.color = Color.white;          // the gradient is baked into the art
+                img.preserveAspect = true;
+                img.raycastTarget = false;
+                return;
+            }
+
+            if (logoTf != null) logoTf.gameObject.SetActive(false);
+            title.enabled = true;
             title.text = "STAR LADDER";
             TypeScale.Apply(title, TypeRole.Display); // Task 42 — Rungo Bold 96 masthead (Display role)
             title.color = MenuPalette.TitleColor; // Task 23C — clean flat title, bright + non-gold
@@ -151,31 +192,42 @@ namespace WordPuzzle.UI
             title.enableWordWrapping = false;
         }
 
-        // Task 25 — render a button as a coloured rounded OUTLINE (transparent centre over black).
-        // `color` is the border colour (its existing identity colour); `hero` adds a faint fill wash so
-        // Daily still reads as the primary action. Visual only; never touches onClick/routing.
-        private static void StyleMenuButton(Button btn, Color color, Color labelColor, bool hero = false, bool primary = true)
+        // Task 43 — render a button on its tier: `hero` = the ONE filled gradient hero (Daily),
+        // `primary` = coloured rounded outline (the modes), otherwise GHOST (tinted text only,
+        // invisible hit target — Library/Stats recede). Visual only; never touches onClick/routing.
+        private static void StyleMenuButton(Button btn, Color color, Color labelColor,
+            bool hero = false, bool primary = true, Sprite icon = null)
         {
             if (btn == null) return;
             var img = btn.GetComponent<Image>();
-            // Unify the PRIMARY stack onto ONE shared style (Daily's thicker ring; uniform size comes from
-            // ArrangeMenu), so every primary button reads as one set and can't drift — Daily is the hero ONLY
-            // via its brighter glow. Secondary chrome (Library/Stats) keeps the thinner ring + smaller size.
-            if (primary) UIThemeManager.ApplyPrimaryMenuButton(img, color, heroGlow: hero);
-            else         UIThemeManager.ApplyOutlineButton(img, color);
 
-            // Task 24 — neutralise the scene's inconsistent per-button ColorBlock. Some menu buttons
-            // were authored with a DARK normalColor which (via ColorTint) multiplied the fill down to
-            // near-black — that's why Daily/Resume rendered maroon/teal-black and illegible. Force a
-            // white base so the true fill shows; keep a subtle press-dim for tactile feedback.
-            var cb = btn.colors;
-            cb.normalColor      = Color.white;
-            cb.highlightedColor = new Color(0.92f, 0.92f, 0.92f, 1f);
-            cb.pressedColor     = new Color(0.82f, 0.82f, 0.82f, 1f);
-            cb.selectedColor    = Color.white;
-            cb.disabledColor    = new Color(0.5f, 0.5f, 0.5f, 0.5f);
-            cb.colorMultiplier  = 1f;
-            btn.colors = cb;
+            if (!primary)
+            {
+                UIThemeManager.ApplyGhostButton(btn, color); // tier 3 — tinted Label text, no ring/glow
+            }
+            else if (hero)
+            {
+                // Tier 1 — Daily: solid orchid→deep-violet gradient fill; sets its own ~8% press dim.
+                UIThemeManager.ApplyFilledHeroButton(btn, Palette.ModeDaily, Palette.ModePuzzleShow);
+            }
+            else
+            {
+                // Tier 2 — the ONE shared outline geometry for the mode stack (unchanged).
+                UIThemeManager.ApplyPrimaryMenuButton(img, color, heroGlow: false);
+
+                // Task 24 — neutralise the scene's inconsistent per-button ColorBlock. Some menu buttons
+                // were authored with a DARK normalColor which (via ColorTint) multiplied the fill down to
+                // near-black — that's why Daily/Resume rendered maroon/teal-black and illegible. Force a
+                // white base so the true fill shows; keep a subtle press-dim for tactile feedback.
+                var cb = btn.colors;
+                cb.normalColor      = Color.white;
+                cb.highlightedColor = new Color(0.92f, 0.92f, 0.92f, 1f);
+                cb.pressedColor     = new Color(0.82f, 0.82f, 0.82f, 1f);
+                cb.selectedColor    = Color.white;
+                cb.disabledColor    = new Color(0.5f, 0.5f, 0.5f, 0.5f);
+                cb.colorMultiplier  = 1f;
+                btn.colors = cb;
+            }
 
             var outline = btn.GetComponent<Outline>();
             if (outline != null) outline.enabled = false;
@@ -183,8 +235,8 @@ namespace WordPuzzle.UI
             var label = btn.GetComponentInChildren<TMP_Text>(true);
             if (label != null)
             {
-                TypeScale.Apply(label, TypeRole.Label); // Task 42 — one Label role for every menu button
-                label.color = labelColor;
+                // Hero/ghost label colour is owned by the tier helper; outline keeps its bright label.
+                if (primary && !hero) { TypeScale.Apply(label, TypeRole.Label); label.color = labelColor; }
                 // Root cause of the tiny STATS label: its Label child carried a stray localScale (~0.53) that
                 // shrank the rendered text by ~half even though its fontSize matched its Library pair (both 30).
                 // ArrangeMenu/PlaceMenuRowAtX only normalizes the BUTTON's scale, not the label child — so
@@ -193,6 +245,11 @@ namespace WordPuzzle.UI
                 // Guard: a scene label with TMP auto-sizing ON would ignore fontSize and use its own min/max.
                 label.enableAutoSizing = false;
             }
+
+            // Phase 3 — mode identity carried redundantly by an icon (ghosts stay text-only).
+            // On the filled hero the token would vanish into its own fill, so the icon goes bright.
+            if (primary && icon != null)
+                UIThemeManager.ApplyButtonIcon(btn, icon, hero ? Palette.TextPrimary : color);
         }
 
         private static void SetButtonLabel(Button btn, string text)

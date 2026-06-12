@@ -273,8 +273,9 @@ public class UITheme : ScriptableObject
 /// Static accessor for the default UI theme.
 /// Loads the theme from Resources/Themes/DefaultTheme.asset on first access.
 /// NOTE: Not thread-safe — main Unity thread only.
+/// Partial: the Task 43 button-tier hierarchy lives in Themes/UIThemeManagerTiers.cs.
 /// </summary>
-public static class UIThemeManager
+public static partial class UIThemeManager
 {
     private static UITheme instance;
 

@@ -339,8 +339,7 @@ namespace WordPuzzle.UI
             brt.pivot = new Vector2(0f, 0.5f);
             brt.anchoredPosition = new Vector2(16f, 0f);
             brt.sizeDelta = new Vector2(160f, 64f); // Task 42 — fits the Label-role "‹ Back" (was 96×52)
-            var backImg = backGo.AddComponent<Image>();
-            UIThemeManager.ApplyOutlineButton(backImg, Palette.AccentPeriwinkle); // ghost back chip
+            backGo.AddComponent<Image>(); // the ghost's invisible hit target
             var backBtn = backGo.AddComponent<Button>(); backBtn.transition = Selectable.Transition.None;
             backBtn.onClick.AddListener(() =>
             {
@@ -350,6 +349,7 @@ namespace WordPuzzle.UI
             });
             CreateText(backGo.transform, "BackLabel", "‹ Back", TypeRole.Label,
                 TextAlignmentOptions.Center, C_UNPLAYED_TEXT);
+            UIThemeManager.ApplyGhostButton(backBtn, Palette.AccentPeriwinkle); // Task 43 — grid Back recedes
 
             CreateAnchored(go.transform, "GridTitle", $"Tier {tier.tierId}", TypeRole.Title,
                 TextAlignmentOptions.Top, C_HEADER_TIER,

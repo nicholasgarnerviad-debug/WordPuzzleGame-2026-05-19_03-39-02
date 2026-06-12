@@ -88,14 +88,16 @@ namespace WordPuzzle.UI
 
             UIThemeManager.ApplyScreenBackground(gameObject); // Task 25 — true-black background
 
-            // Task 25 — outline ("ghost") buttons: Play Again = green CTA, Home/Share = muted; light labels.
+            // Task 43 tiers — Play Again = aqua outline CTA, Share = muted outline; HOME recedes to
+            // ghost (tinted "⌂ HOME" text on an invisible hit target — navigation, not an action).
             UIThemeManager.ApplyOutlineButton(playAgainButton, Palette.AccentAqua, Palette.TextPrimary);
-            UIThemeManager.ApplyOutlineButton(mainMenuButton,  Palette.AccentPeriwinkle, Palette.TextPrimary);
+            UIThemeManager.ApplyGhostButton(mainMenuButton,    Palette.AccentPeriwinkle);
             UIThemeManager.ApplyOutlineButton(shareButton,     Palette.AccentPeriwinkle, Palette.TextPrimary);
 
-            // Task 42 — button labels carry the Label role (the outline call above only tints them).
+            // Task 42 — outline labels carry the Label role (the outline calls only tint them).
+            // NOT the ghost HOME: ApplyGhostButton already applies the role and then tints, and a
+            // later TypeScale.Apply would reset the label back to TextPrimary.
             ApplyButtonLabelType(playAgainButton);
-            ApplyButtonLabelType(mainMenuButton);
             ApplyButtonLabelType(shareButton);
 
             // Consolidate + modernize the stat block (display-only; see StyleResultsLayout).

@@ -108,10 +108,12 @@ namespace WordPuzzle.UI
             Anchor(((RectTransform)back.transform), new Vector2(0f, 1f), new Vector2(40f, -110f), new Vector2(190f, 80f));
             back.onClick.AddListener(Close);
 
-            // Restore Purchases — outline, top-right (mirrors Back). Re-establishes owned non-consumables
+            // Restore Purchases — Task 43 ghost tier, top-right (mirrors Back). Rare store-policy
+            // utility, so it recedes to tinted text. Re-establishes owned non-consumables
             // (remove-ads / starter-pack) after a reinstall; store policy requires this when selling them.
             var restore = MakeButton(transform, "Restore", MenuPalette.SecondaryBorder, C_CREAM);
             Anchor(((RectTransform)restore.transform), new Vector2(1f, 1f), new Vector2(-40f, -110f), new Vector2(230f, 80f));
+            UIThemeManager.ApplyGhostButton(restore, MenuPalette.SecondaryBorder);
             restore.onClick.AddListener(RestorePurchases);
 
             // Feedback line near the bottom.
