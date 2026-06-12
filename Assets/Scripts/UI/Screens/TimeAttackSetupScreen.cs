@@ -43,23 +43,31 @@ namespace WordPuzzle.UI
         private static readonly Color C_TEXT_MUTED      = Palette.TextMuted;      // subtitle / explainer
 
         // Vertical rhythm in the screen-root's local space (centre pivot; visible ≈ ±1059y).
-        private const float TITLE_Y     =  680f;
-        private const float SUBTITLE_Y  =  560f;
-        private const float GRID_Y      =  -20f;
-        private const float EXPLAINER_Y = -560f;
+        // Task 49 — the floating footer legend is gone (the modes are column headers now), so the
+        // column composes: title → subtitle → headers → the 2×2 grid, with the bottom left to the
+        // backdrop art.
+        private const float TITLE_Y     =  660f;
+        private const float SUBTITLE_Y  =  548f;
+        private const float GRID_Y      =  -40f;
+        private const float COLHEAD_LIFT = 84f;  // column-header centre above the grid's top edge
+
+        // Task 49 — the cards own the screen: 2×380 + 24 gap = 784 of the 1080 canvas (the scene's
+        // smaller cells floated in dead space).
+        private static readonly Vector2 CARD_CELL    = new Vector2(380f, 280f);
+        private static readonly Vector2 CARD_SPACING = new Vector2(24f, 24f);
 
         private void OnEnable()
         {
             if (titleText != null) titleText.text = "TIME ATTACK";
 
             if (btn60Timed != null)
-                btn60Timed.onClick.AddListener(() => Confirm(60f, TimeAttackSubMode.Timed));
+                btn60Timed.onClick.AddListener(() => ConfirmWithPunch(btn60Timed, 60f, TimeAttackSubMode.Timed));
             if (btn60Survival != null)
-                btn60Survival.onClick.AddListener(() => Confirm(60f, TimeAttackSubMode.Survival));
+                btn60Survival.onClick.AddListener(() => ConfirmWithPunch(btn60Survival, 60f, TimeAttackSubMode.Survival));
             if (btn120Timed != null)
-                btn120Timed.onClick.AddListener(() => Confirm(120f, TimeAttackSubMode.Timed));
+                btn120Timed.onClick.AddListener(() => ConfirmWithPunch(btn120Timed, 120f, TimeAttackSubMode.Timed));
             if (btn120Survival != null)
-                btn120Survival.onClick.AddListener(() => Confirm(120f, TimeAttackSubMode.Survival));
+                btn120Survival.onClick.AddListener(() => ConfirmWithPunch(btn120Survival, 120f, TimeAttackSubMode.Survival));
 
             if (backButton != null)
                 backButton.onClick.AddListener(() => OnBackToMenu?.Invoke());
@@ -105,11 +113,14 @@ namespace WordPuzzle.UI
                 subtitleText.raycastTarget = false;
             }
 
-            // 13A — centre the grid in its slot and re-seat it below the subtitle.
+            // 13A — centre the grid in its slot and re-seat it below the subtitle. Task 49 —
+            // the cells grow to CARD_CELL so the cards own the screen instead of floating.
             var grid = GetComponentInChildren<GridLayoutGroup>(true);
             if (grid != null)
             {
                 grid.childAlignment = TextAnchor.MiddleCenter;
+                grid.cellSize = CARD_CELL;
+                grid.spacing = CARD_SPACING;
                 var grt = grid.GetComponent<RectTransform>();
                 if (grt != null)
                 {
@@ -118,14 +129,17 @@ namespace WordPuzzle.UI
                 }
             }
 
-            // 13B — card styling + the TIMED/SURVIVAL meaning scheme (two distinct on-palette accents).
-            StyleCard(btn60Timed,     C_ACCENT_TIMED);
+            // 13B — card styling + the TIMED/SURVIVAL meaning scheme (two distinct on-palette
+            // accents). Task 49 — "60s TIMED" is the recommended first run: it carries the ONE
+            // hero glow, answering "where do I tap" the way DAILY does on the menu.
+            StyleCard(btn60Timed,     C_ACCENT_TIMED, hero: true);
             StyleCard(btn120Timed,    C_ACCENT_TIMED);
             StyleCard(btn60Survival,  C_ACCENT_SURVIVAL);
             StyleCard(btn120Survival, C_ACCENT_SURVIVAL);
 
-            // 13C — explainer with the real Timed/Survival rules (reward sourced from config).
-            EnsureExplainer();
+            // Task 49 — the modes are COLUMN HEADERS (title + the one-line rule) instead of a
+            // per-card label AND a floating footer legend explaining the same thing twice.
+            EnsureColumnHeaders(grid);
 
             // 13C — icon-only Home, top-left, matching the polished chrome.
             StyleHomeButton();
@@ -139,9 +153,10 @@ namespace WordPuzzle.UI
             rt.sizeDelta = new Vector2(width, height);
         }
 
-        // Card = surface-2 fill + accent outline. LabelTop = duration (cream),
-        // LabelBottom = sub-mode (accent — the colour that carries the Timed/Survival meaning).
-        private static void StyleCard(Button card, Color accent)
+        // Card = surface-2 fill + accent outline. Task 49 — the card carries ONLY its big
+        // duration: the mode lives in the column header above (per-card mode labels said the
+        // same thing four times). `hero` marks the recommended first run (60s TIMED).
+        private static void StyleCard(Button card, Color accent, bool hero = false)
         {
             if (card == null) return;
 
@@ -149,6 +164,7 @@ namespace WordPuzzle.UI
             if (img != null)
             {
                 UIThemeManager.ApplyOutlineButton(img, accent); // Task 25 — ghost card, accent border over black
+                if (hero) UIThemeManager.ApplyNeonGlow(img, accent, hero: true); // the ONE bright cue
                 img.raycastTarget = true;
             }
 
@@ -163,46 +179,81 @@ namespace WordPuzzle.UI
                 top.alignment = TextAlignmentOptions.Center;
                 top.enableWordWrapping = false;
                 top.raycastTarget = false;
-                top.rectTransform.sizeDelta = new Vector2(260f, 90f);
+                top.rectTransform.anchoredPosition = Vector2.zero; // centred alone in the bigger cell
+                top.rectTransform.sizeDelta = new Vector2(320f, 96f);
             }
 
             var bottom = card.transform.Find("LabelBottom")?.GetComponent<TMP_Text>();
-            if (bottom != null)
-            {
-                TypeScale.Apply(bottom, TypeRole.Body); // Task 42
-                bottom.color = accent;
-                bottom.characterSpacing = 4f;
-                bottom.alignment = TextAlignmentOptions.Center;
-                bottom.enableWordWrapping = false;
-                bottom.raycastTarget = false;
-                bottom.rectTransform.sizeDelta = new Vector2(260f, 50f);
-            }
+            if (bottom != null) bottom.gameObject.SetActive(false); // Task 49 — the column header owns the mode
         }
 
-        // Two-line explainer; reward seconds pulled from the canonical Survival config
-        // so the copy can never drift from BalanceConfig.
-        private void EnsureExplainer()
+        // Task 49 — the modes are column headers over their grid columns: accent title + a
+        // one-line rule (reward seconds pulled from the canonical Survival config so the copy
+        // can never drift from BalanceConfig). Replaces the per-card mode label AND the old
+        // floating footer legend. Positioned from the grid's LIVE metrics; idempotent.
+        private void EnsureColumnHeaders(GridLayoutGroup grid)
         {
-            if (explainerText == null)
-            {
-                var go = new GameObject("ExplainerText", typeof(RectTransform));
-                go.transform.SetParent(transform, false);
-                explainerText = go.AddComponent<TextMeshProUGUI>();
-            }
+            if (explainerText != null) explainerText.gameObject.SetActive(false); // the legend is retired
 
+            if (grid == null) return;
+            var grt = grid.GetComponent<RectTransform>();
+            if (grt == null) return;
+
+            float colX = (grid.cellSize.x + grid.spacing.x) * 0.5f;
+            float gridTop = grt.anchoredPosition.y + (grid.cellSize.y * 2f + grid.spacing.y) * 0.5f;
             int reward = Mathf.RoundToInt(TimeAttackConfig.DefaultSurvival().survivalRewardSeconds);
-            string timed    = "#" + ColorUtility.ToHtmlStringRGB(C_ACCENT_TIMED);
-            string survival = "#" + ColorUtility.ToHtmlStringRGB(C_ACCENT_SURVIVAL);
-            explainerText.richText = true;
-            explainerText.text =
-                $"<color={timed}><b>TIMED</b></color>  ·  fixed countdown — beat the clock\n" +
-                $"<color={survival}><b>SURVIVAL</b></color>  ·  each solved word adds +{reward}s";
-            TypeScale.Apply(explainerText, TypeRole.Body); // Task 42
-            explainerText.color = C_TEXT_MUTED;
-            explainerText.lineSpacing = 18f;
-            explainerText.alignment = TextAlignmentOptions.Center;
-            explainerText.raycastTarget = false;
-            PlaceCentered(explainerText.rectTransform, EXPLAINER_Y, 920f, 180f);
+
+            BuildColumnHeader("ColHeadTimed", -colX, gridTop,
+                "TIMED", "beat the clock", C_ACCENT_TIMED);
+            BuildColumnHeader("ColHeadSurvival", colX, gridTop,
+                "SURVIVAL", $"+{reward}s per word", C_ACCENT_SURVIVAL);
+        }
+
+        private void BuildColumnHeader(string name, float x, float gridTop, string title,
+            string caption, Color accent)
+        {
+            var existing = transform.Find(name);
+            GameObject go = existing != null ? existing.gameObject
+                : new GameObject(name, typeof(RectTransform));
+            if (existing == null) go.transform.SetParent(transform, false);
+            var rt = (RectTransform)go.transform;
+            rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0.5f, 0.5f);
+            rt.anchoredPosition = new Vector2(x, gridTop + COLHEAD_LIFT);
+            rt.sizeDelta = new Vector2(CARD_CELL.x, 92f);
+            if (existing != null) return; // built once; later enables only re-seat it
+
+            var titleGo = new GameObject("Title", typeof(RectTransform));
+            titleGo.transform.SetParent(go.transform, false);
+            var trt = (RectTransform)titleGo.transform;
+            trt.anchorMin = new Vector2(0f, 0.5f); trt.anchorMax = new Vector2(1f, 0.5f);
+            trt.anchoredPosition = new Vector2(0f, 22f); trt.sizeDelta = new Vector2(0f, 46f);
+            var titleTmp = titleGo.AddComponent<TextMeshProUGUI>();
+            titleTmp.text = title;
+            TypeScale.Apply(titleTmp, TypeRole.Label);
+            titleTmp.color = accent;
+            titleTmp.characterSpacing = 6f;
+            titleTmp.alignment = TextAlignmentOptions.Center;
+            titleTmp.raycastTarget = false;
+
+            var capGo = new GameObject("Caption", typeof(RectTransform));
+            capGo.transform.SetParent(go.transform, false);
+            var crt = (RectTransform)capGo.transform;
+            crt.anchorMin = new Vector2(0f, 0.5f); crt.anchorMax = new Vector2(1f, 0.5f);
+            crt.anchoredPosition = new Vector2(0f, -20f); crt.sizeDelta = new Vector2(0f, 32f);
+            var capTmp = capGo.AddComponent<TextMeshProUGUI>();
+            capTmp.text = caption;
+            TypeScale.Apply(capTmp, TypeRole.Caption);
+            capTmp.color = C_TEXT_MUTED;
+            capTmp.alignment = TextAlignmentOptions.Center;
+            capTmp.raycastTarget = false;
+        }
+
+        // Task 49 — press squish precedes the confirm (the same tactile beat as everywhere else).
+        private void ConfirmWithPunch(Button card, float baseSeconds, TimeAttackSubMode sub)
+        {
+            if (!UIAnimations.ReduceMotion && isActiveAndEnabled && card != null)
+                StartCoroutine(UIAnimations.ScaleButtonTap((RectTransform)card.transform));
+            Confirm(baseSeconds, sub);
         }
 
         private static Sprite _homeIconSprite;
@@ -302,7 +353,26 @@ namespace WordPuzzle.UI
             OnConfigConfirmed?.Invoke(cfg);
         }
 
-        public void Show() { gameObject.SetActive(true); UIAnimations.PlayScreenEntrance(this); }
+        public void Show()
+        {
+            gameObject.SetActive(true);
+            UIAnimations.PlayScreenEntrance(this);
+            PlayCardEntrance(); // Task 49 — the four cards settle in with the shared calm stagger
+        }
+
         public void Hide() => gameObject.SetActive(false);
+
+        private Coroutine _cardsEntrance;
+
+        private void PlayCardEntrance()
+        {
+            if (UIAnimations.ReduceMotion || !isActiveAndEnabled) return;
+            if (_cardsEntrance != null) StopCoroutine(_cardsEntrance);
+            var rects = new System.Collections.Generic.List<RectTransform>(4);
+            foreach (var b in new[] { btn60Timed, btn60Survival, btn120Timed, btn120Survival })
+                if (b != null) rects.Add((RectTransform)b.transform);
+            if (rects.Count > 0)
+                _cardsEntrance = StartCoroutine(UIAnimations.StaggeredPop(rects));
+        }
     }
 }
