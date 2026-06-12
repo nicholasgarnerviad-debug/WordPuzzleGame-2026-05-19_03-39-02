@@ -440,10 +440,12 @@ namespace WordPuzzle.UI
             rt.sizeDelta = new Vector2(40f, 40f);
             badge.alignment = TextAlignmentOptions.Center;
             TypeScale.Apply(badge, TypeRole.Caption);
-            badge.color = Palette.TextPrimary; // bright digit on the alert-red pill
+            // Task 47 — the count is INVENTORY ("charges you own"), not an error: dark digit on a
+            // warm-gold pill (the hint-tile gold-on-dark precedent), replacing the alert-red square.
+            badge.color = Palette.SurfaceVoid;
             badge.raycastTarget = false;
 
-            // Add a dark circular bg pill behind the count digit
+            // The gold count pill behind the digit — ROUND via the shared bubbly 9-slice.
             var imgGO = badge.transform.Find("__BadgeBg");
             if (imgGO == null)
             {
@@ -455,7 +457,10 @@ namespace WordPuzzle.UI
                 brt.offsetMin = Vector2.zero;
                 brt.offsetMax = Vector2.zero;
                 var img = go.AddComponent<Image>();
-                img.color = new Color(Palette.Alert.r, Palette.Alert.g, Palette.Alert.b, 0.9f); // alert-red pill
+                img.sprite = UIThemeManager.RoundedButtonSprite;
+                img.type = Image.Type.Sliced;
+                img.pixelsPerUnitMultiplier = 5.5f; // 44px corner art on a 40px pill ⇒ fully round
+                img.color = new Color(Palette.Coins.r, Palette.Coins.g, Palette.Coins.b, 0.9f);
                 img.raycastTarget = false;
                 go.transform.SetAsFirstSibling();
             }
@@ -586,6 +591,7 @@ namespace WordPuzzle.UI
             float barWidth = selfRt.rect.width - 2f * sideMargin;
             float slotW = (barWidth - (n - 1) * btnGap) / n;
             float left = -barWidth * 0.5f;
+            float barTopLocalY = float.NegativeInfinity; // Task 47 — the bar's top = the play zone's floor
 
             int idx = 0;
             foreach (var b in all)
@@ -599,7 +605,19 @@ namespace WordPuzzle.UI
                 ap.x = left + slotW * 0.5f + idx * (slotW + btnGap);
                 ap.y = keysTopLocalY + barGap + rt.rect.height * 0.5f;
                 rt.anchoredPosition = ap;
+                barTopLocalY = Mathf.Max(barTopLocalY, keysTopLocalY + barGap + rt.rect.height);
                 idx++;
+            }
+
+            // Task 47 — publish the LIVE play zone so the ladder centres between the composed
+            // header and this bar (kills the dead void under the TO row on fresh puzzles). Both
+            // bounds are runtime-measured, so the board stays balanced on every device/safe-area.
+            if (_ladderDriver == null) _ladderDriver = GetComponent<LadderLayoutDriver>();
+            if (_ladderDriver != null && barTopLocalY > float.NegativeInfinity)
+            {
+                float zoneTop = selfRt.rect.yMax - HudLayout.GameplayHeaderBlock;
+                _ladderDriver.SetPlayZone(zoneTop - HudLayout.BoardZoneMargin,
+                                          barTopLocalY + HudLayout.BoardZoneMargin);
             }
         }
 
@@ -792,6 +810,23 @@ namespace WordPuzzle.UI
             if (_ladderDriver != null) _ladderDriver.SetMetrics(_chainRowHeight, RUNG_GAP);
         }
 
+        // Task 47 — the board entrance: start → input → target settle in with the shared calm
+        // stagger (Task 45 vocabulary; MICRO per row, no bounce). Fires once per NEW puzzle from
+        // SetStartAndEndWords' change guard; ReduceMotion renders the rows at rest instantly.
+        private Coroutine _entranceRoutine;
+
+        private void PlayBoardEntrance()
+        {
+            if (!isActiveAndEnabled || UIAnimations.ReduceMotion) return;
+            if (_entranceRoutine != null) StopCoroutine(_entranceRoutine);
+            var rows = new List<RectTransform>(3);
+            if (startWordRow != null) rows.Add(startWordRow);
+            if (currentInputRow != null) rows.Add(currentInputRow);
+            if (endWordRow != null) rows.Add(endWordRow);
+            if (rows.Count > 0)
+                _entranceRoutine = StartCoroutine(UIAnimations.StaggeredPop(rows));
+        }
+
         /// <summary>§6: Idempotent. Sets persistent FROM/TO row labels + tile content.</summary>
         public void SetStartAndEndWords(string startWord, string endWord)
         {
@@ -807,6 +842,10 @@ namespace WordPuzzle.UI
             // otherwise keep the previous puzzle's tile count (the "boxes wrong past 3" bug). Invalidate them
             // here so the SetCurrentInput / SetHintLetterIndex later in this same UI tick rebuild to the new length.
             _seenInput = false; _seenHint = false;
+
+            // Task 47 — the board's entrance beat: this guard fires exactly once per NEW puzzle,
+            // so the rows settle in here (start → input → target, the shared calm stagger).
+            PlayBoardEntrance();
 
             currentStartWord = s;
             currentEndWord = e;
@@ -919,12 +958,28 @@ namespace WordPuzzle.UI
             // Kept for API stability; intentional no-op.
         }
 
+        private int _displayedScore;
+        private Coroutine _scoreRoutine;
+
         public void SetScore(int score)
         {
             if (scoreText == null) return;
-            scoreText.text = $"Score: {score}";
             // Task 8A/8C: score is secondary info — muted so it doesn't pull focus from tiles.
             scoreText.color = C_LABEL_SECONDARY;
+
+            // Task 47 — gains roll up (the Task 45 count-up) with a small punch; decreases (undo)
+            // and ReduceMotion snap — counting DOWN or animating a recall reads wrong.
+            if (_scoreRoutine != null) { StopCoroutine(_scoreRoutine); _scoreRoutine = null; }
+            int from = _displayedScore;
+            _displayedScore = score;
+            if (!isActiveAndEnabled || UIAnimations.ReduceMotion || score <= from)
+            {
+                scoreText.text = $"Score: {score}";
+                return;
+            }
+            _scoreRoutine = StartCoroutine(UIAnimations.CountUpInt(scoreText, from, score,
+                UIAnimations.STANDARD, "Score: {0}"));
+            StartCoroutine(UIAnimations.ScaleTileTap(scoreText.rectTransform));
         }
 
         public void SetTimer(float timeRemaining)
@@ -1119,7 +1174,14 @@ namespace WordPuzzle.UI
             {
                 var lastRow = chainScrollContent.GetChild(chainScrollContent.childCount - 1)
                     as RectTransform;
-                if (lastRow != null) StartCoroutine(UIAnimations.RowClimbSettle(lastRow)); // Task 29C — upward "climb"
+                if (lastRow != null)
+                {
+                    StartCoroutine(UIAnimations.RowClimbSettle(lastRow)); // Task 29C — upward "climb"
+                    // Task 47 — "rung lock": the fresh rung blinks aqua (the success token) and
+                    // FlashColor reverts each tile to its settled ring on its own.
+                    foreach (var rungTile in lastRow.GetComponentsInChildren<LetterTile>())
+                        StartCoroutine(rungTile.FlashColor(Palette.AccentAqua, 0.25f));
+                }
             }
         }
 
@@ -1503,6 +1565,8 @@ namespace WordPuzzle.UI
                     ApplyTileStyle(t, LadderTileStyle.InputHintHighlight);
                 else if (hasLetter)
                     ApplyTileStyle(t, LadderTileStyle.InputFilled);
+                else if (k == input.Length)
+                    ApplyTileStyle(t, LadderTileStyle.InputCaret); // Task 47 — the breathing "type here" ring
                 else
                     ApplyTileStyle(t, LadderTileStyle.InputEmpty);
             }
@@ -1635,6 +1699,7 @@ namespace WordPuzzle.UI
             ChainUnchanged,
             ChainChanged,
             InputEmpty,
+            InputCaret,   // Task 47 — the NEXT empty input tile (breathing focus ring)
             InputFilled,
             InputHintHighlight,
             RevealUnchanged,
@@ -1685,6 +1750,16 @@ namespace WordPuzzle.UI
 
                 case LadderTileStyle.InputEmpty:
                     tile.SetState(TileState.DefaultEmpty);
+                    tile.SetColor(C_INPUT_EMPTY_FILL);
+                    SetTextColor(tile, C_TILE_TEXT);
+                    break;
+
+                case LadderTileStyle.InputCaret:
+                    // Task 47 — the at-rest "type here" answer: the next empty tile carries the
+                    // existing CurrentInputCaret breathing ring (a gold↔aqua focus pulse — ring
+                    // only, single tile; distinct from the solid gold HINT fill, so the
+                    // gold-is-for-hints rule holds).
+                    tile.SetState(TileState.CurrentInputCaret);
                     tile.SetColor(C_INPUT_EMPTY_FILL);
                     SetTextColor(tile, C_TILE_TEXT);
                     break;
@@ -1951,6 +2026,26 @@ namespace WordPuzzle.UI
             RepositionHeaderElement(scoreText?.GetComponent<RectTransform>(),  notchClearance);
             RepositionHeaderElement(tierIndicatorText?.GetComponent<RectTransform>(), notchClearance);
             RepositionHeaderElement(timerText?.GetComponent<RectTransform>(), notchClearance);
+
+            // Task 47 — the steps/par line joins the COMPOSED header as a Caption subtitle under
+            // the score (it was scene-anchored at a fixed mid-screen Y, colliding with the
+            // power-up bar). In Puzzle Show the tier line owns the first subtitle slot, so the
+            // steps line drops one slot further.
+            float subtitleDrop = notchClearance + HudLayout.HeaderSubtitleDrop;
+            if (tierIndicatorText != null && tierIndicatorText.gameObject.activeSelf)
+                subtitleDrop += HudLayout.HeaderSubtitleSpacing;
+            PlaceHeaderSubtitle(stepsRemainingText != null ? stepsRemainingText.rectTransform : null,
+                subtitleDrop);
+        }
+
+        // Pin a subtitle line centred under the score, top-referenced like the other header rows.
+        private static void PlaceHeaderSubtitle(RectTransform rt, float topClearance)
+        {
+            if (rt == null) return;
+            rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 1f);
+            rt.pivot = new Vector2(0.5f, 1f);
+            rt.anchoredPosition = new Vector2(0f, -topClearance);
+            if (rt.sizeDelta.x < 700f) rt.sizeDelta = new Vector2(700f, rt.sizeDelta.y); // one centred line
         }
 
         private static void RepositionHeaderElement(RectTransform rt, float notchClearance)

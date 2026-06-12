@@ -459,6 +459,9 @@ namespace WordPuzzle.UI.Components
                     border = C_HINT_GOLD;
                     hasBorder = true;
                     textC = C_HINT_GOLD;
+                    // Task 47 — the render loop re-applies states every keystroke: stop the prior
+                    // pulse before starting a fresh one so coroutines never stack on the tile.
+                    if (caretCoroutine != null) StopCoroutine(caretCoroutine);
                     if (isActiveAndEnabled)
                         caretCoroutine = StartCoroutine(CaretPulse());
                     break;
@@ -494,7 +497,19 @@ namespace WordPuzzle.UI.Components
             if (shadow != null) shadow.color = shadowC;
             if (borderImage != null)
             {
-                borderImage.color = hasBorder ? border : new Color(0f, 0f, 0f, 0f);
+                if (hasBorder)
+                {
+                    // Task 47 — state borders render as the same rounded RING SetOutline uses. A
+                    // null sprite painted the FULL border quad, which made empty input tiles read
+                    // as solid muted slabs (the "lavender blocks") instead of edged tiles.
+                    borderImage.sprite = TryGetRoundedRectOutlineSprite();
+                    borderImage.type = Image.Type.Sliced;
+                    borderImage.color = border;
+                }
+                else
+                {
+                    borderImage.color = new Color(0f, 0f, 0f, 0f);
+                }
             }
             // Apply non-color glyph cue.
             if (stateGlyphText != null)
@@ -517,6 +532,14 @@ namespace WordPuzzle.UI.Components
             const float hz = 1.5f;
             while (currentState == TileState.CurrentInputCaret && borderImage != null)
             {
+                // Task 47 — the caret state is reachable at rest now: under ReduceMotion the ring
+                // holds a STATIC gold (the affordance survives; the breathing doesn't).
+                if (UIAnimations.ReduceMotion)
+                {
+                    borderImage.color = C_HINT_GOLD;
+                    yield return null;
+                    continue;
+                }
                 float t = (Mathf.Sin(Time.unscaledTime * Mathf.PI * 2f * hz) + 1f) * 0.5f;
                 Color a = C_HINT_GOLD; a.a = Mathf.Lerp(0.4f, 1.0f, t);
                 Color b = C_ACCENT_SOFT; b.a = Mathf.Lerp(0.4f, 1.0f, 1f - t);

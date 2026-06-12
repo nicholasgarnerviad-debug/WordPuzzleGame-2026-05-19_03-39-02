@@ -67,6 +67,47 @@ namespace WordPuzzle.UI
             gapInputToLabel = rungGap;
         }
 
+        // ── Task 47 — the LIVE play zone (GameplayScreen-local, +up from centre), pushed at
+        // runtime by GameplayScreen: top = below the composed header, bottom = above the power-up
+        // bar. When set, the OCCUPIED ladder block is vertically CENTERED in the zone (clamped to
+        // the top as the chain grows), so a fresh puzzle no longer top-stacks with a dead void
+        // under the TO row. The fixed ladderTopY stays as the editor-preview / pre-push fallback.
+        private float _zoneTop, _zoneBottom;
+        private bool _zoneSet;
+
+        public void SetPlayZone(float topY, float bottomY)
+        {
+            _zoneTop = topY;
+            _zoneBottom = bottomY;
+            _zoneSet = bottomY < topY;
+        }
+
+        /// <summary>
+        /// Pure centring math (unit-tested): the block's TOP edge so the block centres in the
+        /// zone; a block taller than the zone pins to the zone top (it scrolls/caps below).
+        /// </summary>
+        public static float CenteredBlockTop(float zoneTop, float zoneBottom, float blockHeight)
+        {
+            float zoneH = zoneTop - zoneBottom;
+            if (zoneH <= 0f || blockHeight >= zoneH) return zoneTop;
+            return zoneBottom + (zoneH + blockHeight) * 0.5f;
+        }
+
+        // The block height PositionLadder will lay out — mirrors its row/gap sums exactly.
+        private float OccupiedHeight(float chainH)
+        {
+            float h = 0f;
+            if (startWordLabel != null && startWordLabel.gameObject.activeInHierarchy)
+                h += labelHeight + gapLabelToRow;
+            h += tileRowHeight + gapRowToChain;
+            if (chainH > 0f) h += chainH + gapChainToInput;
+            h += tileRowHeight + gapInputToLabel;
+            if (endWordLabel != null && endWordLabel.gameObject.activeInHierarchy)
+                h += labelHeight + gapLabelToEnd;
+            h += tileRowHeight;
+            return h;
+        }
+
         private void LateUpdate()
         {
             if (!AllRefsValid()) return;
@@ -99,7 +140,15 @@ namespace WordPuzzle.UI
         /// </summary>
         private void PositionLadder(float chainH)
         {
+            // Task 47 — centre the occupied block in the live play zone (fallback: the fixed top).
+            // A growing chain also gets capped so the block can never invade the power-up bar.
             float cursor = ladderTopY; // top of next element, positive = up from center
+            if (_zoneSet)
+            {
+                float maxChain = (_zoneTop - _zoneBottom) - OccupiedHeight(0f) - gapChainToInput;
+                chainH = Mathf.Min(chainH, Mathf.Max(0f, maxChain));
+                cursor = CenteredBlockTop(_zoneTop, _zoneBottom, OccupiedHeight(chainH));
+            }
 
             // --- StartWordLabel (skip when inactive — Issue 3: FROM label hidden) ---
             bool startLabelActive = startWordLabel != null && startWordLabel.gameObject.activeInHierarchy;

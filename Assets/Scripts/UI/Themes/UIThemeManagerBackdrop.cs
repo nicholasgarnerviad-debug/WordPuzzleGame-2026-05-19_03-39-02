@@ -33,6 +33,16 @@ namespace WordPuzzle.UI
     {
         /// <summary>Gameplay header padding below the SAFE-AREA top edge (not the physical screen top).</summary>
         public const float HeaderTopPadding = 32f;
+
+        // ── Task 47 — the composed gameplay header + the centred board zone ──
+        /// <summary>The steps/par subtitle's top, measured below <see cref="HeaderTopPadding"/>.</summary>
+        public const float HeaderSubtitleDrop = 64f;
+        /// <summary>Extra drop when Puzzle Show's tier line already owns the first subtitle slot.</summary>
+        public const float HeaderSubtitleSpacing = 44f;
+        /// <summary>Total header band reserved above the board (pad + score + subtitle rows).</summary>
+        public const float GameplayHeaderBlock = 176f;
+        /// <summary>Breathing room between the board block and the zone edges.</summary>
+        public const float BoardZoneMargin = 24f;
     }
 }
 
