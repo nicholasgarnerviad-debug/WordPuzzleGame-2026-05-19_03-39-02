@@ -727,6 +727,47 @@ public static partial class UIThemeManager
         if (existing != null) UnityEngine.Object.Destroy(existing.gameObject);
     }
 
+    private const string CardRingChildName = "__CardRing";
+
+    /// <summary>
+    /// Modern SOLID card (the tutorial welcome-modal recipe, now the one seam): a rounded
+    /// near-opaque SurfaceVoid fill so content sits on readable ground over the busy backdrop,
+    /// with the accent outline ring (+ its glow) as a stretched, layout-IGNORED overlay child —
+    /// safe inside layout-group parents. Idempotent: re-applying re-tints the existing ring.
+    /// </summary>
+    public static void ApplySolidCard(UnityEngine.UI.Image img, UnityEngine.Color accent)
+    {
+        if (img == null) return;
+        ApplyRoundedButton(img);
+        var fill = WordPuzzle.UI.Palette.SurfaceVoid;
+        fill.a = 0.97f;
+        img.color = fill;
+
+        var existing = img.transform.Find(CardRingChildName);
+        UnityEngine.UI.Image ring;
+        if (existing != null)
+        {
+            ring = existing.GetComponent<UnityEngine.UI.Image>();
+            if (ring == null) ring = existing.gameObject.AddComponent<UnityEngine.UI.Image>();
+        }
+        else
+        {
+            var go = new UnityEngine.GameObject(CardRingChildName,
+                typeof(UnityEngine.RectTransform), typeof(UnityEngine.CanvasRenderer),
+                typeof(UnityEngine.UI.Image), typeof(UnityEngine.UI.LayoutElement));
+            go.transform.SetParent(img.transform, false);
+            var rrt = (UnityEngine.RectTransform)go.transform;
+            rrt.anchorMin = UnityEngine.Vector2.zero;
+            rrt.anchorMax = UnityEngine.Vector2.one;
+            rrt.offsetMin = UnityEngine.Vector2.zero;
+            rrt.offsetMax = UnityEngine.Vector2.zero;
+            go.GetComponent<UnityEngine.UI.LayoutElement>().ignoreLayout = true;
+            ring = go.GetComponent<UnityEngine.UI.Image>();
+        }
+        ring.raycastTarget = false;
+        ApplyOutlineButton(ring, accent);
+    }
+
     // ============================================================
     //  Polish — TIGHT NEON-TUBE glow on outline buttons.
     //  The outline must read as a luminous LINE, not a fuzzy cloud: a

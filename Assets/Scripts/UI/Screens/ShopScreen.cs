@@ -109,13 +109,35 @@ namespace WordPuzzle.UI
             var title = MakeText(content, "SHOP", TypeRole.Headline, MenuPalette.TitleColor, TextAlignmentOptions.Center);
             Anchor(title.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -120f), new Vector2(600f, 70f));
 
-            // Coin balance — gold, top centre under the title.
-            balanceText = MakeText(content, "0 coins", TypeRole.Body, C_GOLD, TextAlignmentOptions.Center);
-            Anchor(balanceText.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -196f), new Vector2(600f, 48f));
+            // Coin balance — the shared gold coin pill (matches menu/stats), centred under the title.
+            var pill = new GameObject("CoinPill", typeof(RectTransform), typeof(Image),
+                                      typeof(HorizontalLayoutGroup), typeof(ContentSizeFitter));
+            pill.transform.SetParent(content, false);
+            var prt = (RectTransform)pill.transform;
+            prt.anchorMin = prt.anchorMax = new Vector2(0.5f, 1f);
+            prt.pivot = new Vector2(0.5f, 1f);
+            prt.anchoredPosition = new Vector2(0f, -196f);
+            var pimg = pill.GetComponent<Image>(); pimg.raycastTarget = false;
+            UIThemeManager.ApplyOutlineButton(pimg, Palette.AccentPeriwinkle);
+            var phlg = pill.GetComponent<HorizontalLayoutGroup>();
+            phlg.childControlWidth = true; phlg.childForceExpandWidth = false;
+            phlg.childControlHeight = true; phlg.childForceExpandHeight = false;
+            phlg.childAlignment = TextAnchor.MiddleCenter;
+            phlg.spacing = 10f; phlg.padding = new RectOffset(22, 24, 8, 8);
+            var pcsf = pill.GetComponent<ContentSizeFitter>();
+            pcsf.horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
+            pcsf.verticalFit   = ContentSizeFitter.FitMode.PreferredSize;
+            var token = new GameObject("Token", typeof(RectTransform), typeof(Image));
+            token.transform.SetParent(pill.transform, false);
+            var timg = token.GetComponent<Image>(); timg.color = C_GOLD; timg.raycastTarget = false;
+            UIThemeManager.ApplyRoundedButton(timg);
+            var tle = token.AddComponent<LayoutElement>(); tle.preferredWidth = 26f; tle.preferredHeight = 26f;
+            balanceText = MakeText(pill.transform, "0", TypeRole.Body, C_GOLD, TextAlignmentOptions.Center);
 
-            // Back button — outline, top-left. Task 46 — 96px hit height (≥88 enforced).
+            // Back button — Task 43 tier 3: navigation recedes to a ghost (same as library Back).
             var back = MakeButton(content, "Back", MenuPalette.SecondaryBorder, C_CREAM);
             Anchor(((RectTransform)back.transform), new Vector2(0f, 1f), new Vector2(40f, -110f), new Vector2(190f, 96f));
+            UIThemeManager.ApplyGhostButton(back, MenuPalette.SecondaryBorder);
             back.onClick.AddListener(Close);
 
             // Restore Purchases — Task 43 ghost tier, top-right (mirrors Back). Rare store-policy
@@ -175,7 +197,7 @@ namespace WordPuzzle.UI
             if (contentRoot == null) return;
             var prog = economy?.GetCurrentProgress();
             int coins = prog != null ? prog.totalCoins : 0;
-            if (balanceText != null) balanceText.text = $"{coins} coins";
+            if (balanceText != null) balanceText.text = coins.ToString("N0"); // the pill's gold token carries the unit
 
             for (int i = contentRoot.childCount - 1; i >= 0; i--)
                 Destroy(contentRoot.GetChild(i).gameObject);
@@ -186,7 +208,7 @@ namespace WordPuzzle.UI
                 foreach (var p in store.Products) { if (p != null && p.type == StoreProductType.StarterPack) { starter = p; break; } }
             if (starter != null)
             {
-                SectionHeader("STARTER PACK  ·  one-time  ·  best value");
+                SectionHeader("STARTER PACK  ·  best value"); // short enough to never truncate at Title size
                 StarterPackRow(starter);
             }
 
@@ -317,7 +339,7 @@ namespace WordPuzzle.UI
         private void StarterPackRow(StoreProduct p)
         {
             bool owned = store != null && store.IsOwned(p.id);
-            var row = MakeRow(150f);
+            var row = MakeRow(150f, C_GOLD); // gold ring — the merchandised lead offer
             string contents = $"{p.coins} coins  ·  {p.powerUpsEach} of each power-up  ·  {p.adFreeDays} days ad-free";
             var label = MakeText(row, $"{p.displayName}\n<size=24><color=#{Hx(C_MUTED)}>{contents}</color></size>",
                                   TypeRole.Body, C_GOLD, TextAlignmentOptions.Left);
@@ -328,7 +350,12 @@ namespace WordPuzzle.UI
                                  owned ? C_SECTION : MenuPalette.DailyFill, owned ? C_MUTED : C_CREAM);
             var ble = btn.gameObject.AddComponent<LayoutElement>(); ble.preferredWidth = 220f; ble.flexibleWidth = 0f;
             btn.interactable = !owned;
-            if (!owned) { string id = p.id; btn.onClick.AddListener(() => BuyRealMoney(id, "Starter Pack unlocked!")); }
+            // Task 43 — the Starter Pack price is the shop's ONE filled hero (the DAILY gradient).
+            if (!owned)
+            {
+                UIThemeManager.ApplyFilledHeroButton(btn, Palette.ModeDaily, Palette.ModePuzzleShow);
+                string id = p.id; btn.onClick.AddListener(() => BuyRealMoney(id, "Starter Pack unlocked!"));
+            }
         }
 
         // ── Purchase handlers ────────────────────────────────────────────────
@@ -379,15 +406,22 @@ namespace WordPuzzle.UI
         }
 
         // ── Tiny UI builders ─────────────────────────────────────────────────
-        private RectTransform MakeRow(float height)
+        private RectTransform MakeRow(float height) => MakeRow(height, GameAccents.CardOutline);
+
+        // Each row is a SOLID card (shared modern-card seam) so labels and prices sit on readable
+        // ground instead of colliding with the backdrop planets; `accent` tints the ring.
+        private RectTransform MakeRow(float height, Color accent)
         {
-            var go = new GameObject("Row", typeof(RectTransform), typeof(HorizontalLayoutGroup), typeof(LayoutElement));
+            var go = new GameObject("Row", typeof(RectTransform), typeof(Image), typeof(HorizontalLayoutGroup), typeof(LayoutElement));
             go.transform.SetParent(contentRoot, false);
+            var img = go.GetComponent<Image>(); img.raycastTarget = false;
+            UIThemeManager.ApplySolidCard(img, accent);
             var hlg = go.GetComponent<HorizontalLayoutGroup>();
             hlg.childAlignment = TextAnchor.MiddleLeft;
             hlg.childControlWidth = true; hlg.childForceExpandWidth = false;
             hlg.childControlHeight = true; hlg.childForceExpandHeight = true;
             hlg.spacing = 12f;
+            hlg.padding = new RectOffset(28, 18, 14, 14);
             var le = go.GetComponent<LayoutElement>();
             le.minHeight = height; le.preferredHeight = height;
             return (RectTransform)go.transform;

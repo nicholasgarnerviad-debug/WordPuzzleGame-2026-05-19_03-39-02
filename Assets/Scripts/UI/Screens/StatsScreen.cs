@@ -476,21 +476,10 @@ namespace WordPuzzle.UI
         {
             var go = new GameObject("Card", typeof(RectTransform), typeof(Image), typeof(VerticalLayoutGroup), typeof(LayoutElement));
             go.transform.SetParent(parent, false);
-            // Modern card recipe (tutorial welcome modal): a SOLID rounded surface so the numbers
-            // sit on readable ground (the old transparent-centre ring let backdrop planets collide
-            // with the copy), with the accent ring + glow as a layout-ignored overlay child.
+            // Solid card so the numbers sit on readable ground (the old transparent-centre ring
+            // let backdrop planets collide with the copy) — the shared modern-card seam.
             var img = go.GetComponent<Image>(); img.raycastTarget = false;
-            UIThemeManager.ApplyRoundedButton(img);
-            img.color = new Color(Palette.SurfaceVoid.r, Palette.SurfaceVoid.g, Palette.SurfaceVoid.b, 0.97f);
-
-            var ring = new GameObject("Ring", typeof(RectTransform), typeof(Image), typeof(LayoutElement));
-            ring.transform.SetParent(go.transform, false);
-            var rrt = (RectTransform)ring.transform;
-            rrt.anchorMin = Vector2.zero; rrt.anchorMax = Vector2.one;
-            rrt.offsetMin = Vector2.zero; rrt.offsetMax = Vector2.zero;
-            ring.GetComponent<LayoutElement>().ignoreLayout = true;
-            var rimg = ring.GetComponent<Image>(); rimg.raycastTarget = false;
-            UIThemeManager.ApplyOutlineButton(rimg, accent);
+            UIThemeManager.ApplySolidCard(img, accent);
 
             var vlg = go.GetComponent<VerticalLayoutGroup>();
             vlg.childControlWidth = true; vlg.childForceExpandWidth = true;
