@@ -1756,9 +1756,8 @@ namespace WordPuzzle.UI
 
                 case LadderTileStyle.InputCaret:
                     // Task 47 — the at-rest "type here" answer: the next empty tile carries the
-                    // existing CurrentInputCaret breathing ring (a gold↔aqua focus pulse — ring
-                    // only, single tile; distinct from the solid gold HINT fill, so the
-                    // gold-is-for-hints rule holds).
+                    // CurrentInputCaret breathing ring — AQUA (the affirmative/GO-key language),
+                    // so gold stays reserved for hints per the standing palette rule.
                     tile.SetState(TileState.CurrentInputCaret);
                     tile.SetColor(C_INPUT_EMPTY_FILL);
                     SetTextColor(tile, C_TILE_TEXT);

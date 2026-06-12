@@ -455,10 +455,12 @@ namespace WordPuzzle.UI.Components
                     break;
 
                 case TileState.CurrentInputCaret:
+                    // Task 47 — the caret is AQUA (affirmative/"act here", the GO-key language):
+                    // gold stays reserved for hints, per the standing palette rule.
                     fill = C_SURFACE_2;
-                    border = C_HINT_GOLD;
+                    border = C_ACCENT;
                     hasBorder = true;
-                    textC = C_HINT_GOLD;
+                    textC = C_ACCENT;
                     // Task 47 — the render loop re-applies states every keystroke: stop the prior
                     // pulse before starting a fresh one so coroutines never stack on the tile.
                     if (caretCoroutine != null) StopCoroutine(caretCoroutine);
@@ -533,17 +535,18 @@ namespace WordPuzzle.UI.Components
             while (currentState == TileState.CurrentInputCaret && borderImage != null)
             {
                 // Task 47 — the caret state is reachable at rest now: under ReduceMotion the ring
-                // holds a STATIC gold (the affordance survives; the breathing doesn't).
+                // holds a STATIC aqua (the affordance survives; the breathing doesn't).
                 if (UIAnimations.ReduceMotion)
                 {
-                    borderImage.color = C_HINT_GOLD;
+                    borderImage.color = C_ACCENT;
                     yield return null;
                     continue;
                 }
+                // A pure alpha breathe on the aqua ring (gold is reserved for hints).
                 float t = (Mathf.Sin(Time.unscaledTime * Mathf.PI * 2f * hz) + 1f) * 0.5f;
-                Color a = C_HINT_GOLD; a.a = Mathf.Lerp(0.4f, 1.0f, t);
-                Color b = C_ACCENT_SOFT; b.a = Mathf.Lerp(0.4f, 1.0f, 1f - t);
-                borderImage.color = Color.Lerp(a, b, 0.5f);
+                Color c = C_ACCENT;
+                c.a = Mathf.Lerp(0.4f, 1.0f, t);
+                borderImage.color = c;
                 yield return null;
             }
         }
