@@ -162,7 +162,7 @@ namespace WordPuzzle
                 MobileAds.Initialize(status =>
                 {
                     sdkInitialized = true;
-                    Debug.Log("[AdService] MobileAds initialized.");
+                    GameLog.Log("[AdService] MobileAds initialized."); // editor-only (release-stripped)
                     LoadRewarded();
                     LoadInterstitial();
                 });

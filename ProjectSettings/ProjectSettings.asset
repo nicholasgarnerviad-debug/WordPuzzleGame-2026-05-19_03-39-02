@@ -165,7 +165,7 @@ PlayerSettings:
   androidMinAspectRatio: 1
   applicationIdentifier:
     Android: com.nicholasgarner.wordpuzzle
-    Standalone: com.DefaultCompany.2D-URP
+    Standalone: com.nicholasgarner.wordpuzzle
     iPhone: com.nicholasgarner.wordpuzzle
   buildNumber:
     Standalone: 0

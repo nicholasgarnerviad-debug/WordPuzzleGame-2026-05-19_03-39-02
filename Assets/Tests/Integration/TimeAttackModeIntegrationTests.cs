@@ -97,4 +97,16 @@ public class TimeAttackModeIntegrationTests
         Assert.AreEqual("Timed", stats.modeName);
         Assert.AreEqual(10.0f, stats.totalTime, 0.01f);
     }
+
+    // Locks the rename's results-disambiguation requirement: the SURVIVAL sub-mode must title
+    // the shared results screen "Timed Survival Results" (the default Timed case is above).
+    [Test]
+    public void GetStats_SurvivalSubMode_ModeNameIsTimedSurvival()
+    {
+        var survival = new TimeAttackMode(TimeAttackConfig.DefaultSurvival());
+        survival.Initialize(stateManager);
+        survival.StartGame(testPuzzle);
+
+        Assert.AreEqual("Timed Survival", survival.GetStats().modeName);
+    }
 }
