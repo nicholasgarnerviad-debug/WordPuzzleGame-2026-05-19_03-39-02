@@ -8,7 +8,9 @@ Generates (machine-generated -- re-run this tool, never hand-edit the outputs):
   * Logotype           -> Assets/ui/icons/StarLadderLogotype.svg (candidate A,
     wired) + _CandidateB/_CandidateC.svg for the human pick, traced from the
     real Rungo-Bold glyph outlines; aqua->periwinkle vertical gradient; the
-    second A's crossbar doubled into a ladder-rung pair; one four-point star.
+    one four-point star in the word gap. (The original "ladder-rung A" motif —
+    an extra bar above LADDER's A crossbar — read as a RENDERING GLITCH at
+    masthead size, not a motif; retired. The star alone carries the identity.)
   * 4x PNG masthead    -> Assets/Resources/Icons/StarLadderLogotype.png
   * Unity .meta files for every SVG (svgType=1 Textured Sprite, STABLE guids
     derived from the filename so re-runs never churn references).
@@ -303,9 +305,7 @@ def logotype_svg(candidate):
         d = pen.getCommands()
         parts.append(f'<path transform="translate({x:.1f},{baseline:.1f}) scale(1,-1)" d="{d}"/>')
 
-    rx0, ry0, rw, rh = rung
-    parts.append(f'<rect x="{rx0:.1f}" y="{baseline - ry0 - rh:.1f}" width="{rw:.1f}" '
-                 f'height="{rh:.1f}" rx="{rh / 2:.1f}"/>')
+    # (The extra A-rung rect is retired — it read as a glitch on the A, not a ladder motif.)
 
     if star is not None:
         scx, scy, R, r = star
@@ -349,19 +349,8 @@ def logotype_png(path):
             d.text((x, baseline), ch, font=f, fill=255, anchor='ls')
         x += wch + track_px
 
-    # Rung + star use the same font-unit geometry, mapped through xs.
-    a_idx = [i for i, ch in enumerate(TEXT) if ch == 'A'][1]
-    acx_px = xs[a_idx] + widths[a_idx] / 2.0
-    rx0, ry0, rw, rh = rung
-    gcx_units = rung[0] + rw / 2.0
-    a_entry = [g for g in glyphs if g[2] == 'A'][1]
-    offset_units = gcx_units - (a_entry[0] + a_entry[1] / 2.0)
-    bx = acx_px + offset_units * upx
-    bw, bh = rw * upx, rh * upx
-    by_top = baseline - (ry0 + rh) * upx
-    d.rounded_rectangle([bx - bw / 2, by_top, bx + bw / 2, by_top + bh],
-                        radius=bh / 2, fill=255)
-
+    # Star uses the same font-unit geometry, mapped through xs. (The extra A-rung
+    # is retired — it read as a glitch on the A at masthead size.)
     sp_idx = TEXT.index(' ')
     scx = xs[sp_idx] + widths[sp_idx] / 2.0
     _, scy_u, R_u, r_u = star
