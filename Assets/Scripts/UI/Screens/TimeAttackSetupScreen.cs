@@ -58,7 +58,7 @@ namespace WordPuzzle.UI
 
         private void OnEnable()
         {
-            if (titleText != null) titleText.text = "TIME ATTACK";
+            if (titleText != null) titleText.text = "TIMED"; // the mode is "Timed" now; the TIMED/SURVIVAL columns are the variant picker
 
             if (btn60Timed != null)
                 btn60Timed.onClick.AddListener(() => ConfirmWithPunch(btn60Timed, 60f, TimeAttackSubMode.Timed));
@@ -96,7 +96,7 @@ namespace WordPuzzle.UI
             PlaceCentered(titleText != null ? titleText.rectTransform : null, TITLE_Y, 860f, 110f);
             if (titleText != null)
             {
-                titleText.text = "TIME ATTACK";
+                titleText.text = "TIMED";
                 TypeScale.Apply(titleText, TypeRole.Headline); // Task 42 — screen title
                 titleText.color = C_TITLE;
                 titleText.alignment = TextAlignmentOptions.Center;

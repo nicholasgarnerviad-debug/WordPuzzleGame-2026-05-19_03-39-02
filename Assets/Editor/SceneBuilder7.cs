@@ -212,7 +212,7 @@ namespace WordPuzzleGame.EditorTools
             rt.sizeDelta = new Vector2(800f, 100f);
 
             var tmp = EnsureComponent<TextMeshProUGUI>(go);
-            tmp.text = "TIME ATTACK";
+            tmp.text = "TIMED"; // runtime TimeAttackSetupScreen re-sets this; kept in sync to avoid drift
             tmp.fontSize = 56f;
             tmp.fontStyle = FontStyles.Bold;
             tmp.color = C_GOLD;

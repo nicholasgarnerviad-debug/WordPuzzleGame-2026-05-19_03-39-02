@@ -94,7 +94,7 @@ public class TimeAttackModeIntegrationTests
 
         var stats = mode.GetStats();
 
-        Assert.AreEqual("Time Attack", stats.modeName);
+        Assert.AreEqual("Timed", stats.modeName);
         Assert.AreEqual(10.0f, stats.totalTime, 0.01f);
     }
 }

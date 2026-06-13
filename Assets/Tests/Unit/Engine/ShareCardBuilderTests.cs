@@ -64,7 +64,7 @@ public class ShareCardBuilderTests
         input.totalTimeSeconds = 42f;
         string text = ShareCardBuilder.Build(input);
 
-        StringAssert.Contains("Time Attack 60s Survival", text);
+        StringAssert.Contains("Timed 60s Survival", text);
         StringAssert.Contains("0:42", text);
     }
 

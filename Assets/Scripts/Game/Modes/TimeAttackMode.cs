@@ -189,9 +189,11 @@ namespace WordPuzzle.Modes
 
             return new GameModeStats
             {
+                // The mode is "Timed" everywhere now; the results title disambiguates the sub-mode
+                // ("Timed Survival Results" vs "Timed Results") so it's obvious which you played.
                 modeName = config.subMode == TimeAttackSubMode.Survival
-                    ? "Time Attack (Survival)"
-                    : "Time Attack",
+                    ? "Timed Survival"
+                    : "Timed",
                 wordsFound = state?.wordsFound ?? 0,
                 totalTime = timeUsed,
                 score = state?.score ?? 0,

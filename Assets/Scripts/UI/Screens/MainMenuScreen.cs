@@ -136,6 +136,9 @@ namespace WordPuzzle.UI
                 icon: UIThemeManager.LoadIconSprite("IconPuzzleShow"));
             StyleMenuButton(timeAttackButton,  MenuPalette.TimeAttackFill, MenuPalette.TimeAttackLabel,
                 icon: UIThemeManager.LoadIconSprite("IconTimeAttack"));
+            // Scene authored this "Time Attack"; the mode is just "Timed" now (results say
+            // "Timed" / "Timed Survival", stats card "TIMED"). Relabel at runtime, like Classic.
+            SetButtonLabel(timeAttackButton, "Timed");
             StyleMenuButton(libraryButton,     MenuPalette.SecondaryBorder, MenuPalette.SecondaryLabel, primary: false);
             StyleMenuButton(statsButton,       MenuPalette.SecondaryBorder, MenuPalette.SecondaryLabel, primary: false);
             StyleMenuButton(settingsButton,    MenuPalette.SecondaryBorder, MenuPalette.SecondaryLabel, primary: false);

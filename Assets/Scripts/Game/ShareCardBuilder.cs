@@ -222,8 +222,8 @@ namespace WordPuzzle.Game
                 case ModeKind.TimeAttack:
                     int b = input.timeAttackBaseSeconds ?? 60;
                     return input.timeAttackSurvival
-                        ? $"Time Attack {b}s Survival"
-                        : $"Time Attack {b}s";
+                        ? $"Timed {b}s Survival"
+                        : $"Timed {b}s";
                 default:
                     return "Classic";
             }

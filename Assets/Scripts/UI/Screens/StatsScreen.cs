@@ -447,7 +447,7 @@ namespace WordPuzzle.UI
             _classicWonVal    = MakeStatCell(classicCells, "WON");
             RegisterReveal(classic.gameObject);
             var timeAttack = MakeCard(modeRow, 0f, Palette.ModeTimeAttack);
-            CardHeader(timeAttack, "TIME ATTACK", Palette.ModeTimeAttack);
+            CardHeader(timeAttack, "TIMED", Palette.ModeTimeAttack);
             var taCells = MakeHRow(timeAttack, MODE_CELLS_H, expandChildHeight: true, forceExpandWidth: true);
             _taPlayedVal = MakeStatCell(taCells, "PLAYED");
             _taBestVal   = MakeStatCell(taCells, "BEST");
