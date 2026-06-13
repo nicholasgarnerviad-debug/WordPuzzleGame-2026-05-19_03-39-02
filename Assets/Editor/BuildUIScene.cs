@@ -48,7 +48,7 @@ public class BuildUIScene {
         titleTMP.fontSize = 80;
         titleTMP.alignment = TextAlignmentOptions.Center;
 
-        var classicBtn = CreateButton("ClassicModeButton", mms.transform, new Color(70/255f, 130/255f, 200/255f), "Classic Mode", 50, 0, 250, 500, 100);
+        var classicBtn = CreateButton("ClassicModeButton", mms.transform, new Color(70/255f, 130/255f, 200/255f), "Classic", 50, 0, 250, 500, 100);
         var puzzleBtn = CreateButton("PuzzleShowButton", mms.transform, new Color(130/255f, 80/255f, 200/255f), "Puzzle Show", 50, 0, 110, 500, 100);
         var timeBtn = CreateButton("TimeAttackButton", mms.transform, new Color(200/255f, 80/255f, 60/255f), "Time Attack", 50, 0, -30, 500, 100);
 
@@ -211,7 +211,7 @@ public class BuildUIScene {
         var rsComp = rs.AddComponent<ResultsScreen>();
         rs.SetActive(false);
 
-        var modeNameText = CreateText("ModeNameText", rs.transform, "Classic Mode", 70, 0, 600);
+        var modeNameText = CreateText("ModeNameText", rs.transform, "Classic", 70, 0, 600);
         var scoreText = CreateText("ScoreText", rs.transform, "Puzzles: 0", 55, 0, 400);
         var coinsText = CreateText("CoinsEarnedText", rs.transform, "Coins: +0", 55, 0, 300);
         var timeText = CreateText("TimeText", rs.transform, "Time: 0s", 55, 0, 200);

@@ -128,6 +128,10 @@ namespace WordPuzzle.UI
                 icon: UIThemeManager.LoadIconSprite("IconDaily"));
             StyleMenuButton(classicModeButton, MenuPalette.ClassicFill,    MenuPalette.ClassicLabel,
                 icon: UIThemeManager.LoadIconSprite("IconClassic"));
+            // The scene authored this button "Classic Mode", but the mode is called just "Classic"
+            // everywhere else (results title, Stats card, share card) — relabel so it's consistent
+            // on every screen. Runtime relabel (no scene edit); runs in OnEnable before first paint.
+            SetButtonLabel(classicModeButton, "Classic");
             StyleMenuButton(puzzleShowButton,  MenuPalette.PuzzleShowFill, MenuPalette.PuzzleShowLabel,
                 icon: UIThemeManager.LoadIconSprite("IconPuzzleShow"));
             StyleMenuButton(timeAttackButton,  MenuPalette.TimeAttackFill, MenuPalette.TimeAttackLabel,
