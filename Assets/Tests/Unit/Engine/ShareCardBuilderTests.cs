@@ -91,7 +91,7 @@ public class ShareCardBuilderTests
         input.puzzleShowTier = 4;
         string text = ShareCardBuilder.Build(input);
 
-        StringAssert.Contains("Puzzle Show T4", text);
+        StringAssert.Contains("Puzzle Library Shelf 4", text);
     }
 
     [Test]

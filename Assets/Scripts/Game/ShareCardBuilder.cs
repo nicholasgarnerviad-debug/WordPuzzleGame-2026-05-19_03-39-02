@@ -218,7 +218,7 @@ namespace WordPuzzle.Game
                     return $"Daily #{n}";
                 case ModeKind.PuzzleShow:
                     int t = input.puzzleShowTier ?? 1;
-                    return $"Puzzle Show T{t}";
+                    return $"Puzzle Library Shelf {t}";
                 case ModeKind.TimeAttack:
                     int b = input.timeAttackBaseSeconds ?? 60;
                     return input.timeAttackSurvival

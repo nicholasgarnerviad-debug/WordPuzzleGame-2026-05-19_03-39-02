@@ -134,6 +134,9 @@ namespace WordPuzzle.UI
             SetButtonLabel(classicModeButton, "Classic");
             StyleMenuButton(puzzleShowButton,  MenuPalette.PuzzleShowFill, MenuPalette.PuzzleShowLabel,
                 icon: UIThemeManager.LoadIconSprite("IconPuzzleShow"));
+            // Scene authored this "Puzzle Show"; the mode is "Puzzle Library" now (tiers are
+            // "shelves"). Relabel at runtime, like Classic/Timed.
+            SetButtonLabel(puzzleShowButton, "Puzzle Library");
             StyleMenuButton(timeAttackButton,  MenuPalette.TimeAttackFill, MenuPalette.TimeAttackLabel,
                 icon: UIThemeManager.LoadIconSprite("IconTimeAttack"));
             // Scene authored this "Time Attack"; the mode is just "Timed" now (results say

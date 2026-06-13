@@ -79,7 +79,7 @@ public class PuzzleShowModeIntegrationTests
 
         var stats = mode.GetStats();
 
-        Assert.AreEqual("Puzzle Show", stats.modeName);
+        Assert.AreEqual("Puzzle Library", stats.modeName);
         Assert.GreaterOrEqual(stats.accuracy, 0f);
     }
 }

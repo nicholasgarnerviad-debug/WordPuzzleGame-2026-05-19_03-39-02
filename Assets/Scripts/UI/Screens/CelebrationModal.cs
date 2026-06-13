@@ -38,7 +38,7 @@ namespace WordPuzzle.UI
         public static CelebrationModal ShowTierUnlocked(Transform parent, int tier, string themeLine, Action onContinue)
         {
             var m = Build(parent, onContinue);
-            m.BuildCard($"TIER {tier} UNLOCKED", TypeRole.Headline, Palette.ModePuzzleShow,
+            m.BuildCard($"SHELF {tier} UNLOCKED", TypeRole.Headline, Palette.ModePuzzleShow,
                 themeLine, Palette.ModePuzzleShow);
             return m;
         }

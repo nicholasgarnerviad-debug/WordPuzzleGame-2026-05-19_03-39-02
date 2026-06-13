@@ -801,7 +801,7 @@ namespace WordPuzzle.UI
             if (nextTierButton != null)
             {
                 SetButtonVisible(nextTierButton, hasNextTier);
-                if (hasNextTier) SetButtonLabel(nextTierButton, $"TIER {nextTierNumber} ▸");
+                if (hasNextTier) SetButtonLabel(nextTierButton, $"SHELF {nextTierNumber} ▸");
             }
         }
 

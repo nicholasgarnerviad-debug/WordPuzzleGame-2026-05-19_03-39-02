@@ -1609,7 +1609,7 @@ namespace WordPuzzle
             }
             else if (activeMode is PuzzleShowMode psm)
             {
-                gameplay.SetTierIndicator($"Tier {psm.CurrentTier} / {PuzzleShowMode.MaxTier}");
+                gameplay.SetTierIndicator($"Shelf {psm.CurrentTier} / {PuzzleShowMode.MaxTier}");
             }
             else
             {

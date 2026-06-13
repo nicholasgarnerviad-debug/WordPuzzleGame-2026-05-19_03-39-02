@@ -353,7 +353,7 @@ namespace WordPuzzle.Modes
             var state = stateManager?.GetCurrentState();
             return new GameModeStats
             {
-                modeName = "Puzzle Show",
+                modeName = "Puzzle Library", // display name (internal type stays PuzzleShowMode)
                 wordsFound = state?.wordsFound ?? 0,
                 totalTime = state?.elapsedTime ?? 0f,
                 score = state?.score ?? 0,

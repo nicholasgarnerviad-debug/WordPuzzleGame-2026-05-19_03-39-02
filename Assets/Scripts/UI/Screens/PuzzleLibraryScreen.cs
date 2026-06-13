@@ -225,7 +225,7 @@ namespace WordPuzzle.UI
         // ---------------- Level 1: Tier Select ----------------
         private void PopulateTierSelect()
         {
-            CreateScreenTitle("PUZZLE SHOW", "Pick a tier");
+            CreateScreenTitle("PUZZLE LIBRARY", "Pick a shelf");
 
             int index = 0;
             foreach (var tier in tierData.tiers)
@@ -284,8 +284,8 @@ namespace WordPuzzle.UI
                                              : unlocked     ? C_UNPLAYED_BG
                                                             : C_LOCKED_BG; // all near-black centres now
 
-            // Title row: "Tier N"  +  progress / lock on the right
-            CreateAnchored(fill.transform, "TierName", $"Tier {tier.tierId}", TypeRole.Title,
+            // Title row: "Shelf N"  +  progress / lock on the right
+            CreateAnchored(fill.transform, "TierName", $"Shelf {tier.tierId}", TypeRole.Title,
                 TextAlignmentOptions.TopLeft, unlocked ? C_HEADER_TIER : C_HEADER_TIER_LK,
                 new Vector2(0f, 1f), new Vector2(0f, 1f),
                 new Vector2(24f, -16f), new Vector2(420f, 56f)); // Title (44) needs a taller slot than the old 30pt
@@ -311,7 +311,7 @@ namespace WordPuzzle.UI
                 // hint below carries the locked state on its own)
                 // Polish — was C_SUBTITLE @18 (flagged low-contrast/tiny); brighter + larger for legibility.
                 CreateAnchored(fill.transform, "UnlockHint",
-                    $"Clear {need} in Tier {tier.tierId - 1} to unlock", TypeRole.Caption,
+                    $"Clear {need} on Shelf {tier.tierId - 1} to unlock", TypeRole.Caption,
                     TextAlignmentOptions.BottomRight, C_HEADER_COUNT,
                     new Vector2(1f, 0f), new Vector2(1f, 0f),
                     new Vector2(-24f, 18f), new Vector2(380f, 32f));
@@ -404,7 +404,7 @@ namespace WordPuzzle.UI
                 TextAlignmentOptions.Center, C_UNPLAYED_TEXT);
             UIThemeManager.ApplyGhostButton(backBtn, Palette.AccentPeriwinkle); // Task 43 — grid Back recedes
 
-            CreateAnchored(go.transform, "GridTitle", $"TIER {tier.tierId}", TypeRole.Title,
+            CreateAnchored(go.transform, "GridTitle", $"SHELF {tier.tierId}", TypeRole.Title,
                 TextAlignmentOptions.Top, C_HEADER_TIER,
                 new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
                 new Vector2(0f, -6f), new Vector2(420f, 52f));

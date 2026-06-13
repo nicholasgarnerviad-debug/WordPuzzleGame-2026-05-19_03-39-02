@@ -49,7 +49,7 @@ public class BuildUIScene {
         titleTMP.alignment = TextAlignmentOptions.Center;
 
         var classicBtn = CreateButton("ClassicModeButton", mms.transform, new Color(70/255f, 130/255f, 200/255f), "Classic", 50, 0, 250, 500, 100);
-        var puzzleBtn = CreateButton("PuzzleShowButton", mms.transform, new Color(130/255f, 80/255f, 200/255f), "Puzzle Show", 50, 0, 110, 500, 100);
+        var puzzleBtn = CreateButton("PuzzleShowButton", mms.transform, new Color(130/255f, 80/255f, 200/255f), "Puzzle Library", 50, 0, 110, 500, 100);
         var timeBtn = CreateButton("TimeAttackButton", mms.transform, new Color(200/255f, 80/255f, 60/255f), "Timed", 50, 0, -30, 500, 100);
 
         var so = new SerializedObject(mmsComp);
