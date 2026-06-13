@@ -26,7 +26,7 @@ namespace WordPuzzle
             if (gameBootstrap == null)
             {
                 gameBootstrap = bootstrap.AddComponent<GameBootstrap>();
-                Debug.Log("Added GameBootstrap component");
+                GameLog.Log("Added GameBootstrap component");
             }
 
             // Add UIManager if missing
@@ -34,7 +34,17 @@ namespace WordPuzzle
             if (uiManager == null)
             {
                 uiManager = bootstrap.AddComponent<UIManager>();
-                Debug.Log("Added UIManager component");
+                GameLog.Log("Added UIManager component");
+            }
+
+            // v1.0 audit Track 1 - the production ad stack was never attached ANYWHERE, so
+            // GameBootstrap's GetComponent<IAdService>() always fell back to NullAdService and
+            // ads were dead code. Ensure it here like the other components (unit IDs load from
+            // Resources/Config/ad_units.json inside AdService; editor stays ad-inert).
+            if (bootstrap.GetComponent<AdService>() == null)
+            {
+                bootstrap.AddComponent<AdService>();
+                GameLog.Log("Added AdService component");
             }
 
             // Find UI elements
@@ -69,7 +79,7 @@ namespace WordPuzzle
                 SetFieldValue(uiManager, "mainMenuScreen", mainMenuScreen);
                 SetFieldValue(uiManager, "gameplayScreen", gameplayScreen);
                 SetFieldValue(uiManager, "resultsScreen", resultsScreen);
-                Debug.Log("Wired UIManager references");
+                GameLog.Log("Wired UIManager references");
             }
 
             // Wire GameBootstrap using reflection
@@ -79,10 +89,10 @@ namespace WordPuzzle
                 SetFieldValue(gameBootstrap, "gameplayScreen", gameplayScreen);
                 SetFieldValue(gameBootstrap, "mainMenuScreen", mainMenuScreen);
                 SetFieldValue(gameBootstrap, "resultsScreen", resultsScreen);
-                Debug.Log("Wired GameBootstrap references");
+                GameLog.Log("Wired GameBootstrap references");
             }
 
-            Debug.Log("Bootstrap initialization complete");
+            GameLog.Log("Bootstrap initialization complete");
 
             // Destroy this initializer - its job is done
             Destroy(this.gameObject);

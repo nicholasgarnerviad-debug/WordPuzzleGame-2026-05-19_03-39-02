@@ -233,7 +233,7 @@ namespace WordPuzzle
                 }
 
                 generator.SetCommonWords(set);
-                Debug.Log($"[CommonWords] loaded {set.Count} common words; generation filter active.");
+                GameLog.Log($"[CommonWords] loaded {set.Count} common words; generation filter active.");
             }
             catch (System.Exception ex)
             {
@@ -271,7 +271,7 @@ namespace WordPuzzle
                     }
                 }
 
-                Debug.Log($"WordLibrary: loaded {added} words from Resources/Data/word_library.json");
+                GameLog.Log($"WordLibrary: loaded {added} words from Resources/Data/word_library.json");
             }
             catch (System.Exception ex)
             {
@@ -319,7 +319,7 @@ namespace WordPuzzle
                     }
                 }
 
-                Debug.Log($"TierData: loaded {wrapper.tiers.Length} tiers");
+                GameLog.Log($"TierData: loaded {wrapper.tiers.Length} tiers");
             }
             catch (System.Exception ex)
             {
@@ -375,6 +375,7 @@ namespace WordPuzzle
                 uiManager.GetSettings().OnSettingsSaved += OnSettingsSaved;
                 uiManager.GetSettings().OnResetProgressConfirmed += OnResetProgressConfirmed;
                 uiManager.GetSettings().OnReplayTutorialRequested += OnReplayTutorialRequested;
+                uiManager.GetSettings().OnPrivacyOptionsRequested += OnPrivacyOptionsRequested;
             }
 
             // Task 9F — Stats screen back-button.
@@ -470,6 +471,7 @@ namespace WordPuzzle
                 uiManager.GetSettings().OnSettingsSaved -= OnSettingsSaved;
                 uiManager.GetSettings().OnResetProgressConfirmed -= OnResetProgressConfirmed;
                 uiManager.GetSettings().OnReplayTutorialRequested -= OnReplayTutorialRequested;
+                uiManager.GetSettings().OnPrivacyOptionsRequested -= OnPrivacyOptionsRequested;
             }
 
             if (uiManager.GetStats() != null)
@@ -542,7 +544,8 @@ namespace WordPuzzle
                 BalanceConfig.PowerUpBundleSizes, BalanceConfig.HintBundlePrices, BalanceConfig.UndoBundlePrices,
                 BalanceConfig.RevealBundlePrices, BalanceConfig.TimeBundlePrices,
                 watchCoinsRemaining: () => economyManager.WatchCoinsRemainingToday(dailyClock.TodayIso),
-                watchForCoins: RequestWatchForCoins);
+                watchForCoins: RequestWatchForCoins,
+                watchAdReady: () => adService != null && adService.IsRewardedReady); // C4 - drives the Watch/Loading state
             go.SetActive(false);
 
             uiManager.OnShopRequested += OpenShop;
@@ -727,8 +730,18 @@ namespace WordPuzzle
             {
                 if (cachedSettings == null) cachedSettings = new SettingsData();
                 settingsScreen.Populate(cachedSettings);
+                // Track 2 - the UMP PRIVACY band shows only when consent options are Required
+                // (EEA/UK). Evaluated per open: the consent state lands async after boot.
+                settingsScreen.SetPrivacyOptionsVisible(
+                    (adService as AdService)?.Consent?.PrivacyOptionsRequired == true);
             }
             uiManager.ShowSettings();
+        }
+
+        // Track 2 - UMP privacy-options re-prompt (the Settings PRIVACY row).
+        private void OnPrivacyOptionsRequested()
+        {
+            (adService as AdService)?.Consent?.ShowPrivacyOptions(null);
         }
 
         // Spec §3.2 — persist user-edited settings (debounced from SettingsScreen).
@@ -780,7 +793,7 @@ namespace WordPuzzle
                     }
                 }
 
-                Debug.Log("Progress reset. Returning to main menu.");
+                GameLog.Log("Progress reset. Returning to main menu.");
             }
             catch (System.Exception ex)
             {
@@ -868,7 +881,7 @@ namespace WordPuzzle
         {
             if (cachedDailyProgress == null || !cachedDailyProgress.todayResultValid)
             {
-                Debug.Log("[Daily] Already played today; no stored result to re-show.");
+                GameLog.Log("[Daily] Already played today; no stored result to re-show.");
                 return;
             }
             report.DailyReShow();                   // Task 41B — BY CONTRACT emits nothing (canary seam)

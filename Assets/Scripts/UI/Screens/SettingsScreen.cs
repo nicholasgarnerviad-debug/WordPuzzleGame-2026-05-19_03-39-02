@@ -42,6 +42,10 @@ namespace WordPuzzle.UI
         /// <summary>Fired when user requests to replay the tutorial.</summary>
         public event Action OnReplayTutorialRequested;
 
+        // v1.0 audit Track 2 — UMP privacy-options re-prompt (visible only when Required).
+        public event Action OnPrivacyOptionsRequested;
+        private Transform _privacySection;
+
         private SettingsData currentSettings = new SettingsData();
         private bool suppressEvents;
 
@@ -97,6 +101,12 @@ namespace WordPuzzle.UI
         }
 
         public void Show() { gameObject.SetActive(true); UIAnimations.PlayScreenEntrance(this); }
+
+        /// <summary>Toggle the PRIVACY band (UMP privacy options) — caller knows the consent state.</summary>
+        public void SetPrivacyOptionsVisible(bool visible)
+        {
+            if (_privacySection != null) _privacySection.gameObject.SetActive(visible);
+        }
         public void Hide() => gameObject.SetActive(false);
 
         /// <summary>
@@ -303,6 +313,18 @@ namespace WordPuzzle.UI
             warn.enableWordWrapping = true;
             warn.gameObject.AddComponent<LayoutElement>().minHeight = 34f;
             _replayButton = MakeActionButton(data, "REPLAY TUTORIAL", Muted, Knob, OnReplayTutorialClicked);
+
+            // ── PRIVACY (v1.0 audit Track 2) — UMP consent re-prompt. The whole band stays
+            // hidden unless the consent impl reports options are Required (EEA/UK traffic);
+            // GameBootstrap refreshes the visibility every time Settings opens.
+            _privacySection = MakeSection(crt, "PRIVACY");
+            MakeActionButton(_privacySection, "PRIVACY OPTIONS", Muted, Knob,
+                () => OnPrivacyOptionsRequested?.Invoke());
+            var pnote = MakeText(_privacySection, "Review or change your ads consent choices.",
+                                 TypeRole.Caption, Muted, TextAlignmentOptions.Left);
+            pnote.enableWordWrapping = true;
+            pnote.gameObject.AddComponent<LayoutElement>().minHeight = 32f;
+            _privacySection.gameObject.SetActive(false);
 
             // Wire the reused, scene-authored confirm modal buttons (the guard stays intact).
             if (resetConfirmCancelButton != null)

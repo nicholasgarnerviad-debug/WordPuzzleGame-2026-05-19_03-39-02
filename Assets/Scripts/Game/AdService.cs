@@ -35,6 +35,12 @@ namespace WordPuzzle
         [Tooltip("Interstitial ad unit ID. Replace with a real ID before shipping.")]
         [SerializeField] private string interstitialAdUnitId = "ca-app-pub-3940256099942544/1033173712"; // AdMob test ID
 
+        [Tooltip("Editor only — allow GMA v11 placeholder ads in Play Mode. OFF keeps the test " +
+                 "suite deterministic (gameplay tests assume the never-ready ad state).")]
+#pragma warning disable 0414 // read only inside the UNITY_EDITOR branch of Awake
+        [SerializeField] private bool enableAdsInEditor = false;
+#pragma warning restore 0414
+
         // ── Runtime state ────────────────────────────────────────────────────
         private RewardedAd rewardedAd;
         private InterstitialAd interstitialAd;
@@ -127,10 +133,24 @@ namespace WordPuzzle
             // callbacks touch Unity objects and the economy, so force main-thread.
             MobileAds.RaiseAdEventsOnUnityMainThread = true;
 
+            // Track 1 (v1.0 audit) — production unit IDs live in Resources/Config/ad_units.json
+            // (this component is added at runtime by BootstrapInitializer, so there is no scene
+            // Inspector to set them on; the doc rule stands: real IDs never hardcoded in source).
+            // Missing/empty config keeps the test-ID defaults above.
+            LoadUnitIdConfig();
+
             // 41A — MobileAds.Initialize is UNREACHABLE until the consent flow completes
             // and reports ads may be requested (AdMob policy for EEA/UK traffic).
-            // Phase 2 swaps the device path to UmpConsentService; Null never blocks boot.
+#if UNITY_EDITOR
+            // Editor: Null consent (instant), and ad init stays OFF unless explicitly enabled —
+            // GMA v11 placeholder ads would otherwise pop mid-PlayMode-test.
             consent = new NullConsentService();
+            if (!enableAdsInEditor) return; // sdkInitialized stays false → never ready, like NullAdService
+#else
+            // Device: the real UMP flow (Track 2). Failure/declined keeps ads gated off; the
+            // game itself never blocks on consent.
+            consent = new UmpConsentService();
+#endif
             consent.Gather(() =>
             {
                 if (!ConsentGate.ShouldInitAds(gathered: true, canRequestAds: consent.CanRequestAds))
@@ -147,6 +167,24 @@ namespace WordPuzzle
                     LoadInterstitial();
                 });
             });
+        }
+
+        [Serializable]
+        private class AdUnitConfig
+        {
+            public string rewardedAdUnitId;
+            public string interstitialAdUnitId;
+        }
+
+        private void LoadUnitIdConfig()
+        {
+            var asset = Resources.Load<TextAsset>("Config/ad_units");
+            if (asset == null) return; // no config — keep the test-ID defaults
+            AdUnitConfig cfg = null;
+            try { cfg = JsonUtility.FromJson<AdUnitConfig>(asset.text); } catch { cfg = null; }
+            if (cfg == null) return;
+            if (!string.IsNullOrEmpty(cfg.rewardedAdUnitId))     rewardedAdUnitId     = cfg.rewardedAdUnitId;
+            if (!string.IsNullOrEmpty(cfg.interstitialAdUnitId)) interstitialAdUnitId = cfg.interstitialAdUnitId;
         }
 
         private void OnDestroy()
