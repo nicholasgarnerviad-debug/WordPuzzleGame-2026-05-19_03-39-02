@@ -58,6 +58,10 @@ namespace WordPuzzle.UI
         private TMP_Text _masterVal, _sfxVal, _musicVal;
         private Toggle _muteToggle, _reduceMotionToggle, _hapticsToggle, _colorBlindToggle;
         private Button _resetButton, _replayButton;
+        // Runtime-built reset-confirm modal (replaces the scene-authored overlay, which rendered
+        // transparent + behind the cards — no scrim, wrong sibling order).
+        private GameObject _resetModal;
+        private RectTransform _resetModalCard;
         // Switch visuals so each toggle can show a clear, colorblind-safe ON/OFF (track colour + knob position).
         private readonly Dictionary<Toggle, (Image track, RectTransform knob)> _switchVisuals = new Dictionary<Toggle, (Image, RectTransform)>();
         private readonly Dictionary<Toggle, Coroutine> _switchAnims = new Dictionary<Toggle, Coroutine>();
@@ -165,6 +169,7 @@ namespace WordPuzzle.UI
             AnchorHome();
             AnchorVersion();
             BuildScrollContent();
+            BuildResetConfirmModal();
         }
 
         // The off-left clipping came from a mis-anchored / scaled scene root: force the screen to fill the
@@ -328,31 +333,77 @@ namespace WordPuzzle.UI
             pnote.gameObject.AddComponent<LayoutElement>().minHeight = 32f;
             _privacySection.gameObject.SetActive(false);
 
-            // Wire the reused, scene-authored confirm modal buttons (the guard stays intact).
-            if (resetConfirmCancelButton != null)
-            {
-                UIThemeManager.ApplyOutlineButton(resetConfirmCancelButton, Muted, Knob);
-                resetConfirmCancelButton.onClick.RemoveListener(OnResetConfirmCancel);
-                resetConfirmCancelButton.onClick.AddListener(OnResetConfirmCancel);
-            }
-            if (resetConfirmResetButton != null)
-            {
-                UIThemeManager.ApplyOutlineButton(resetConfirmResetButton, GameAccents.Danger, Knob);
-                resetConfirmResetButton.onClick.RemoveListener(OnResetConfirmReset);
-                resetConfirmResetButton.onClick.AddListener(OnResetConfirmReset);
-            }
+            // The scene-authored confirm overlay rendered transparent + behind the cards; it's
+            // superseded by BuildResetConfirmModal(). Force it off so it can never flash through.
+            if (resetConfirmOverlay != null) resetConfirmOverlay.SetActive(false);
+        }
 
-            // Task 42 — the scene-authored confirm modal joins the type system: button labels are
-            // Label-role, everything else (the warning message) Body. Colours untouched.
-            if (resetConfirmOverlay != null)
-            {
-                foreach (var txt in resetConfirmOverlay.GetComponentsInChildren<TMP_Text>(true))
-                {
-                    var keep = txt.color;
-                    TypeScale.Apply(txt, txt.GetComponentInParent<Button>() != null ? TypeRole.Label : TypeRole.Body);
-                    txt.color = keep;
-                }
-            }
+        // A proper destructive-confirm modal (the shared modal recipe: full SurfaceVoid scrim +
+        // a SOLID danger-ringed card on top, last-sibling so it covers everything and the scrim
+        // swallows taps). Built once, hidden; shown by OnResetClicked.
+        private void BuildResetConfirmModal()
+        {
+            _resetModal = new GameObject("ResetConfirmModal", typeof(RectTransform), typeof(Image));
+            _resetModal.transform.SetParent(transform, false);
+            var mrt = (RectTransform)_resetModal.transform;
+            mrt.anchorMin = Vector2.zero; mrt.anchorMax = Vector2.one;
+            mrt.offsetMin = Vector2.zero; mrt.offsetMax = Vector2.zero;
+            mrt.localScale = Vector3.one;
+            var scrim = _resetModal.GetComponent<Image>();
+            scrim.color = new Color(Palette.SurfaceVoid.r, Palette.SurfaceVoid.g, Palette.SurfaceVoid.b, 0.86f);
+            scrim.raycastTarget = true; // modal — block taps to the screen behind
+
+            var card = new GameObject("Card", typeof(RectTransform), typeof(Image),
+                                      typeof(VerticalLayoutGroup), typeof(ContentSizeFitter));
+            card.transform.SetParent(_resetModal.transform, false);
+            _resetModalCard = (RectTransform)card.transform;
+            _resetModalCard.anchorMin = _resetModalCard.anchorMax = new Vector2(0.5f, 0.5f);
+            _resetModalCard.pivot = new Vector2(0.5f, 0.5f);
+            _resetModalCard.sizeDelta = new Vector2(820f, 0f);
+            var cimg = card.GetComponent<Image>(); cimg.raycastTarget = true;
+            UIThemeManager.ApplySolidCard(cimg, GameAccents.Danger); // danger ring — destructive surface
+            var vlg = card.GetComponent<VerticalLayoutGroup>();
+            vlg.childControlWidth = true; vlg.childForceExpandWidth = true;
+            vlg.childControlHeight = true; vlg.childForceExpandHeight = false;
+            vlg.spacing = 18f; vlg.padding = new RectOffset(44, 44, 40, 40);
+            vlg.childAlignment = TextAnchor.UpperCenter;
+            card.GetComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+            var title = MakeText(card.transform, "Reset all progress?", TypeRole.Title, Header, TextAlignmentOptions.Center);
+            title.gameObject.AddComponent<LayoutElement>().minHeight = 54f;
+            var body = MakeText(card.transform,
+                "This permanently erases puzzle history, coins, and unlocks. This cannot be undone.",
+                TypeRole.Body, Muted, TextAlignmentOptions.Center);
+            body.enableWordWrapping = true;
+            body.gameObject.AddComponent<LayoutElement>().minHeight = 88f;
+
+            // Action row — CANCEL (safe, cream outline) beside RESET (danger). Both ≥96px tall.
+            var row = new GameObject("Actions", typeof(RectTransform), typeof(HorizontalLayoutGroup), typeof(LayoutElement));
+            row.transform.SetParent(card.transform, false);
+            var hlg = row.GetComponent<HorizontalLayoutGroup>();
+            hlg.childControlWidth = true; hlg.childForceExpandWidth = true;
+            hlg.childControlHeight = true; hlg.childForceExpandHeight = true;
+            hlg.spacing = 16f; hlg.childAlignment = TextAnchor.MiddleCenter;
+            row.GetComponent<LayoutElement>().minHeight = 96f;
+            MakeModalButton(row.transform, "CANCEL", Muted, OnResetConfirmCancel);
+            MakeModalButton(row.transform, "RESET",  GameAccents.Danger, OnResetConfirmReset);
+
+            _resetModal.SetActive(false);
+        }
+
+        // A full-width outline action button for the confirm modal (≥96px hit target).
+        private void MakeModalButton(Transform parent, string label, Color border, UnityEngine.Events.UnityAction onClick)
+        {
+            var go = new GameObject("Btn_" + label, typeof(RectTransform), typeof(Image), typeof(Button), typeof(LayoutElement));
+            go.transform.SetParent(parent, false);
+            var le = go.GetComponent<LayoutElement>(); le.minHeight = 96f; le.preferredHeight = 96f; le.flexibleWidth = 1f;
+            var btn = go.GetComponent<Button>();
+            var t = MakeText(go.transform, label, TypeRole.Label, border, TextAlignmentOptions.Center);
+            t.rectTransform.anchorMin = Vector2.zero; t.rectTransform.anchorMax = Vector2.one;
+            t.rectTransform.offsetMin = Vector2.zero; t.rectTransform.offsetMax = Vector2.zero;
+            t.raycastTarget = false;
+            UIThemeManager.ApplyOutlineButton(btn, border, border);
+            btn.onClick.AddListener(onClick);
         }
 
         // ── Section card (outline ring, header, auto-sized) ──
@@ -651,18 +702,21 @@ namespace WordPuzzle.UI
 
         private void OnResetClicked()
         {
-            if (resetConfirmOverlay != null) resetConfirmOverlay.SetActive(true);
-            else { OnResetProgressConfirmed?.Invoke(); ShowToast("Progress reset"); }
+            if (_resetModal == null) { OnResetProgressConfirmed?.Invoke(); ShowToast("Progress reset"); return; }
+            _resetModal.transform.SetAsLastSibling();   // cover the whole screen
+            _resetModal.SetActive(true);
+            if (_resetModalCard != null && isActiveAndEnabled)
+                StartCoroutine(UIAnimations.StaggeredPop(new[] { _resetModalCard })); // ReduceMotion-safe pop
         }
 
         private void OnResetConfirmCancel()
         {
-            if (resetConfirmOverlay != null) resetConfirmOverlay.SetActive(false);
+            if (_resetModal != null) _resetModal.SetActive(false);
         }
 
         private void OnResetConfirmReset()
         {
-            if (resetConfirmOverlay != null) resetConfirmOverlay.SetActive(false);
+            if (_resetModal != null) _resetModal.SetActive(false);
             OnResetProgressConfirmed?.Invoke();
             ShowToast("Progress reset");
         }
