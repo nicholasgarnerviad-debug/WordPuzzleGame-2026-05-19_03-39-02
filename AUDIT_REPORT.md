@@ -122,3 +122,17 @@ Same-day, immediately pre-audit (separate user requests, listed for completeness
 ---
 
 *Audit fixes commit: `f7732a4` (B7). Suite: 378/378 PlayMode. Runner-integrity check: test count delta matched added tests exactly.*
+
+---
+
+## ADDENDUM — Remediation pass (same day, commits `2a9cde6` + `2a2c556`)
+
+Executed on the owner's "go" against the fix plan. Status of the §8 table:
+
+- **Blocker 1 (AdMob unconfigured) — RESOLVED in-repo**, plus a deeper root cause found: `AdService` was attached to **nothing** (no scene, no prefab, no AddComponent), so the entire production ad stack had never executed; `GameBootstrap` always fell back to `NullAdService`. Now: `BootstrapInitializer` ensures the component; production unit IDs load from `Resources/Config/ad_units.json`; `GoogleMobileAdsSettings.asset` created with the production Android App ID (verified by editor readback log). Editor stays deliberately ad-inert so the suite remains deterministic. **Residual: real-ads-on-device verification.**
+- **Blocker 2 (UMP missing) — RESOLVED in-repo**: `UmpConsentService` implemented over the bundled `GoogleMobileAds.Ump.dll` (v11.1.0), swapped in for device builds; Settings gained the conditional PRIVACY band for the re-prompt. **Residual: EEA debug-geography device test.**
+- **Blocker 3 (mock store) — RESOLVED for v1.0 by decision Option A**: real-money commerce hidden behind `ShopScreen.RealMoneyEnabled = false` (Starter Pack, coin packs, Remove Ads, Restore). Re-enable is a one-line flip once a real `IStoreService` lands (planned 1.1).
+- Should-fixes: iOS bundle ID set (`com.nicholasgarner.wordpuzzle`); shop Watch button now shows a disabled "Loading…" with a bounded readiness poll; tutorial card folded into `ApplySolidCard`; bootstrap/economy info logs release-stripped.
+- **Still open:** the 5 HUMAN GATE visual eyeballs (owner), merge to `main`, and the §10 device-verification list (force-kill, offline cold-launch, lifecycle, clock, real ads/UMP, E1/E2/E4 measurements).
+
+Suite after remediation: **378/378 PlayMode green.** With Option A in effect, the ship verdict upgrades to **SHIP AFTER: human gates + merge + device verification pass** — no known in-repo blockers remain.
