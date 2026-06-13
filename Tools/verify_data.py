@@ -22,6 +22,7 @@ EXPECT_TIERS = 7
 EXPECT_PER_TIER = 100
 EXPECT_TIER_TOTAL = 700
 MIN_DAILY_POOL = 450            # never SHRINK below the original curated pool
+DAILY_FLOOR = 4                 # Daily rework — every daily needs optimalSteps >= 4 (honest par)
 
 # Must mirror dictionary_build.OFFENSIVE_BLOCKLIST (kept in sync deliberately; a few sentinels
 # are enough to prove the shipped data is clean — we assert NONE of these appear anywhere).
@@ -97,7 +98,8 @@ def verify(td, dp, library, common):
     for w in library: by_len[len(w)].append(w)
     adjL = {L: build_graph(by_len[L]) for L in by_len}
 
-    def check_puzzle(kind, p, enforce_floor, enforce_multiroute=False):
+    def check_puzzle(kind, p, enforce_floor, enforce_multiroute=False,
+                     floor_override=None, enforce_true_par=False):
         s = p["startWord"].lower(); e = p["endWord"].lower()
         sol = [w.lower() for w in p["solution"]]
         pid = p.get("puzzleId")
@@ -121,8 +123,11 @@ def verify(td, dp, library, common):
         adj = adjL.get(L0, {})
         n, dd = count_shortest_paths(adj, s, e)
         if dd < 0: fails.append(f"{pre}: UNSOLVABLE in dictionary graph")
-        if enforce_floor and 0 <= dd < min_moves_for_length(L0):
-            fails.append(f"{pre}: below min-move floor (true dist {dd})")
+        floor = floor_override if floor_override is not None else min_moves_for_length(L0)
+        if enforce_floor and 0 <= dd < floor:
+            fails.append(f"{pre}: below min-move floor (true dist {dd}, floor {floor})")
+        if enforce_true_par and dd >= 0 and dd != len(sol) - 1:
+            fails.append(f"{pre}: optimalSteps {len(sol)-1} != true shortest {dd} (dishonest par)")
         if enforce_multiroute:
             # stored solution length must equal the TRUE full-dictionary shortest distance
             if dd >= 0 and dd != len(sol) - 1:
@@ -143,7 +148,10 @@ def verify(td, dp, library, common):
             if key in pairseen: fails.append(f"tier{t['tierId']}: dup pair {key}")
             pairseen.add(key)
     for p in dp["puzzles"]:
-        n = check_puzzle("daily", p, enforce_floor=False)  # legacy daily floor handled by tool
+        # Daily rework — every daily must have optimalSteps >= DAILY_FLOOR (4) AND an honest
+        # par (stored optimalSteps == true full-dictionary shortest).
+        n = check_puzzle("daily", p, enforce_floor=True,
+                         floor_override=DAILY_FLOOR, enforce_true_par=True)
         if n is not None:
             multi += n > 1; single += n <= 1
 

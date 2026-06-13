@@ -6,11 +6,14 @@ The hand-curated daily_puzzles.json contains a handful of puzzles whose start/en
 are one letter apart (true full-dictionary shortest path = 1 move) even though their stored
 solution takes a detour. Those are 1-move puzzles to the player and violate the Task 17 floor.
 
-This tool ONLY replaces puzzles whose TRUE full-dictionary shortest distance < AbsoluteMinMoves(2).
-For each, it generates a fresh same-length ladder from the common-word pool with true shortest
-distance >= 2 (target 2-3 moves), keeping the original puzzleId AND array position so ordering /
-DailyPuzzleService indexing is unchanged. All other puzzles are left byte-for-byte intact.
-Deterministic (seeded per puzzleId) and re-runnable. NOT shipped (under Tools/).
+DAILY REWORK (2026-06): every daily must now have optimalSteps >= 4 (FLOOR raised 2 -> 4) so
+the par-scored mode never serves a trivial ladder. This tool ONLY replaces puzzles whose TRUE
+full-dictionary shortest distance < FLOOR. For each, it generates a fresh same-length ladder
+from the common-word pool with true shortest distance >= FLOOR (target 4-5 moves), keeping the
+original puzzleId AND array position so ordering / DailyPuzzleService indexing is unchanged.
+Compliant puzzles are left byte-for-byte intact. Deterministic (seeded per puzzleId) and
+re-runnable (idempotent once compliant). Exits 1 LOUDLY if the pool cannot be filled.
+DAILY pool only — tier/Classic/TimeAttack floors are untouched (BalanceConfig curve stands).
 
 Usage:  python Tools/daily_floor_fix.py [--dry-run]
 """
@@ -18,7 +21,7 @@ import os, sys, json, random, collections
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 DATA = os.path.normpath(os.path.join(HERE, "..", "Assets", "Resources", "Data"))
-FLOOR = 2
+FLOOR = 4   # daily-specific minimum (raised from the generic 2): par >= 4 on every daily
 
 
 def min_moves_for_length(L):
@@ -26,8 +29,10 @@ def min_moves_for_length(L):
 
 
 def target_moves_for_length(L):
-    m = min_moves_for_length(L)
-    return [m, m + 1]   # replacement ladders meet the length curve (and the floor)
+    # Replacement ladders sit just above the daily floor (4-5 moves) regardless of length;
+    # the per-length curve still applies where it is stricter (it never is, at FLOOR=4).
+    m = max(FLOOR, min_moves_for_length(L))
+    return [m, m + 1]
 
 
 def load(n):
@@ -110,7 +115,10 @@ def main():
         L = len(s)
         if L not in full_by_len:
             continue
-        if bfs_dist(full_by_len[L], s, e, 8) >= FLOOR:
+        true_dist = bfs_dist(full_by_len[L], s, e, 8)
+        # Replace when below the daily floor OR when the stored par is DISHONEST (the true
+        # full-dictionary shortest differs from optimalSteps — par must be beatable-exactly).
+        if true_dist >= FLOOR and true_dist == p["optimalSteps"]:
             continue  # already fine
 
         # Generate a replacement same-length ladder with true distance >= FLOOR.
@@ -129,8 +137,11 @@ def main():
             ne = rng.choice(cands)
             if (ns, ne) in existing_pairs or (ne, ns) in existing_pairs:
                 continue
-            if bfs_dist(full_by_len[L], ns, ne, 8) < FLOOR:
-                continue  # true shortcut — reject
+            # HONEST PAR: the true full-dictionary shortest must EQUAL the stored solution
+            # length (>= FLOOR by construction) — a full-graph shortcut would let players
+            # beat par with non-common words, so reject anything shorter than the target.
+            if bfs_dist(full_by_len[L], ns, ne, 8) != target:
+                continue
             replacement = (ns, ne, paths[ne])
             break
         if replacement is None:
@@ -139,7 +150,7 @@ def main():
 
         ns, ne, sol = replacement
         if len(examples) < 8:
-            examples.append(f"{p['puzzleId']}: {s}->{e} (1 move)  =>  {ns}->{ne} ({len(sol)-1} moves)")
+            examples.append(f"{p['puzzleId']}: {s}->{e} (< {FLOOR} moves)  =>  {ns}->{ne} ({len(sol)-1} moves)")
         existing_pairs.discard((s, e))
         existing_pairs.add((ns, ne))
         p["startWord"] = ns
@@ -152,10 +163,13 @@ def main():
     for ex in examples:
         print("   ", ex)
 
-    # Re-validate: nothing left below the floor.
-    remaining = sum(1 for p in dp["puzzles"]
-                    if bfs_dist(full_by_len[len(p['startWord'])], p["startWord"], p["endWord"], 8) < FLOOR)
-    print(f"Daily puzzles still < {FLOOR} moves after fix: {remaining}")
+    # Re-validate: nothing below the floor AND every stored par equals the true shortest.
+    remaining = 0
+    for p in dp["puzzles"]:
+        td = bfs_dist(full_by_len[len(p['startWord'])], p["startWord"].lower(), p["endWord"].lower(), 8)
+        if td < FLOOR or td != p["optimalSteps"]:
+            remaining += 1
+    print(f"Daily puzzles violating floor>={FLOOR} or honest-par after fix: {remaining}")
     if remaining:
         sys.exit(1)
 
