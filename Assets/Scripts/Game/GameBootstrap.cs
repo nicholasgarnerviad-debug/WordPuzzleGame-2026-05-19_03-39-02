@@ -619,6 +619,11 @@ namespace WordPuzzle
         private void MaybeShowDailyRewards()
         {
             if (dailyRewardPopup == null || economyManager == null) return;
+            // A fresh install shows the tutorial WELCOME first — never stack the rewards popup
+            // over it (the two modals interleave illegibly). The reward stays claimable: skipping
+            // routes through ShowMainMenu, and completing the lesson returns to the menu later —
+            // both re-run this check once onboarding no longer gates it.
+            if (OnboardingRules.ShouldRouteToTutorial(cachedOnboarding)) return;
             var prog = economyManager.GetCurrentProgress();
             if (prog == null) return;   // economy still loading — retry on the next menu visit
 

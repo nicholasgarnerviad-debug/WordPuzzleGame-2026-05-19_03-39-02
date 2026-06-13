@@ -55,6 +55,8 @@ namespace WordPuzzle.UI
             transform.SetAsLastSibling();   // above the menu, gear, and coin pill
             EnsureBuilt();
             Rebuild();
+            if (contentRoot != null && isActiveAndEnabled)
+                StartCoroutine(UIAnimations.StaggeredPop(new[] { contentRoot })); // ReduceMotion-safe entrance pop
         }
 
         public void Close()
@@ -85,7 +87,11 @@ namespace WordPuzzle.UI
             crt.anchorMin = crt.anchorMax = new Vector2(0.5f, 0.5f);
             crt.pivot = new Vector2(0.5f, 0.5f);
             crt.sizeDelta = new Vector2(840f, 0f);
-            card.GetComponent<Image>().color = C_BLACK;
+            // The shared modern-card seam (rounded SOLID SurfaceVoid fill + ring overlay) — the
+            // old bare square quad read as floating text. Gold ring: this surface is about coins.
+            var cimg = card.GetComponent<Image>();
+            cimg.raycastTarget = true; // the card swallows taps so they can't fall through
+            UIThemeManager.ApplySolidCard(cimg, C_GOLD);
 
             var vlg = card.GetComponent<VerticalLayoutGroup>();
             vlg.childControlWidth = true; vlg.childForceExpandWidth = true;
@@ -118,7 +124,7 @@ namespace WordPuzzle.UI
                     {
                         if (claimLogin == null) return;
                         claimLogin(_ => { loginClaimed = true; Rebuild(); });
-                    });
+                    }, hero: true);
                 }
                 else
                 {
@@ -163,7 +169,7 @@ namespace WordPuzzle.UI
             }
 
             Spacer(8f);
-            Btn("CLOSE", C_MUTED, true, Close);
+            Btn("CLOSE", C_MUTED, true, Close, ghost: true);
         }
 
         // ── tiny builders (mirror ShopScreen) ──
@@ -188,7 +194,8 @@ namespace WordPuzzle.UI
             go.AddComponent<LayoutElement>().minHeight = h;
         }
 
-        private void Btn(string label, Color outline, bool interactable, Action onClick)
+        private void Btn(string label, Color outline, bool interactable, Action onClick,
+                         bool hero = false, bool ghost = false)
         {
             var go = new GameObject("Button", typeof(RectTransform), typeof(Image), typeof(Button), typeof(LayoutElement));
             go.transform.SetParent(contentRoot, false);
@@ -209,6 +216,11 @@ namespace WordPuzzle.UI
             t.color = interactable ? C_CREAM : C_MUTED;
             t.alignment = TextAlignmentOptions.Center;
             t.raycastTarget = false; t.richText = true;
+
+            // Task 43 tiers — the primary action is the surface's ONE filled hero; dismiss recedes
+            // to a ghost. Both helpers own their own label styling, so apply after the text exists.
+            if (hero && interactable) UIThemeManager.ApplyFilledHeroButton(btn, Palette.ModeDaily, Palette.ModePuzzleShow);
+            else if (ghost)           UIThemeManager.ApplyGhostButton(btn, C_MUTED);
         }
 
         private static void Stretch(RectTransform rt)
