@@ -216,21 +216,23 @@ namespace WordPuzzle.UI
             if (homeButton == null) return;
             homeButton.onClick.RemoveListener(OnHomeClicked);
             homeButton.onClick.AddListener(OnHomeClicked);
-            UIThemeManager.ApplyOutlineButton(homeButton, Muted, Knob);
+            // Task 43 tier 3 — HOME recedes to a ghost (matches stats/shop/library). The ghost
+            // helper owns the label role + tint, so set the text first.
             var lbl = homeButton.GetComponentInChildren<TMP_Text>(true);
             if (lbl != null)
             {
                 lbl.text = "HOME";
-                TypeScale.Apply(lbl, TypeRole.Label); // Task 42
-                lbl.color = Knob; lbl.alignment = TextAlignmentOptions.Center;
+                lbl.alignment = TextAlignmentOptions.Center;
             }
+            UIThemeManager.ApplyGhostButton(homeButton, Palette.AccentPeriwinkle);
             var rt = homeButton.transform as RectTransform;
             if (rt != null)
             {
                 rt.anchorMin = rt.anchorMax = new Vector2(0f, 1f);
                 rt.pivot = new Vector2(0f, 1f);
                 rt.anchoredPosition = new Vector2(40f, -110f);
-                if (rt.sizeDelta.x < 120f || rt.sizeDelta.y < 60f) rt.sizeDelta = new Vector2(150f, 76f);
+                // ≥96px hit height — the ghost tier's comfortable minimum (Task 46 / 43).
+                if (rt.sizeDelta.x < 150f || rt.sizeDelta.y < 96f) rt.sizeDelta = new Vector2(190f, 96f);
                 rt.localScale = Vector3.one;
             }
         }
@@ -360,7 +362,7 @@ namespace WordPuzzle.UI
                                     typeof(VerticalLayoutGroup), typeof(ContentSizeFitter), typeof(LayoutElement));
             go.transform.SetParent(parent, false);
             var img = go.GetComponent<Image>(); img.raycastTarget = false;
-            UIThemeManager.ApplyOutlineButton(img, GameAccents.CardOutline); // slate ring, transparent centre
+            UIThemeManager.ApplySolidCard(img, GameAccents.CardOutline); // solid card — backdrop art stops bleeding through the rows
             var vlg = go.GetComponent<VerticalLayoutGroup>();
             vlg.childControlWidth = true; vlg.childForceExpandWidth = true;
             vlg.childControlHeight = true; vlg.childForceExpandHeight = false;
@@ -402,16 +404,21 @@ namespace WordPuzzle.UI
             slider.minValue = 0f; slider.maxValue = 1f; slider.wholeNumbers = false;
             slider.direction = Slider.Direction.LeftToRight;
 
+            // The shared bubbly 9-slice carries 44px corner art — at ppu 1 the corners exceed
+            // these small rects and render as fat blobs. Divide the radius to fit: track/fill
+            // 16px tall -> ~8px radius (44/5.5); the 34px knob -> ~17px radius (44/2.6) = a circle.
+            const float stripPpu = 5.5f, knobPpu = 2.6f;
+
             // Groove (full-width slate track, behind everything).
             var bg = MakeImage(go.transform, "Track", Track);
-            UIThemeManager.ApplyRoundedButton(bg);
+            UIThemeManager.ApplyRoundedButton(bg, stripPpu);
             StretchCenteredY(bg.rectTransform, 0f, trackH);
 
             // Fill Area (padded by the knob radius so the fill aligns with the knob's travel).
             var fillArea = MakeRect(go.transform, "Fill Area");
             StretchCenteredY(fillArea, -knobD, trackH);
             var fill = MakeImage(fillArea, "Fill", Accent);
-            UIThemeManager.ApplyRoundedButton(fill);
+            UIThemeManager.ApplyRoundedButton(fill, stripPpu);
             var frt = fill.rectTransform; frt.anchorMin = Vector2.zero; frt.anchorMax = Vector2.one;
             frt.offsetMin = Vector2.zero; frt.offsetMax = Vector2.zero;
             slider.fillRect = frt;
@@ -420,7 +427,7 @@ namespace WordPuzzle.UI
             var handleArea = MakeRect(go.transform, "Handle Slide Area");
             StretchCenteredY(handleArea, -knobD, 0f);
             var handle = MakeImage(handleArea, "Handle", Knob);
-            UIThemeManager.ApplyRoundedButton(handle);
+            UIThemeManager.ApplyRoundedButton(handle, knobPpu); // a true circle, not an oval blob
             handle.rectTransform.sizeDelta = new Vector2(knobD, knobD);
             slider.handleRect = handle.rectTransform;
             slider.targetGraphic = handle;
@@ -452,15 +459,17 @@ namespace WordPuzzle.UI
             toggle.transition = Selectable.Transition.None;
             toggle.graphic = null; // we drive visuals manually (avoids the ColorBlock dark-tint pitfall)
 
+            // Same 44px-corner-art rule as the sliders: divide the radius to fit the pill.
+            // 36px track -> ~18px radius (44/2.4); 28px knob -> ~14px radius (44/3.1) = a circle.
             var track = MakeImage(go.transform, "SwitchTrack", Track);
-            UIThemeManager.ApplyRoundedButton(track);
+            UIThemeManager.ApplyRoundedButton(track, 2.4f);
             var trt = track.rectTransform;
             trt.anchorMin = trt.anchorMax = new Vector2(0.5f, 0.5f); trt.pivot = new Vector2(0.5f, 0.5f);
             trt.sizeDelta = new Vector2(w, h);
             toggle.targetGraphic = track;
 
             var knob = MakeImage(go.transform, "SwitchKnob", Knob);
-            UIThemeManager.ApplyRoundedButton(knob);
+            UIThemeManager.ApplyRoundedButton(knob, 3.1f);
             var krt = knob.rectTransform;
             krt.anchorMin = krt.anchorMax = new Vector2(0.5f, 0.5f); krt.pivot = new Vector2(0.5f, 0.5f);
             krt.sizeDelta = new Vector2(knobD, knobD);
