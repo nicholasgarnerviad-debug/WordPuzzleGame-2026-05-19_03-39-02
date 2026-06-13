@@ -119,7 +119,7 @@ namespace WordPuzzle.UI
                 if (!loginClaimed)
                 {
                     Label($"Day {loginDay} reward", C_CREAM, TypeRole.Body);
-                    Label($"<color=#{Hx(C_GOLD)}>+{loginCoins} coins</color>", C_CREAM, TypeRole.Title);
+                    Label($"<color=#{Hx(C_GOLD)}>+{loginCoins} stars</color>", C_CREAM, TypeRole.Title);
                     Btn("CLAIM", C_GOLD, true, () =>
                     {
                         if (claimLogin == null) return;
@@ -128,7 +128,7 @@ namespace WordPuzzle.UI
                 }
                 else
                 {
-                    Label($"<color=#{Hx(C_GREEN)}>Claimed  ·  +{loginCoins} coins</color>", C_CREAM, TypeRole.Body);
+                    Label($"<color=#{Hx(C_GREEN)}>Claimed  ·  +{loginCoins} stars</color>", C_CREAM, TypeRole.Body);
                 }
             }
 
@@ -145,7 +145,7 @@ namespace WordPuzzle.UI
                 }
                 else
                 {
-                    Btn(repairAffordable ? $"REPAIR  ·  {repairCost} coins" : $"Need {repairCost} coins",
+                    Btn(repairAffordable ? $"REPAIR  ·  {repairCost} stars" : $"Need {repairCost} stars",
                         repairAffordable ? C_GOLD : C_SECTION, repairAffordable, () =>
                         {
                             if (requestRepair == null) return;

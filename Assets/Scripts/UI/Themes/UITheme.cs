@@ -380,6 +380,22 @@ public static partial class UIThemeManager
         img.pixelsPerUnitMultiplier = pixelsPerUnitMultiplier;
     }
 
+    /// <summary>
+    /// The shared currency token — a gold five-point star (the "Star Ladder" currency is STARS,
+    /// not coins). A StarGraphic draws the star filling its rect; the caller sizes/positions the
+    /// returned transform. Drawn geometry, never text: the bundled font has no ★ glyph.
+    /// Colour stays the warm-gold currency token (Palette.Coins) — gold stars suit the identity.
+    /// </summary>
+    public static WordPuzzle.UI.Components.StarGraphic CreateStarToken(UnityEngine.Transform parent)
+    {
+        var go = new UnityEngine.GameObject("StarToken", typeof(UnityEngine.RectTransform));
+        go.transform.SetParent(parent, false);
+        var star = go.AddComponent<WordPuzzle.UI.Components.StarGraphic>();
+        star.color = WordPuzzle.UI.Palette.Coins;
+        star.raycastTarget = false;
+        return star;
+    }
+
     // ============================================================
     //  Task 25 — true-black background + outline ("ghost") buttons.
     // ============================================================

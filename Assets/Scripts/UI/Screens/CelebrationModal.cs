@@ -49,7 +49,7 @@ namespace WordPuzzle.UI
             var m = Build(parent, onContinue);
             m.BuildCard(days.ToString(), TypeRole.Display, Palette.Coins,
                 $"{days}-DAY STREAK", Palette.Coins);
-            m.AddCountUpLine(coins, "+{0} coins");
+            m.AddCountUpLine(coins, "+{0} stars");
             return m;
         }
 

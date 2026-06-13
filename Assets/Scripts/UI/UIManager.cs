@@ -202,17 +202,12 @@ namespace WordPuzzle.UI
             btn.targetGraphic = bg;
             btn.onClick.AddListener(() => OnShopRequested?.Invoke());
 
-            var coinGO = new GameObject("Coin", typeof(RectTransform), typeof(Image));
-            coinGO.transform.SetParent(go.transform, false);
-            var crt = coinGO.GetComponent<RectTransform>();
+            var star = UIThemeManager.CreateStarToken(go.transform); // gold star — the currency mark
+            var crt = star.rectTransform;
             crt.anchorMin = crt.anchorMax = new Vector2(0f, 0.5f);
             crt.pivot = new Vector2(0f, 0.5f);
             crt.anchoredPosition = new Vector2(14f, 0f);
             crt.sizeDelta = new Vector2(40f, 40f);
-            var coinImg = coinGO.GetComponent<Image>();
-            UIThemeManager.ApplyRoundedButton(coinImg, 1f);
-            coinImg.color = Palette.Coins;   // gold token
-            coinImg.raycastTarget = false;
 
             var txtGO = new GameObject("Count", typeof(RectTransform));
             txtGO.transform.SetParent(go.transform, false);

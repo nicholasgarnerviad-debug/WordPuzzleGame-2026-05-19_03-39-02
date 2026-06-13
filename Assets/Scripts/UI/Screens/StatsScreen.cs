@@ -393,11 +393,8 @@ namespace WordPuzzle.UI
             csf.horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
             csf.verticalFit   = ContentSizeFitter.FitMode.PreferredSize;
 
-            var token = new GameObject("Token", typeof(RectTransform), typeof(Image));
-            token.transform.SetParent(go.transform, false);
-            var dimg = token.GetComponent<Image>(); dimg.color = GameAccents.Gold; dimg.raycastTarget = false;
-            UIThemeManager.ApplyRoundedButton(dimg); // rounded gold token
-            var dle = token.AddComponent<LayoutElement>(); dle.preferredWidth = 26f; dle.preferredHeight = 26f;
+            var star = UIThemeManager.CreateStarToken(go.transform); // gold star — the currency mark
+            var dle = star.gameObject.AddComponent<LayoutElement>(); dle.preferredWidth = 26f; dle.preferredHeight = 26f;
 
             _coinText = MakeText(go.transform, "0", TypeRole.Body, GameAccents.Gold, TextAlignmentOptions.Center);
 

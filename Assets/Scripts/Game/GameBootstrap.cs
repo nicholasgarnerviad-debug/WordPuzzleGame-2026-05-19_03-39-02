@@ -2118,7 +2118,7 @@ namespace WordPuzzle
                     try { await economyManager.AddCoinsAsync(bonus, "daily_doubler"); }
                     catch (System.Exception ex) { Debug.LogWarning($"[Economy] doubler grant failed: {ex.Message}"); }
                     RefreshCoinPill();
-                    uiManager.GetResults().MarkDoublerClaimed($"+{bonus} bonus coins!");
+                    uiManager.GetResults().MarkDoublerClaimed($"+{bonus} bonus stars!");
                 },
                 onClosed: () => { });
         }

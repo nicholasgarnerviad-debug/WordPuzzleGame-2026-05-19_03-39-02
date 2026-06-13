@@ -117,7 +117,7 @@ namespace WordPuzzle.UI
             Transform content = safeGo.transform;
 
             // Title — cyan, matches the menu header.
-            var title = MakeText(content, "SHOP", TypeRole.Headline, MenuPalette.TitleColor, TextAlignmentOptions.Center);
+            var title = MakeText(content, "STAR SHOP", TypeRole.Headline, MenuPalette.TitleColor, TextAlignmentOptions.Center);
             Anchor(title.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -120f), new Vector2(600f, 70f));
 
             // Coin balance — the shared gold coin pill (matches menu/stats), centred under the title.
@@ -138,11 +138,8 @@ namespace WordPuzzle.UI
             var pcsf = pill.GetComponent<ContentSizeFitter>();
             pcsf.horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
             pcsf.verticalFit   = ContentSizeFitter.FitMode.PreferredSize;
-            var token = new GameObject("Token", typeof(RectTransform), typeof(Image));
-            token.transform.SetParent(pill.transform, false);
-            var timg = token.GetComponent<Image>(); timg.color = C_GOLD; timg.raycastTarget = false;
-            UIThemeManager.ApplyRoundedButton(timg);
-            var tle = token.AddComponent<LayoutElement>(); tle.preferredWidth = 26f; tle.preferredHeight = 26f;
+            var star = UIThemeManager.CreateStarToken(pill.transform); // gold star — the currency mark
+            var tle = star.gameObject.AddComponent<LayoutElement>(); tle.preferredWidth = 26f; tle.preferredHeight = 26f;
             balanceText = MakeText(pill.transform, "0", TypeRole.Body, C_GOLD, TextAlignmentOptions.Center);
 
             // Back button — Task 43 tier 3: navigation recedes to a ghost (same as library Back).
@@ -228,7 +225,7 @@ namespace WordPuzzle.UI
             }
 
             // POWER-UPS (coins)
-            SectionHeader("POWER-UPS  ·  buy with coins");
+            SectionHeader("POWER-UPS  ·  buy with stars");
             PowerUpRow("Hint",   prog != null ? prog.totalHintsEarned   : 0, hintPrices,   AddKind.Hint,   coins);
             PowerUpRow("Undo",   prog != null ? prog.totalUndosEarned   : 0, undoPrices,   AddKind.Undo,   coins);
             PowerUpRow("Reveal", prog != null ? prog.totalRevealsEarned : 0, revealPrices, AddKind.Reveal, coins);
@@ -237,14 +234,14 @@ namespace WordPuzzle.UI
             // FREE COINS (watch a rewarded ad) — daily-capped faucet, shown above the paid packs.
             if (watchForCoins != null)
             {
-                SectionHeader("FREE COINS  ·  watch an ad");
+                SectionHeader("FREE STARS  ·  watch an ad");
                 WatchForCoinsRow();
             }
 
             // COINS + REMOVE ADS (real money) — hidden for v1.0 (Track 3, RealMoneyEnabled).
             if (RealMoneyEnabled)
             {
-                SectionHeader("COINS  ·  buy with money");
+                SectionHeader("STARS  ·  buy with money");
                 if (store != null)
                 {
                     foreach (var p in store.Products)
@@ -282,7 +279,9 @@ namespace WordPuzzle.UI
                 int size = sizes[i];
                 int price = (bundlePrices != null && i < bundlePrices.Length) ? bundlePrices[i] : size;
                 bool canAfford = coins >= price;
-                var btn = MakeButton(row, $"x{size}\n<size=22>{price}c</size>", canAfford ? MenuPalette.ClassicFill : C_SECTION, canAfford ? C_CREAM : C_MUTED);
+                // No "c" suffix — the bundled font has no ★ glyph, and the "buy with stars" header
+                // + the gold star pill already establish the unit. The number IS the star price.
+                var btn = MakeButton(row, $"x{size}\n<size=22>{price}</size>", canAfford ? MenuPalette.ClassicFill : C_SECTION, canAfford ? C_CREAM : C_MUTED);
                 var ble = btn.gameObject.AddComponent<LayoutElement>(); ble.preferredWidth = 150f; ble.flexibleWidth = 0f;
                 btn.interactable = canAfford;
                 var label2 = btn.GetComponentInChildren<TMP_Text>(); if (label2 != null) label2.richText = true;
@@ -300,7 +299,7 @@ namespace WordPuzzle.UI
             bool adReady = watchAdReady == null || watchAdReady();
             var row = MakeRow(120f);
             string sub = canWatch ? $"{remaining} left today" : "back tomorrow";
-            var label = MakeText(row, $"Watch for Coins\n<size=24><color=#{Hx(C_MUTED)}>Free  ·  {sub}</color></size>",
+            var label = MakeText(row, $"Watch for Stars\n<size=24><color=#{Hx(C_MUTED)}>Free  ·  {sub}</color></size>",
                                   TypeRole.Body, C_CREAM, TextAlignmentOptions.Left);
             label.richText = true;
             var lle = label.gameObject.AddComponent<LayoutElement>(); lle.flexibleWidth = 1f;
@@ -313,7 +312,7 @@ namespace WordPuzzle.UI
             if (canWatch && adReady)
                 btn.onClick.AddListener(() => watchForCoins(coins =>
                 {
-                    Feedback(coins > 0 ? $"+{coins} coins!" : "Ads aren't available yet");
+                    Feedback(coins > 0 ? $"+{coins} stars!" : "Ads aren't available yet");
                     Rebuild();
                 }));
             if (canWatch && !adReady) StartWatchReadyPoll();
@@ -356,9 +355,9 @@ namespace WordPuzzle.UI
             var row = MakeRow(120f);
             // Title = pack name (Pouch/Stack/Chest/Vault/Hoard) + optional merchandising badge;
             // subtitle = coin count; price lives on the Buy button (matches the Starter Pack row).
-            string title = string.IsNullOrEmpty(p.displayName) ? $"{p.coins} Coins" : p.displayName;
+            string title = string.IsNullOrEmpty(p.displayName) ? $"{p.coins} Stars" : p.displayName;
             string badge = string.IsNullOrEmpty(p.badge) ? "" : $"  <size=22><color=#{Hx(C_GOLD)}>[ {p.badge} ]</color></size>";
-            var label = MakeText(row, $"{title}{badge}\n<size=24><color=#{Hx(C_MUTED)}>{p.coins} coins</color></size>",
+            var label = MakeText(row, $"{title}{badge}\n<size=24><color=#{Hx(C_MUTED)}>{p.coins} stars</color></size>",
                                   TypeRole.Body, C_GOLD, TextAlignmentOptions.Left);
             label.richText = true;
             var lle = label.gameObject.AddComponent<LayoutElement>(); lle.flexibleWidth = 1f;
@@ -366,7 +365,7 @@ namespace WordPuzzle.UI
             var btn = MakeButton(row, $"${p.priceUsd:0.00}", MenuPalette.DailyFill, C_CREAM);
             var ble = btn.gameObject.AddComponent<LayoutElement>(); ble.preferredWidth = 200f; ble.flexibleWidth = 0f;
             string id = p.id;
-            btn.onClick.AddListener(() => BuyRealMoney(id, "Coins added!"));
+            btn.onClick.AddListener(() => BuyRealMoney(id, "Stars added!"));
         }
 
         private void RemoveAdsRow()
@@ -394,7 +393,7 @@ namespace WordPuzzle.UI
         {
             bool owned = store != null && store.IsOwned(p.id);
             var row = MakeRow(150f, C_GOLD); // gold ring — the merchandised lead offer
-            string contents = $"{p.coins} coins  ·  {p.powerUpsEach} of each power-up  ·  {p.adFreeDays} days ad-free";
+            string contents = $"{p.coins} stars  ·  {p.powerUpsEach} of each power-up  ·  {p.adFreeDays} days ad-free";
             var label = MakeText(row, $"{p.displayName}\n<size=24><color=#{Hx(C_MUTED)}>{contents}</color></size>",
                                   TypeRole.Body, C_GOLD, TextAlignmentOptions.Left);
             label.richText = true;
@@ -417,7 +416,7 @@ namespace WordPuzzle.UI
         {
             if (economy == null) return;
             bool ok = await economy.SpendCoinsAsync(price, "shop_powerup");
-            if (!ok) { Feedback("Not enough coins"); Rebuild(); return; }
+            if (!ok) { Feedback("Not enough stars"); Rebuild(); return; }
             switch (kind)
             {
                 case AddKind.Hint:   await economy.AddHintsAsync(size, "shop"); break;

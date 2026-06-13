@@ -592,7 +592,7 @@ namespace WordPuzzle.UI
             if (_dailyCoinLine == null) return;
             _pendingCoinReward = coins;
             _dailyCoinLine.gameObject.SetActive(true);
-            _dailyCoinLine.text = _payoutAnimated ? "+0 coins" : $"+{coins} coins";
+            _dailyCoinLine.text = _payoutAnimated ? "+0 stars" : $"+{coins} stars";
         }
 
         // Created once (cached), SET each view — the same anti-stacking discipline as the streak line.
@@ -630,7 +630,7 @@ namespace WordPuzzle.UI
             RestoreLabelAlpha(wordsFoundText);
             RestoreLabelAlpha(modeNameText);
             if (_dailyCoinLine != null && _pendingCoinReward >= 0)
-                _dailyCoinLine.text = $"+{_pendingCoinReward} coins";
+                _dailyCoinLine.text = $"+{_pendingCoinReward} stars";
             if (_pendingDoublerReveal)
             {
                 SetButtonVisible(doublerButton, true);
@@ -671,7 +671,7 @@ namespace WordPuzzle.UI
             // 3 — the coin payout counts up from 0.
             if (_dailyCoinLine != null && _pendingCoinReward >= 0)
                 yield return UIAnimations.CountUpInt(_dailyCoinLine, 0, _pendingCoinReward,
-                    UIAnimations.STANDARD, "+{0} coins");
+                    UIAnimations.STANDARD, "+{0} stars");
 
             // 4 — the streak number gets its single punch (the existing tile-tap scale).
             if (_dailyStreakLine != null && _dailyStreakLine.gameObject.activeSelf)

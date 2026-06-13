@@ -137,8 +137,8 @@ public class CelebrationJuiceTests
 
         var coinLine = host.transform.Find("DailyCoinLine");
         Assert.IsNotNull(coinLine);
-        Assert.AreEqual("+30 coins", coinLine.GetComponent<TextMeshProUGUI>().text,
-            "the re-show renders the final coin value at rest");
+        Assert.AreEqual("+30 stars", coinLine.GetComponent<TextMeshProUGUI>().text,
+            "the re-show renders the final star value at rest");
     }
 
     [Test]
@@ -154,7 +154,7 @@ public class CelebrationJuiceTests
 
         Assert.IsFalse(results.PayoutAnimating, "ReduceMotion renders the payout at rest");
         var coinLine = host.transform.Find("DailyCoinLine");
-        Assert.AreEqual("+60 coins", coinLine.GetComponent<TextMeshProUGUI>().text);
+        Assert.AreEqual("+60 stars", coinLine.GetComponent<TextMeshProUGUI>().text);
     }
 
     // ── celebratedTiers persistence + the once-ever decision ──

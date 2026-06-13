@@ -372,7 +372,7 @@ namespace WordPuzzle.UI
             var title = MakeText(card.transform, "Reset all progress?", TypeRole.Title, Header, TextAlignmentOptions.Center);
             title.gameObject.AddComponent<LayoutElement>().minHeight = 54f;
             var body = MakeText(card.transform,
-                "This permanently erases puzzle history, coins, and unlocks. This cannot be undone.",
+                "This permanently erases puzzle history, stars, and unlocks. This cannot be undone.",
                 TypeRole.Body, Muted, TextAlignmentOptions.Center);
             body.enableWordWrapping = true;
             body.gameObject.AddComponent<LayoutElement>().minHeight = 88f;

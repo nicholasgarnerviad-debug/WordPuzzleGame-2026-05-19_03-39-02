@@ -84,7 +84,7 @@ namespace WordPuzzle.State
                         type = StoreProductType.Coins,
                         coins = p.coins,
                         priceUsd = p.price,
-                        displayName = string.IsNullOrEmpty(p.name) ? $"{p.coins} Coins" : p.name,
+                        displayName = string.IsNullOrEmpty(p.name) ? $"{p.coins} Stars" : p.name,
                         badge = p.badge
                     });
                 }
