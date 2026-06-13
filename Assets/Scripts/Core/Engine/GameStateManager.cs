@@ -269,10 +269,20 @@ namespace WordPuzzle.State
                 workingState.currentInput = "";
                 workingState.currentStreak = 0;
 
-                // Daily 2.0 — an invalid guess (correct length, but not a valid next step) is a
-                // MISTAKE: it costs the run, not the score. Exhausting the budget FAILS the daily
-                // (one-and-done). The wrong-LENGTH path above is malformed input, not a mistake.
-                if (workingState.isDaily)
+                // Daily rework (typos can't kill you) — a LEGAL-SHAPED dictionary miss (exactly
+                // one letter changed from the chain tail, just not a real word) bounces FREE:
+                // reject feedback only — no mistake, no detour, no share-card row. Every OTHER
+                // rejection still costs a mistake, and exhausting the budget FAILS the daily
+                // (one-and-done). PRECEDENCE: the validator checks the dictionary BEFORE the
+                // one-letter rule, so NotInDictionary alone does NOT imply a legal shape —
+                // gibberish that ALSO breaks the rule is a RULE VIOLATION and pays; the free
+                // pass needs the explicit Hamming-1 re-check below. The wrong-LENGTH path above
+                // stays malformed input (never a mistake).
+                bool legalShapedTypo = workingState.isDaily
+                    && validation?.RejectReason == WordRejectReason.NotInDictionary
+                    && WordOps.HaveOneLetterDifference(previousWord, word);
+
+                if (workingState.isDaily && !legalShapedTypo)
                 {
                     // Phase 4 — record the mistake row for the share card (2 = mistake).
                     workingState.dailyStepClasses.Add(2);
@@ -286,9 +296,20 @@ namespace WordPuzzle.State
 
                 // Map the validator's typed RejectReason to SubmissionRejectReason + user text.
                 var (reason, userReason) = MapWordRejectReason(validation?.RejectReason ?? WordRejectReason.None);
+                // Daily legibility — the two rejections must READ differently: the free typo
+                // bounce says so, and a dictionary miss that ALSO broke the one-letter rule paid
+                // a mistake, so it gets the RULE copy (not "not a word") to explain the tick-down.
+                if (workingState.isDaily && validation?.RejectReason == WordRejectReason.NotInDictionary)
+                    userReason = legalShapedTypo ? DailyFreeBounceMessage : DailyRuleViolationMessage;
                 FireSubmissionResult(false, word, userReason, reason, workingState.dailyResult);
             }
         }
+
+        // Daily rework — centralized DAILY-ONLY rejection copy. The two rejections must read
+        // differently so players learn why one hurt and one didn't: a legal-shaped typo bounces
+        // free (and says so); a rule-break costs a mistake (the HUD counter ticks down).
+        private const string DailyFreeBounceMessage    = "Not a word — free try";
+        private const string DailyRuleViolationMessage = "Change exactly one letter";
 
         // §1 — translate WordValidator's typed WordRejectReason into SubmissionRejectReason + UI text.
         // No string parsing: switch on the enum set by WordValidator.ValidateWord.

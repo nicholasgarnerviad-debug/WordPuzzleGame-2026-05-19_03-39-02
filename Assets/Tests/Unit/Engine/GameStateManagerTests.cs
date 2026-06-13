@@ -470,6 +470,90 @@ public class GameStateManagerTests
         Assert.AreEqual(0, result.Value.stars, "Failed = 0 stars");
     }
 
+    // ── Daily rework — typos can't kill you: a LEGAL-SHAPED dictionary miss bounces FREE;
+    //    rule violations (incl. the both-invalid precedence case) still cost a mistake. ──
+
+    [Test]
+    public void Daily_LegalShapedDictionaryMiss_BouncesFree_NoMistake_NoDetour()
+    {
+        manager.StartNewPuzzle(DailyPuzzle());
+        manager.ConfigureDailyRun(BalanceConfig.DailyMistakeBudget, 4);
+
+        string lastMsg = null; bool lastAccepted = true;
+        manager.OnWordSubmissionResult += r => { lastMsg = r.reason; lastAccepted = r.accepted; };
+
+        // "cax" IS one letter from the chain tail "cat" but is not a word → a FREE bounce.
+        mockValidator.SetRejection(WordPuzzle.Puzzle.WordRejectReason.NotInDictionary, "nonsense");
+        manager.Dispatch(new SubmitWordAction("cax"));
+
+        Assert.AreEqual(BalanceConfig.DailyMistakeBudget, manager.GetMistakesRemaining(),
+            "a legal-shaped typo must NOT spend a mistake");
+        Assert.AreEqual(0, manager.GetDetourCount(), "a typo is not a detour");
+        Assert.AreEqual(0, manager.GetDailyStepClasses().Count, "no share-card row for a free bounce");
+        Assert.IsFalse(manager.GetDailyResult().HasValue, "run unaffected");
+        Assert.IsFalse(lastAccepted, "still a rejection (shake + message)");
+        Assert.AreEqual("Not a word — free try", lastMsg, "the free bounce says so");
+    }
+
+    [Test]
+    public void Daily_BothInvalid_Precedence_RuleViolation_SpendsMistake()
+    {
+        manager.StartNewPuzzle(DailyPuzzle());
+        manager.ConfigureDailyRun(BalanceConfig.DailyMistakeBudget, 4);
+
+        string lastMsg = null;
+        manager.OnWordSubmissionResult += r => lastMsg = r.reason;
+
+        // "zzz" is NOT a word AND not one letter from "cat". The validator checks the
+        // dictionary FIRST (so it reports NotInDictionary), but precedence says the free
+        // pass is only for LEGAL-shaped misses — a rule-break pays.
+        mockValidator.SetRejection(WordPuzzle.Puzzle.WordRejectReason.NotInDictionary, "nonsense");
+        manager.Dispatch(new SubmitWordAction("zzz"));
+
+        Assert.AreEqual(BalanceConfig.DailyMistakeBudget - 1, manager.GetMistakesRemaining(),
+            "both-invalid = rule violation = a mistake");
+        Assert.AreEqual("Change exactly one letter", lastMsg,
+            "the costly rejection carries the RULE copy, not 'not a word'");
+    }
+
+    [Test]
+    public void Daily_NonHamming1_StillSpendsMistake()
+    {
+        manager.StartNewPuzzle(DailyPuzzle());
+        manager.ConfigureDailyRun(BalanceConfig.DailyMistakeBudget, 4);
+
+        // A multi-letter change (typed reason from the validator) → costs a mistake, as today.
+        mockValidator.SetRejection(WordPuzzle.Puzzle.WordRejectReason.NotOneLetterDifferent, "x");
+        manager.Dispatch(new SubmitWordAction("dog"));
+
+        Assert.AreEqual(BalanceConfig.DailyMistakeBudget - 1, manager.GetMistakesRemaining());
+    }
+
+    [Test]
+    public void Daily_TyposNeverFail_RuleBreaksStillDo()
+    {
+        manager.StartNewPuzzle(DailyPuzzle());
+        manager.ConfigureDailyRun(BalanceConfig.DailyMistakeBudget, 4);
+        mockValidator.SetRejection(WordPuzzle.Puzzle.WordRejectReason.NotInDictionary, "x");
+
+        // More free typos than the whole budget — the run never ends…
+        for (int i = 0; i < BalanceConfig.DailyMistakeBudget + 2; i++)
+            manager.Dispatch(new SubmitWordAction("cax"));
+        Assert.IsFalse(manager.GetDailyResult().HasValue, "typos alone can never fail the run");
+        Assert.AreEqual(BalanceConfig.DailyMistakeBudget, manager.GetMistakesRemaining());
+
+        // …but rule-breaks still burn the budget down to the unchanged Failed result.
+        for (int i = 0; i < BalanceConfig.DailyMistakeBudget; i++)
+            manager.Dispatch(new SubmitWordAction("zzz"));
+        Assert.AreEqual(0, manager.GetMistakesRemaining());
+        Assert.IsTrue(manager.GetDailyResult().HasValue && manager.GetDailyResult().Value.failed,
+            "0 mistakes = Failed, unchanged");
+    }
+
+    // (A CANARY asserting the OLD rule — "a legal-shaped dictionary miss spends a mistake" —
+    //  was run here and FAILED as required (expected budget-1, got budget), proving both the
+    //  behavior change and the runner. Removed after the red was confirmed, per convention.)
+
     [Test]
     public void Daily_UndoAfterDetour_DecrementsDetourToZero_NoMistakeRefund()
     {

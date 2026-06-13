@@ -49,7 +49,7 @@ namespace WordPuzzle.UI
         private const string Beat1Rule    = "Change ONE letter to make a new word.";
         private const string Beat2Moved   = "Nice — one letter changed, one step closer.";
         private const string Beat3Routes  = "There's often more than one path — aim for a SHORT one.";
-        private const string Beat4ParFmt  = "Par is the fewest steps possible (here: {0}). In daily play your mistakes are limited — so plan ahead.";
+        private const string Beat4ParFmt  = "Par is the fewest steps possible (here: {0}). In daily play rule-breaking guesses are limited — typos bounce free, so plan your route.";
         private const string Beat5Finish  = "Now reach the end word — one step at a time.";
         private const string WinText      = "You've got it! 🎉";
         private const string TapHint      = "tap to continue  ▸";
