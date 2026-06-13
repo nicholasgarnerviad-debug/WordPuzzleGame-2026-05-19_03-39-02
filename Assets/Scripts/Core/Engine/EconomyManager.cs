@@ -357,7 +357,10 @@ namespace WordPuzzle.State
 
     public void LogEconomyEvent(string eventName, string data)
     {
+        // Editor-only echo (the Utils Logger lives in another assembly) — silent in release.
+#if UNITY_EDITOR
         Debug.Log($"[EconomyEvent] {eventName}: {data}");
+#endif
     }
     }
 }

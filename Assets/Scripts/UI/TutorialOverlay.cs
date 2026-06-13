@@ -242,8 +242,7 @@ namespace WordPuzzle.UI
             crt.anchorMin = crt.anchorMax = new Vector2(0.5f, 0.5f); crt.pivot = new Vector2(0.5f, 0.5f);
             crt.anchoredPosition = Vector2.zero; crt.sizeDelta = new Vector2(820f, 0f);
             var cimg = card.GetComponent<Image>(); cimg.raycastTarget = true;
-            UIThemeManager.ApplyRoundedButton(cimg); // rounded 9-slice, SOLID fill
-            cimg.color = new Color(Palette.SurfaceVoid.r, Palette.SurfaceVoid.g, Palette.SurfaceVoid.b, 0.97f);
+            UIThemeManager.ApplySolidCard(cimg, MenuPalette.TitleColor); // the one card seam (fill + aqua ring overlay)
             var vlg = card.GetComponent<VerticalLayoutGroup>();
             vlg.childControlWidth = true; vlg.childForceExpandWidth = true;
             vlg.childControlHeight = true; vlg.childForceExpandHeight = false;
@@ -251,14 +250,6 @@ namespace WordPuzzle.UI
             vlg.childAlignment = TextAnchor.UpperCenter;
             card.GetComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
             _welcomeCard = crt;
-
-            // Aqua ring + neon glow OVER the solid fill (a stretched, layout-ignored overlay child).
-            var ring = new GameObject("Ring", typeof(RectTransform), typeof(Image), typeof(LayoutElement));
-            ring.transform.SetParent(card.transform, false);
-            Stretch((RectTransform)ring.transform);
-            ring.GetComponent<LayoutElement>().ignoreLayout = true;
-            var rimg = ring.GetComponent<Image>(); rimg.raycastTarget = false;
-            UIThemeManager.ApplyOutlineButton(rimg, MenuPalette.TitleColor);
 
             var title = MakeText(card.transform, WelcomeTitle, TypeRole.Title, MenuPalette.TitleColor, TextAlignmentOptions.Center);
             title.gameObject.AddComponent<LayoutElement>().minHeight = 54f;

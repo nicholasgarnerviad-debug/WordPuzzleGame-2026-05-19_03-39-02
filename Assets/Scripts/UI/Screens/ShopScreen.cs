@@ -21,6 +21,14 @@ namespace WordPuzzle.UI
         private Action onClosed;
         private Func<int> watchCoinsRemaining;        // Task 36 36K — watches left today (for the row label)
         private Action<Action<int>> watchForCoins;    // Task 36 36K — play rewarded ad then grant; cb(coinsGranted)
+        private Func<bool> watchAdReady;              // v1.0 audit C4 — rewarded ad loaded? (null = assume ready)
+        private Coroutine watchReadyPoll;             // refreshes the Watch row once the ad arrives
+
+        // v1.0 audit Track 3 — real-money commerce is OFF for v1.0: the only IStoreService is a
+        // mock, so selling Starter Pack / coin packs / Remove Ads would be fake purchases. Flip
+        // to true when a real store integration lands (planned 1.1). readonly (not const) so the
+        // gated blocks don't trip CS0162 unreachable-code warnings.
+        private static readonly bool RealMoneyEnabled = false;
 
         private RectTransform contentRoot;   // the scroll content that gets rebuilt
         private TMP_Text balanceText;
@@ -50,11 +58,13 @@ namespace WordPuzzle.UI
 
         public void Configure(IEconomyManager economy, IStoreService store, Action onClosed,
                               int[] bundleSizes, int[] hintPrices, int[] undoPrices, int[] revealPrices, int[] timePrices,
-                              Func<int> watchCoinsRemaining = null, Action<Action<int>> watchForCoins = null)
+                              Func<int> watchCoinsRemaining = null, Action<Action<int>> watchForCoins = null,
+                              Func<bool> watchAdReady = null)
         {
             this.economy = economy;
             this.store = store;
             this.onClosed = onClosed;
+            this.watchAdReady = watchAdReady;
             if (bundleSizes != null && bundleSizes.Length > 0) this.bundleSizes = bundleSizes;
             if (hintPrices != null) this.hintPrices = hintPrices;
             if (undoPrices != null) this.undoPrices = undoPrices;
@@ -76,6 +86,7 @@ namespace WordPuzzle.UI
 
         public void Close()
         {
+            StopWatchReadyPoll();
             gameObject.SetActive(false);
             onClosed?.Invoke();
         }
@@ -142,11 +153,15 @@ namespace WordPuzzle.UI
 
             // Restore Purchases — Task 43 ghost tier, top-right (mirrors Back). Rare store-policy
             // utility, so it recedes to tinted text. Re-establishes owned non-consumables
-            // (remove-ads / starter-pack) after a reinstall; store policy requires this when selling them.
-            var restore = MakeButton(content, "Restore", MenuPalette.SecondaryBorder, C_CREAM);
-            Anchor(((RectTransform)restore.transform), new Vector2(1f, 1f), new Vector2(-40f, -110f), new Vector2(230f, 80f));
-            UIThemeManager.ApplyGhostButton(restore, MenuPalette.SecondaryBorder);
-            restore.onClick.AddListener(RestorePurchases);
+            // (remove-ads / starter-pack) after a reinstall; store policy requires this when selling
+            // them — and ONLY when selling them, so it hides with the money sections (Track 3).
+            if (RealMoneyEnabled)
+            {
+                var restore = MakeButton(content, "Restore", MenuPalette.SecondaryBorder, C_CREAM);
+                Anchor(((RectTransform)restore.transform), new Vector2(1f, 1f), new Vector2(-40f, -110f), new Vector2(230f, 80f));
+                UIThemeManager.ApplyGhostButton(restore, MenuPalette.SecondaryBorder);
+                restore.onClick.AddListener(RestorePurchases);
+            }
 
             // Feedback line near the bottom.
             feedbackText = MakeText(content, "", TypeRole.Caption, C_CREAM, TextAlignmentOptions.Center);
@@ -204,7 +219,7 @@ namespace WordPuzzle.UI
 
             // STARTER PACK (real money, one-time) — pinned at the very top for new players.
             StoreProduct starter = null;
-            if (store != null)
+            if (RealMoneyEnabled && store != null)
                 foreach (var p in store.Products) { if (p != null && p.type == StoreProductType.StarterPack) { starter = p; break; } }
             if (starter != null)
             {
@@ -226,20 +241,22 @@ namespace WordPuzzle.UI
                 WatchForCoinsRow();
             }
 
-            // COINS (real money)
-            SectionHeader("COINS  ·  buy with money");
-            if (store != null)
+            // COINS + REMOVE ADS (real money) — hidden for v1.0 (Track 3, RealMoneyEnabled).
+            if (RealMoneyEnabled)
             {
-                foreach (var p in store.Products)
+                SectionHeader("COINS  ·  buy with money");
+                if (store != null)
                 {
-                    if (p == null || p.type != StoreProductType.Coins) continue;
-                    CoinBundleRow(p);
+                    foreach (var p in store.Products)
+                    {
+                        if (p == null || p.type != StoreProductType.Coins) continue;
+                        CoinBundleRow(p);
+                    }
                 }
-            }
 
-            // REMOVE ADS (real money)
-            SectionHeader("REMOVE ADS");
-            RemoveAdsRow();
+                SectionHeader("REMOVE ADS");
+                RemoveAdsRow();
+            }
         }
 
         private enum AddKind { Hint, Undo, Reveal, Time }
@@ -278,6 +295,9 @@ namespace WordPuzzle.UI
         {
             int remaining = watchCoinsRemaining != null ? watchCoinsRemaining() : 0;
             bool canWatch = remaining > 0;
+            // v1.0 audit C4 — a tappable "Watch" while the rewarded ad is still loading was a
+            // silent no-op; show a disabled "Loading…" instead and refresh when the ad arrives.
+            bool adReady = watchAdReady == null || watchAdReady();
             var row = MakeRow(120f);
             string sub = canWatch ? $"{remaining} left today" : "back tomorrow";
             var label = MakeText(row, $"Watch for Coins\n<size=24><color=#{Hx(C_MUTED)}>Free  ·  {sub}</color></size>",
@@ -285,16 +305,50 @@ namespace WordPuzzle.UI
             label.richText = true;
             var lle = label.gameObject.AddComponent<LayoutElement>(); lle.flexibleWidth = 1f;
 
-            var btn = MakeButton(row, canWatch ? "Watch" : "Done",
-                                 canWatch ? MenuPalette.TimeAttackFill : C_SECTION, canWatch ? C_CREAM : C_MUTED);
+            var btn = MakeButton(row, !canWatch ? "Done" : adReady ? "Watch" : "Loading…",
+                                 canWatch && adReady ? MenuPalette.TimeAttackFill : C_SECTION,
+                                 canWatch && adReady ? C_CREAM : C_MUTED);
             var ble = btn.gameObject.AddComponent<LayoutElement>(); ble.preferredWidth = 200f; ble.flexibleWidth = 0f;
-            btn.interactable = canWatch;
-            if (canWatch)
+            btn.interactable = canWatch && adReady;
+            if (canWatch && adReady)
                 btn.onClick.AddListener(() => watchForCoins(coins =>
                 {
                     Feedback(coins > 0 ? $"+{coins} coins!" : "Ads aren't available yet");
                     Rebuild();
                 }));
+            if (canWatch && !adReady) StartWatchReadyPoll();
+        }
+
+        // Poll the rewarded-ad readiness while the "Loading…" row is showing; one Rebuild when
+        // it flips. Dedicated handle (never StopAllCoroutines — see the ShowToast trap).
+        private void StartWatchReadyPoll()
+        {
+            if (watchReadyPoll != null || watchAdReady == null || !isActiveAndEnabled) return;
+            watchReadyPoll = StartCoroutine(WatchReadyPollRoutine());
+        }
+
+        private void StopWatchReadyPoll()
+        {
+            if (watchReadyPoll == null) return;
+            StopCoroutine(watchReadyPoll);
+            watchReadyPoll = null;
+        }
+
+        private System.Collections.IEnumerator WatchReadyPollRoutine()
+        {
+            // Bounded: ~60s of 1s checks; the retry backoff caps near this horizon anyway,
+            // and reopening the shop restarts the poll.
+            for (int i = 0; i < 60; i++)
+            {
+                yield return new WaitForSecondsRealtime(1f);
+                if (watchAdReady != null && watchAdReady())
+                {
+                    watchReadyPoll = null;
+                    Rebuild();
+                    yield break;
+                }
+            }
+            watchReadyPoll = null;
         }
 
         private void CoinBundleRow(StoreProduct p)
